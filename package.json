@@ -1,0 +1,48 @@
+{
+    "name": "cogs-shape",
+    "version": "1.0.0",
+    "description": "Full-stack type system and ORM for TypeScript applications. Provides unified schema definitions, automatic client/server type generation, database mapping, and runtime validation with zero config. Part of the COGS framework.",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+      "dist"
+    ],
+    "scripts": {
+      "build": "tsc",
+      "prepublishOnly": "npm run build",
+      "lint": "eslint src --ext .ts",
+      "format": "prettier --write \"src/**/*.ts\""
+    },
+    "keywords": [
+      "typescript",
+      "orm",
+      "database",
+      "full-stack",
+      "type-safe",
+      "client-server",
+      "zod",
+      "validation",
+      "cogs",
+      "schema",
+      "types"
+    ],
+    "author": "",
+    "license": "MIT",
+    "dependencies": {
+      "uuid": "^9.0.0",
+      "zod": "^3.22.4",
+      "zod-to-json-schema": "^3.22.3"
+    },
+    "devDependencies": {
+      "@types/node": "^20.10.5",
+      "@types/uuid": "^9.0.7",
+      "@typescript-eslint/eslint-plugin": "^6.15.0",
+      "@typescript-eslint/parser": "^6.15.0",
+      "eslint": "^8.56.0",
+      "prettier": "^3.1.1",
+      "typescript": "^5.3.3"
+    },
+    "peerDependencies": {
+      "zod": "^3.22.4"
+    }
+  }
