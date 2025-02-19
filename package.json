@@ -1,7 +1,7 @@
 {
-    "name": "cogs-shape",
-    "version": "1.0.0",
-    "description": "Full-stack type system and ORM for TypeScript applications. Provides unified schema definitions, automatic client/server type generation, database mapping, and runtime validation with zero config. Part of the COGS framework.",
+    "name": "@cogsbox/cogsbox-shape",
+    "version": "0.5.0",
+    "description": "A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
