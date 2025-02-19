@@ -7,8 +7,9 @@
     "files": [
       "dist"
     ],
+    "repository": "github:cogsbox/cogsbox-shape",   
     "scripts": {
-      "build": "tsc",
+      "build": " tsc",
       "prepublishOnly": "npm run build",
       "lint": "eslint src --ext .ts",
       "format": "prettier --write \"src/**/*.ts\""
