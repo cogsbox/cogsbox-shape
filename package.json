@@ -1,49 +1,49 @@
 {
     "name": "@cogsbox/cogsbox-shape",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "description": "A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
-      "dist"
+        "dist"
     ],
-    "repository": "github:cogsbox/cogsbox-shape",   
+    "repository": "github:cogsbox/cogsbox-shape",
     "scripts": {
-      "build": " tsc",
-      "prepublishOnly": "npm run build",
-      "lint": "eslint src --ext .ts",
-      "format": "prettier --write \"src/**/*.ts\""
+        "build": " tsc",
+        "prepublishOnly": "npm run build",
+        "lint": "eslint src --ext .ts",
+        "format": "prettier --write \"src/**/*.ts\""
     },
     "keywords": [
-      "typescript",
-      "orm",
-      "database",
-      "full-stack",
-      "type-safe",
-      "client-server",
-      "zod",
-      "validation",
-      "cogs",
-      "schema",
-      "types"
+        "typescript",
+        "orm",
+        "database",
+        "full-stack",
+        "type-safe",
+        "client-server",
+        "zod",
+        "validation",
+        "cogs",
+        "schema",
+        "types"
     ],
     "author": "",
     "license": "MIT",
     "dependencies": {
-      "uuid": "^9.0.0",
-      "zod": "^3.22.4",
-      "zod-to-json-schema": "^3.22.3"
+        "uuid": "^9.0.0",
+        "zod": "^3.22.4",
+        "zod-to-json-schema": "^3.22.3"
     },
     "devDependencies": {
-      "@types/node": "^20.10.5",
-      "@types/uuid": "^9.0.7",
-      "@typescript-eslint/eslint-plugin": "^6.15.0",
-      "@typescript-eslint/parser": "^6.15.0",
-      "eslint": "^8.56.0",
-      "prettier": "^3.1.1",
-      "typescript": "^5.3.3"
+        "@types/node": "^20.10.5",
+        "@types/uuid": "^9.0.7",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0",
+        "eslint": "^8.56.0",
+        "prettier": "^3.1.1",
+        "typescript": "^5.3.3"
     },
     "peerDependencies": {
-      "zod": "^3.22.4"
+        "zod": "^3.22.4"
     }
-  }
+}
