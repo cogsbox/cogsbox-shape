@@ -1,5 +1,9 @@
 # Unified Schema
 
+> ⚠️ **Warning**: This package is currently a work in progress and not ready for production use. The API is unstable and subject to breaking changes. Please do not use in production environments.
+
+---
+
 A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.
 
 ## Features
