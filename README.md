@@ -12,7 +12,7 @@ A TypeScript library for creating type-safe database schemas with Zod validation
 - Type-safe schema definitions with TypeScript
 - Built-in Zod validation
 - Automatic type transformations between client and database
-- Support for SQL type definitions
+- SQL migrations codegen from schemas
 - Relationship handling (hasMany, hasOne, belongsTo)
 - Schema serialization
 - Default value generation
