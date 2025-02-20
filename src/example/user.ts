@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { createSchema, hasMany, shape } from "../schema";
 
 export const userSchema = {
