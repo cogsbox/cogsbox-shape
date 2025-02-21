@@ -16,6 +16,7 @@ A TypeScript library for creating type-safe database schemas with Zod validation
 - Relationship handling (hasMany, hasOne, belongsTo)
 - Schema serialization
 - Default value generation
+- CLI tool for SQL generation
 
 ## Installation
 
@@ -53,6 +54,44 @@ const userSchema = {
 const { dbSchema, clientSchema, initialValues, serialized } =
   createSchema(userSchema);
 ```
+
+## Schema Export and SQL Generation
+
+### Exporting Schemas
+
+You can export your schemas for use with the CLI tool:
+
+```typescript
+// schemas.ts
+import { petSchema, userSchema } from "./schemas";
+
+const schemas = {
+  user: userSchema,
+  pet: petSchema,
+};
+
+export { schemas };
+```
+
+### Using the CLI
+
+The package includes a CLI tool for generating SQL from your schemas. After installation, you can use it with:
+
+```bash
+npx cogsbox-shape generate-sql <file>
+```
+
+The CLI supports both TypeScript and JavaScript files:
+
+```bash
+# For TypeScript files
+npx cogsbox-shape generate-sql schemas.ts
+
+# For JavaScript files
+npx cogsbox-shape generate-sql schemas.js
+```
+
+This will generate a SQL file (`cogsbox-shape-sql.sql`) containing the table definitions for all your schemas.
 
 ## Advanced Features
 
