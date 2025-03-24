@@ -979,9 +979,6 @@ export function createSchema<T extends Schema<any>>(schema: T) {
       value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
   }
 
-  type OmitNever<T> = {
-    [K in keyof T as T[K] extends never ? never : K]: T[K];
-  };
   return {
     dbSchema: z.object(dbFields) as z.ZodObject<Prettify<InferDBSchema<T>>>,
     clientSchema: z.object(clientFields) as z.ZodObject<
@@ -998,6 +995,10 @@ export function createSchema<T extends Schema<any>>(schema: T) {
     },
   };
 }
+
+type OmitNever<T> = {
+  [K in keyof T as T[K] extends never ? never : K]: T[K];
+};
 type DefaultValue<T> = Prettify<DeepWriteable<InferDefaultValues<T>>>;
 type GetMandatoryKeys<T> = {
   [P in keyof T]: T[P] extends Exclude<T[P], undefined> ? P : never;
