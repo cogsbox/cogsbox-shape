@@ -504,11 +504,10 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
   toClient?: (dbValue: any) => any;
   toDb?: (clientValue: any) => any;
 };
-type ReferenceField = {
+type ReferenceField<T extends BaseSchemaField = BaseSchemaField> = {
   type: "reference";
-  to: () => BaseSchemaField;
+  to: () => T;
 };
-
 type SchemaField<T extends SQLType = SQLType> =
   | BaseSchemaField<T>
   | ReferenceField;
