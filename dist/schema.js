@@ -305,7 +305,6 @@ function inferDefaultFromZod(zodType, sqlConfig) {
     }
     return undefined;
 }
-// Update reference function
 export function reference(config) {
     return {
         type: "reference",
@@ -389,13 +388,14 @@ function createSerializableSchema(schema) {
     }
     return serializableSchema;
 }
+// Update the createSchema function to handle references in the main loop
 export function createSchema(schema) {
     const serialized = createSerializableSchema(schema);
     const dbFields = {};
     const clientFields = {};
     const defaultValues = {};
     for (const [key, value] of Object.entries(schema)) {
-        if (key === "_tableName")
+        if (key === "_tableName" || key === "__schemaId")
             continue;
         if (typeof value === "function") {
             const relation = value();
@@ -437,10 +437,22 @@ export function createSchema(schema) {
             }
             continue;
         }
-        dbFields[key] = value.zodDbSchema;
-        clientFields[key] = value.zodClientSchema;
-        defaultValues[key] =
-            value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
+        // Handle references - this is the key addition
+        if (value && typeof value === "object" && value.type === "reference") {
+            const referencedField = value.to();
+            dbFields[key] = referencedField.zodDbSchema;
+            clientFields[key] = referencedField.zodClientSchema;
+            defaultValues[key] =
+                referencedField.defaultValue ??
+                    inferDefaultFromZod(referencedField.zodClientSchema);
+        }
+        else {
+            // Handle regular fields
+            dbFields[key] = value.zodDbSchema;
+            clientFields[key] = value.zodClientSchema;
+            defaultValues[key] =
+                value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
+        }
     }
     return {
         dbSchema: z.object(dbFields),

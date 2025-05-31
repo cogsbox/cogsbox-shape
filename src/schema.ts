@@ -548,69 +548,57 @@ type InferSchema<T> = {
   [K in keyof T as K extends "_tableName" | "__schemaId"
     ? never
     : K]: T[K] extends {
-    zodClientSchema: infer ClientType extends z.ZodTypeAny;
-    toClient?: (dbValue: any) => infer TransformedType;
+    type: "reference";
+    to: () => infer RefField;
   }
-    ? T[K]["toClient"] extends Function
-      ? z.ZodType<TransformedType>
-      : ClientType extends z.ZodNever
-        ? z.ZodOptional<z.ZodDate>
-        : ClientType
-    : T[K] extends () => { type: "hasMany"; schema: infer S }
-      ? z.ZodArray<
-          z.ZodObject<{
-            [P in keyof S as P extends "_tableName" | "__schemaId"
-              ? never
-              : P]: S[P] extends {
-              zodClientSchema: z.ZodTypeAny;
-              toClient?: (dbValue: any) => any;
-            }
-              ? S[P]["toClient"] extends Function
-                ? z.ZodType<ReturnType<S[P]["toClient"]>>
-                : S[P]["zodClientSchema"] extends z.ZodNever
-                  ? z.ZodOptional<z.ZodDate>
-                  : S[P]["zodClientSchema"]
-              : never;
-          }>
-        >
-      : T[K] extends () => { type: "hasOne" | "belongsTo"; schema: infer S }
-        ? z.ZodObject<{
-            [P in keyof S as P extends "_tableName" | "__schemaId"
-              ? never
-              : P]: S[P] extends {
-              zodClientSchema: z.ZodTypeAny;
-              toClient?: (dbValue: any) => any;
-            }
-              ? S[P]["toClient"] extends Function
-                ? z.ZodType<ReturnType<S[P]["toClient"]>>
-                : S[P]["zodClientSchema"] extends z.ZodNever
-                  ? z.ZodOptional<z.ZodDate>
-                  : S[P]["zodClientSchema"]
-              : never;
-          }>
-        : never;
-};
-export type InferDBSchema<T> = {
-  [K in keyof T as K extends "_tableName" | "__schemaId"
-    ? never
-    : K]: T[K] extends {
-    zodDbSchema: infer DbType extends z.ZodTypeAny;
-  }
-    ? DbType
+    ? RefField extends {
+        zodClientSchema: infer ClientType extends z.ZodTypeAny;
+        toClient?: (dbValue: any) => infer TransformedType;
+      }
+      ? RefField["toClient"] extends Function
+        ? z.ZodType<TransformedType>
+        : ClientType extends z.ZodNever
+          ? z.ZodOptional<z.ZodDate>
+          : ClientType
+      : never
     : T[K] extends {
-          dbType: infer DbType extends z.ZodTypeAny;
+          zodClientSchema: infer ClientType extends z.ZodTypeAny;
+          toClient?: (dbValue: any) => infer TransformedType;
         }
-      ? DbType
+      ? T[K]["toClient"] extends Function
+        ? z.ZodType<TransformedType>
+        : ClientType extends z.ZodNever
+          ? z.ZodOptional<z.ZodDate>
+          : ClientType
       : T[K] extends () => { type: "hasMany"; schema: infer S }
         ? z.ZodArray<
             z.ZodObject<{
               [P in keyof S as P extends "_tableName" | "__schemaId"
                 ? never
                 : P]: S[P] extends {
-                zodDbSchema: infer DbType extends z.ZodTypeAny;
+                type: "reference";
+                to: () => infer RefField;
               }
-                ? DbType
-                : never;
+                ? RefField extends {
+                    zodClientSchema: z.ZodTypeAny;
+                    toClient?: (dbValue: any) => any;
+                  }
+                  ? RefField["toClient"] extends Function
+                    ? z.ZodType<ReturnType<RefField["toClient"]>>
+                    : RefField["zodClientSchema"] extends z.ZodNever
+                      ? z.ZodOptional<z.ZodDate>
+                      : RefField["zodClientSchema"]
+                  : never
+                : S[P] extends {
+                      zodClientSchema: z.ZodTypeAny;
+                      toClient?: (dbValue: any) => any;
+                    }
+                  ? S[P]["toClient"] extends Function
+                    ? z.ZodType<ReturnType<S[P]["toClient"]>>
+                    : S[P]["zodClientSchema"] extends z.ZodNever
+                      ? z.ZodOptional<z.ZodDate>
+                      : S[P]["zodClientSchema"]
+                  : never;
             }>
           >
         : T[K] extends () => { type: "hasOne" | "belongsTo"; schema: infer S }
@@ -618,12 +606,95 @@ export type InferDBSchema<T> = {
               [P in keyof S as P extends "_tableName" | "__schemaId"
                 ? never
                 : P]: S[P] extends {
-                zodDbSchema: infer DbType extends z.ZodTypeAny;
+                type: "reference";
+                to: () => infer RefField;
               }
-                ? DbType
-                : never;
+                ? RefField extends {
+                    zodClientSchema: z.ZodTypeAny;
+                    toClient?: (dbValue: any) => any;
+                  }
+                  ? RefField["toClient"] extends Function
+                    ? z.ZodType<ReturnType<RefField["toClient"]>>
+                    : RefField["zodClientSchema"] extends z.ZodNever
+                      ? z.ZodOptional<z.ZodDate>
+                      : RefField["zodClientSchema"]
+                  : never
+                : S[P] extends {
+                      zodClientSchema: z.ZodTypeAny;
+                      toClient?: (dbValue: any) => any;
+                    }
+                  ? S[P]["toClient"] extends Function
+                    ? z.ZodType<ReturnType<S[P]["toClient"]>>
+                    : S[P]["zodClientSchema"] extends z.ZodNever
+                      ? z.ZodOptional<z.ZodDate>
+                      : S[P]["zodClientSchema"]
+                  : never;
             }>
           : never;
+};
+
+// Update InferDBSchema similarly
+export type InferDBSchema<T> = {
+  [K in keyof T as K extends "_tableName" | "__schemaId"
+    ? never
+    : K]: T[K] extends {
+    type: "reference";
+    to: () => infer RefField;
+  }
+    ? RefField extends {
+        zodDbSchema: infer DbType extends z.ZodTypeAny;
+      }
+      ? DbType
+      : never
+    : T[K] extends {
+          zodDbSchema: infer DbType extends z.ZodTypeAny;
+        }
+      ? DbType
+      : T[K] extends {
+            dbType: infer DbType extends z.ZodTypeAny;
+          }
+        ? DbType
+        : T[K] extends () => { type: "hasMany"; schema: infer S }
+          ? z.ZodArray<
+              z.ZodObject<{
+                [P in keyof S as P extends "_tableName" | "__schemaId"
+                  ? never
+                  : P]: S[P] extends {
+                  type: "reference";
+                  to: () => infer RefField;
+                }
+                  ? RefField extends {
+                      zodDbSchema: infer DbType extends z.ZodTypeAny;
+                    }
+                    ? DbType
+                    : never
+                  : S[P] extends {
+                        zodDbSchema: infer DbType extends z.ZodTypeAny;
+                      }
+                    ? DbType
+                    : never;
+              }>
+            >
+          : T[K] extends () => { type: "hasOne" | "belongsTo"; schema: infer S }
+            ? z.ZodObject<{
+                [P in keyof S as P extends "_tableName" | "__schemaId"
+                  ? never
+                  : P]: S[P] extends {
+                  type: "reference";
+                  to: () => infer RefField;
+                }
+                  ? RefField extends {
+                      zodDbSchema: infer DbType extends z.ZodTypeAny;
+                    }
+                    ? DbType
+                    : never
+                  : S[P] extends {
+                        zodDbSchema: infer DbType extends z.ZodTypeAny;
+                      }
+                    ? DbType
+                    : never;
+              }>
+            : never;
 };
 type UUID = string | `${string}-${string}-${string}-${string}-${string}`;
 type InferDefaultValues<T, TDefault extends boolean = true> = {
@@ -826,11 +897,13 @@ type InferSerializedSchema<T> = {
         : never;
 };
 
-export function reference<T extends () => BaseSchemaField>(config: { to: T }) {
+export function reference<T extends BaseSchemaField>(config: {
+  to: () => T;
+}): ReferenceField<T> {
   return {
     type: "reference" as const,
     to: config.to,
-  } as SchemaField;
+  };
 }
 function createSerializableSchema<T extends Schema<any>>(
   schema: T
@@ -917,6 +990,7 @@ function createSerializableSchema<T extends Schema<any>>(
   return serializableSchema;
 }
 
+// Update the createSchema function to handle references in the main loop
 export function createSchema<T extends Schema<any>>(schema: T) {
   const serialized = createSerializableSchema(schema);
   const dbFields: Record<string, z.ZodTypeAny> = {};
@@ -924,7 +998,7 @@ export function createSchema<T extends Schema<any>>(schema: T) {
   const defaultValues = {} as Record<string, any>;
 
   for (const [key, value] of Object.entries(schema)) {
-    if (key === "_tableName") continue;
+    if (key === "_tableName" || key === "__schemaId") continue;
 
     if (typeof value === "function") {
       const relation = value();
@@ -971,10 +1045,21 @@ export function createSchema<T extends Schema<any>>(schema: T) {
       continue;
     }
 
-    dbFields[key] = value.zodDbSchema;
-    clientFields[key] = value.zodClientSchema;
-    defaultValues[key] =
-      value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
+    // Handle references - this is the key addition
+    if (value && typeof value === "object" && value.type === "reference") {
+      const referencedField = value.to();
+      dbFields[key] = referencedField.zodDbSchema;
+      clientFields[key] = referencedField.zodClientSchema;
+      defaultValues[key] =
+        referencedField.defaultValue ??
+        inferDefaultFromZod(referencedField.zodClientSchema);
+    } else {
+      // Handle regular fields
+      dbFields[key] = value.zodDbSchema;
+      clientFields[key] = value.zodClientSchema;
+      defaultValues[key] =
+        value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
+    }
   }
 
   return {
@@ -993,7 +1078,6 @@ export function createSchema<T extends Schema<any>>(schema: T) {
     },
   };
 }
-
 type OmitNever<T> = {
   [K in keyof T as T[K] extends never ? never : K]: T[K];
 };
