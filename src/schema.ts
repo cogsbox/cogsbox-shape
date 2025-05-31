@@ -825,7 +825,7 @@ type InferSerializedSchema<T> = {
           }
         : never;
 };
-// Update reference function
+
 export function reference<T extends () => BaseSchemaField>(config: { to: T }) {
   return {
     type: "reference" as const,
