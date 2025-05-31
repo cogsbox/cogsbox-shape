@@ -1408,18 +1408,21 @@ type InferSerializedSchema<T> = {
         };
     } : never;
 };
-export declare function reference(config: {
-    to: () => BaseSchemaField;
+export declare function reference<T extends () => BaseSchemaField>(config: {
+    to: T;
 }): SchemaField;
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;
-    clientSchema: z.ZodObject<Prettify<InferSchema<T> extends infer T_3 ? { [K in keyof T_3 as InferSchema<T>[K] extends never ? never : K]: InferSchema<T>[K]; } : never>>;
-    defaultValues: Prettify<ConfigWithOptionalProps<T> extends infer T_4 ? { [K_1 in keyof T_4 as ConfigWithOptionalProps<T>[K_1] extends never ? never : K_1]: ConfigWithOptionalProps<T>[K_1]; } : never>;
-    initialValues: () => Prettify<ConfigWithOptionalProps<T> extends infer T_5 ? { [K_1 in keyof T_5 as ConfigWithOptionalProps<T>[K_1] extends never ? never : K_1]: ConfigWithOptionalProps<T>[K_1]; } : never>;
+    clientSchema: z.ZodObject<Prettify<OmitNever<InferSchema<T>>>>;
+    defaultValues: Prettify<OmitNever<ConfigWithOptionalProps<T>>>;
+    initialValues: () => Prettify<OmitNever<ConfigWithOptionalProps<T>>>;
     serialized: Prettify<InferSerializedSchema<T>> & {
         _tableName: string;
         __schemaId: string;
     };
+};
+type OmitNever<T> = {
+    [K in keyof T as T[K] extends never ? never : K]: T[K];
 };
 type DefaultValue<T> = Prettify<DeepWriteable<InferDefaultValues<T>>>;
 type GetMandatoryKeys<T> = {
