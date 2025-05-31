@@ -1218,7 +1218,13 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 };
 type ReferenceField = {
     type: "reference";
-    to: () => BaseSchemaField;
+    to: () => any;
+    sql: SQLType;
+    zodDbSchema: z.ZodType<any>;
+    zodClientSchema: z.ZodType<any>;
+    defaultValue?: any;
+    toClient?: (dbValue: any) => any;
+    toDb?: (clientValue: any) => any;
 };
 type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField;
 export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>> = {
@@ -1408,9 +1414,10 @@ type InferSerializedSchema<T> = {
         };
     } : never;
 };
+type ShapeFieldReturn = ReturnType<typeof shape.sql>;
 export declare function reference<T = any>(config: {
     to: () => T;
-    field: BaseSchemaField;
+    field: ShapeFieldReturn;
 }): ReferenceField;
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;

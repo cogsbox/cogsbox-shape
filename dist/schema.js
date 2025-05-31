@@ -305,7 +305,6 @@ function inferDefaultFromZod(zodType, sqlConfig) {
     }
     return undefined;
 }
-// Update reference function
 export function reference(config) {
     return {
         type: "reference",

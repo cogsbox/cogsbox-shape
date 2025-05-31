@@ -506,7 +506,13 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 };
 type ReferenceField = {
   type: "reference";
-  to: () => BaseSchemaField;
+  to: () => any;
+  sql: SQLType;
+  zodDbSchema: z.ZodType<any>;
+  zodClientSchema: z.ZodType<any>;
+  defaultValue?: any;
+  toClient?: (dbValue: any) => any;
+  toDb?: (clientValue: any) => any;
 };
 
 type SchemaField<T extends SQLType = SQLType> =
@@ -826,11 +832,11 @@ type InferSerializedSchema<T> = {
           }
         : never;
 };
-// Update reference function
+type ShapeFieldReturn = ReturnType<typeof shape.sql>;
 export function reference<T = any>(config: {
   to: () => T;
-  field: BaseSchemaField; // Pass the field definition directly
-}) {
+  field: ShapeFieldReturn;
+}): ReferenceField {
   return {
     type: "reference" as const,
     to: config.to,
@@ -840,9 +846,8 @@ export function reference<T = any>(config: {
     defaultValue: config.field.defaultValue,
     toClient: config.field.toClient,
     toDb: config.field.toDb,
-  } as ReferenceField;
+  };
 }
-
 function createSerializableSchema<T extends Schema<any>>(
   schema: T
 ): SerializableSchema {
