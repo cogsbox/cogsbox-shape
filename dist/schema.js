@@ -307,14 +307,9 @@ function inferDefaultFromZod(zodType, sqlConfig) {
 }
 export function reference(config) {
     return {
+        ...config.field,
         type: "reference",
         to: config.to,
-        sql: config.field.sql,
-        zodDbSchema: config.field.zodDbSchema,
-        zodClientSchema: config.field.zodClientSchema,
-        defaultValue: config.field.defaultValue,
-        toClient: config.field.toClient,
-        toDb: config.field.toDb,
     };
 }
 function createSerializableSchema(schema) {

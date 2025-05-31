@@ -1216,17 +1216,12 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
     toClient?: (dbValue: any) => any;
     toDb?: (clientValue: any) => any;
 };
-type ReferenceField = {
+type AnyFieldDefinition = ReturnType<typeof shape.sql>;
+type ReferenceField<TField extends AnyFieldDefinition, TTo extends SchemaField> = TField & {
     type: "reference";
-    to: () => any;
-    sql: SQLType;
-    zodDbSchema: z.ZodType<any>;
-    zodClientSchema: z.ZodType<any>;
-    defaultValue?: any;
-    toClient?: (dbValue: any) => any;
-    toDb?: (clientValue: any) => any;
+    to: () => TTo;
 };
-type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField;
+type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField<AnyFieldDefinition, any>;
 export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>> = {
     _tableName: string;
     __schemaId?: string;
@@ -1414,11 +1409,13 @@ type InferSerializedSchema<T> = {
         };
     } : never;
 };
-type ShapeFieldReturn = ReturnType<typeof shape.sql>;
-export declare function reference<T = any>(config: {
-    to: () => T;
-    field: ShapeFieldReturn;
-}): ReferenceField;
+export declare function reference<TTargetField extends SchemaField, TField extends object>(config: {
+    to: () => TTargetField;
+    field: TField;
+}): TField & {
+    type: "reference";
+    to: () => TTargetField;
+};
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;
     clientSchema: z.ZodObject<Prettify<OmitNever<InferSchema<T>>>>;

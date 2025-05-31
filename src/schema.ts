@@ -504,20 +504,21 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
   toClient?: (dbValue: any) => any;
   toDb?: (clientValue: any) => any;
 };
-type ReferenceField = {
-  type: "reference";
-  to: () => any;
-  sql: SQLType;
-  zodDbSchema: z.ZodType<any>;
-  zodClientSchema: z.ZodType<any>;
-  defaultValue?: any;
-  toClient?: (dbValue: any) => any;
-  toDb?: (clientValue: any) => any;
+type AnyFieldDefinition = ReturnType<typeof shape.sql>;
+
+// 1. Modify ReferenceField to be generic `TField` and intersect it with the `to` and `type` properties.
+//    This ensures all properties of TField (including `field?: string`) are carried over.
+type ReferenceField<
+  TField extends AnyFieldDefinition,
+  TTo extends SchemaField,
+> = TField & {
+  type: "reference"; // Override the 'type' literal to "reference"
+  to: () => TTo; // Add the 'to' property
 };
 
 type SchemaField<T extends SQLType = SQLType> =
   | BaseSchemaField<T>
-  | ReferenceField;
+  | ReferenceField<AnyFieldDefinition, any>; // Use the generic ReferenceField in the union
 
 // Update Schema type to include references
 export type Schema<
@@ -832,20 +833,18 @@ type InferSerializedSchema<T> = {
           }
         : never;
 };
-type ShapeFieldReturn = ReturnType<typeof shape.sql>;
-export function reference<T = any>(config: {
-  to: () => T;
-  field: ShapeFieldReturn;
-}): ReferenceField {
+
+export function reference<
+  TTargetField extends SchemaField,
+  TField extends object,
+>(config: {
+  to: () => TTargetField;
+  field: TField;
+}): TField & { type: "reference"; to: () => TTargetField } {
   return {
+    ...config.field,
     type: "reference" as const,
     to: config.to,
-    sql: config.field.sql,
-    zodDbSchema: config.field.zodDbSchema,
-    zodClientSchema: config.field.zodClientSchema,
-    defaultValue: config.field.defaultValue,
-    toClient: config.field.toClient,
-    toDb: config.field.toDb,
   };
 }
 function createSerializableSchema<T extends Schema<any>>(
