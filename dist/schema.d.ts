@@ -1409,7 +1409,7 @@ type InferSerializedSchema<T> = {
     } : never;
 };
 export declare function reference<T extends () => BaseSchemaField>(config: {
-    to: T;
+    to: any;
 }): SchemaField;
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;
