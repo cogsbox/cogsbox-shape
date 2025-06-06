@@ -130,6 +130,8 @@ type CustomTransform<DbType, ClientType> = {
 // Internal type creation helper
 const createClient = <
   T extends SQLType,
+  DbType, // Remove the extends constraint
+  ClientType, // Remove the extends constraint
   ServerType extends z.ZodTypeAny = never,
 >({
   sqlConfig,
@@ -139,8 +141,8 @@ const createClient = <
   serverType,
 }: {
   sqlConfig: T;
-  inferredDbType: z.ZodTypeAny;
-  inferredClientType: z.ZodTypeAny;
+  inferredDbType: DbType;
+  inferredClientType: ClientType;
   baseJsonSchema: any;
   serverType?: ServerType;
 }) => {
@@ -182,13 +184,13 @@ const createClient = <
       finalDefaultValue = defaultValue.defaultValue as DefaultValue;
     }
 
-    const effectiveDbType = serverType || inferredDbType;
-    const clientJsonSchema = zodToJsonSchema(clientType);
+    const effectiveDbType = serverType || (inferredDbType as any);
+    const clientJsonSchema = zodToJsonSchema(clientType as any);
 
     return {
       sql: finalSqlConfig,
       zodDbSchema: effectiveDbType,
-      zodClientSchema: clientType,
+      zodClientSchema: clientType as ClientType,
       jsonSchema: serverType ? clientJsonSchema : baseJsonSchema,
       defaultValue:
         finalDefaultValue ??
@@ -206,7 +208,7 @@ const createClient = <
       }) => ({
         sql: finalSqlConfig,
         zodDbSchema: effectiveDbType,
-        zodClientSchema: clientType,
+        zodClientSchema: clientType as ClientType,
         jsonSchema: serverType ? clientJsonSchema : baseJsonSchema,
         defaultValue: finalDefaultValue as DefaultValue,
         toClient: transforms.toClient,
@@ -404,12 +406,14 @@ export const shape = {
         sqlConfig
       ) as SQLToDefaultType<T>,
 
-      client: createClient({
-        sqlConfig,
-        inferredDbType,
-        inferredClientType,
-        baseJsonSchema: jsonSchema,
-      }),
+      client: createClient<T, typeof inferredDbType, typeof inferredClientType>(
+        {
+          sqlConfig,
+          inferredDbType,
+          inferredClientType,
+          baseJsonSchema: jsonSchema,
+        }
+      ),
 
       db: <ServerType extends z.ZodTypeAny>(
         assert: (tools: { zod: typeof inferredDbType }) => ServerType
@@ -420,7 +424,7 @@ export const shape = {
           sql: sqlConfig,
           dbType: serverType,
           zodDbSchema: serverType,
-          zodClientSchema: serverType,
+          zodClientSchema: inferredClientType,
           jsonSchema: zodToJsonSchema(serverType),
           defaultValue: inferDefaultFromZod(serverType) as z.infer<ServerType>,
 

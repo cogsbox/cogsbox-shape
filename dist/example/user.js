@@ -21,9 +21,9 @@ export const userSchema = {
 };
 export const petSchema = {
     _tableName: "pets",
-    id: shape.sql({ type: "int", pk: true }).client(({ zod }) => zod.optional()),
+    id: shape.sql({ type: "int", pk: true }).client(({ zod }) => z.string()),
     name: shape.sql({ type: "varchar", length: 255 }),
-    userId: shape.sql({ type: "int" }),
+    userId: shape.sql({ type: "int" }).client(z.string()),
     fluffynessScale: shape
         .sql({ type: "text" })
         .client(({ zod }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))

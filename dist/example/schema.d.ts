@@ -17,7 +17,7 @@ declare const schemas: {
             };
             defaultValue: number;
             client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
+                zod: import("zod").ZodString;
                 serverType?: never;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                 default: "CURRENT_TIMESTAMP";
@@ -27,27 +27,27 @@ declare const schemas: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -63,7 +63,7 @@ declare const schemas: {
                 };
                 dbType: ServerType;
                 zodDbSchema: ServerType;
-                zodClientSchema: ServerType;
+                zodClientSchema: import("zod").ZodString;
                 jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
                     $schema?: string | undefined;
                     definitions?: {
@@ -72,7 +72,7 @@ declare const schemas: {
                 };
                 defaultValue: import("zod").TypeOf<ServerType>;
                 client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodTypeAny;
+                    zod: import("zod").ZodString;
                     serverType?: ServerType;
                 }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
@@ -82,27 +82,27 @@ declare const schemas: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
                         default: "CURRENT_TIMESTAMP";
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     }) => {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -127,7 +127,7 @@ declare const schemas: {
             };
             defaultValue: string;
             client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
+                zod: import("zod").ZodString;
                 serverType?: import("zod").ZodString;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                 default: "CURRENT_TIMESTAMP";
@@ -137,27 +137,27 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -181,7 +181,7 @@ declare const schemas: {
             };
             defaultValue: string;
             client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
+                zod: import("zod").ZodString;
                 serverType?: import("zod").ZodString;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                 default: "CURRENT_TIMESTAMP";
@@ -191,27 +191,27 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -235,7 +235,7 @@ declare const schemas: {
             };
             defaultValue: string;
             client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
+                zod: import("zod").ZodString;
                 serverType?: import("zod").ZodString;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                 default: "CURRENT_TIMESTAMP";
@@ -245,27 +245,27 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -281,24 +281,24 @@ declare const schemas: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
-                defaultValue: any;
+                defaultValue: string;
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                    toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
-                    defaultValue: any;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                    toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    defaultValue: string;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -320,7 +320,7 @@ declare const schemas: {
                 };
                 defaultValue: string;
                 client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodTypeAny;
+                    zod: import("zod").ZodString;
                     serverType?: never;
                 }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
@@ -330,27 +330,27 @@ declare const schemas: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
                         default: "CURRENT_TIMESTAMP";
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     }) => {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -366,7 +366,7 @@ declare const schemas: {
                     };
                     dbType: ServerType;
                     zodDbSchema: ServerType;
-                    zodClientSchema: ServerType;
+                    zodClientSchema: import("zod").ZodString;
                     jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
                         $schema?: string | undefined;
                         definitions?: {
@@ -375,7 +375,7 @@ declare const schemas: {
                     };
                     defaultValue: import("zod").TypeOf<ServerType>;
                     client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodTypeAny;
+                        zod: import("zod").ZodString;
                         serverType?: ServerType;
                     }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                         default: "CURRENT_TIMESTAMP";
@@ -385,27 +385,27 @@ declare const schemas: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue | (DefaultValue extends Date ? {
                             default: "CURRENT_TIMESTAMP";
                             defaultValue: Date;
                         } : never);
                         transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                         }) => {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
+                            zodDbSchema: any;
+                            zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                             transforms: {
                                 toClient: string;
                                 toDb: string;
@@ -417,115 +417,38 @@ declare const schemas: {
                 sql: {
                     type: "int";
                 };
-                dbType: import("zod").ZodNumber;
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodNumber;
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                    $schema?: string | undefined;
-                    definitions?: {
-                        [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                    } | undefined;
-                };
-                defaultValue: number;
-                client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodTypeAny;
-                    serverType?: never;
-                }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never) | undefined) => {
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodString;
+                jsonSchema: any;
+                defaultValue: string;
+                transform: (transforms: {
+                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                }) => {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
-                    defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never);
-                    transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                    }) => {
-                        sql: {
-                            type: "int";
-                        };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                        transforms: {
-                            toClient: string;
-                            toDb: string;
-                        };
-                    };
-                };
-                db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
-                    zod: import("zod").ZodNumber;
-                }) => ServerType) => {
-                    sql: {
-                        type: "int";
-                    };
-                    dbType: ServerType;
-                    zodDbSchema: ServerType;
-                    zodClientSchema: ServerType;
-                    jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                        $schema?: string | undefined;
-                        definitions?: {
-                            [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                        } | undefined;
-                    };
-                    defaultValue: import("zod").TypeOf<ServerType>;
-                    client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodTypeAny;
-                        serverType?: ServerType;
-                    }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never) | undefined) => {
-                        sql: {
-                            type: "int";
-                        };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never);
-                        transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                        }) => {
-                            sql: {
-                                type: "int";
-                            };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                            transforms: {
-                                toClient: string;
-                                toDb: string;
-                            };
-                        };
+                    defaultValue: string;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    transforms: {
+                        toClient: string;
+                        toDb: string;
                     };
                 };
             } | {
                 sql: {
                     type: "text";
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                 jsonSchema: any;
                 defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -534,12 +457,12 @@ declare const schemas: {
                 sql: {
                     type: "int";
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodBoolean;
                 jsonSchema: any;
                 defaultValue: boolean;
-                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => boolean;
-                toDb: (clientValue: boolean) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
+                toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -552,24 +475,24 @@ declare const schemas: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
-                    defaultValue: any;
+                    defaultValue: string;
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                        toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
                     }) => {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: import("zod").ZodString;
                         jsonSchema: any;
-                        defaultValue: any;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                        toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        defaultValue: string;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -592,7 +515,7 @@ declare const schemas: {
                     };
                     defaultValue: string;
                     client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodTypeAny;
+                        zod: import("zod").ZodString;
                         serverType?: never;
                     }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                         default: "CURRENT_TIMESTAMP";
@@ -602,27 +525,27 @@ declare const schemas: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue | (DefaultValue extends Date ? {
                             default: "CURRENT_TIMESTAMP";
                             defaultValue: Date;
                         } : never);
                         transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                         }) => {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
+                            zodDbSchema: any;
+                            zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                             transforms: {
                                 toClient: string;
                                 toDb: string;
@@ -638,7 +561,7 @@ declare const schemas: {
                         };
                         dbType: ServerType;
                         zodDbSchema: ServerType;
-                        zodClientSchema: ServerType;
+                        zodClientSchema: import("zod").ZodString;
                         jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
                             $schema?: string | undefined;
                             definitions?: {
@@ -647,7 +570,7 @@ declare const schemas: {
                         };
                         defaultValue: import("zod").TypeOf<ServerType>;
                         client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                            zod: import("zod").ZodTypeAny;
+                            zod: import("zod").ZodString;
                             serverType?: ServerType;
                         }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                             default: "CURRENT_TIMESTAMP";
@@ -657,27 +580,27 @@ declare const schemas: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
+                            zodDbSchema: any;
+                            zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue | (DefaultValue extends Date ? {
                                 default: "CURRENT_TIMESTAMP";
                                 defaultValue: Date;
                             } : never);
                             transform: (transforms: {
-                                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                                toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                             }) => {
                                 sql: {
                                     type: "varchar";
                                     length: number;
                                 };
-                                zodDbSchema: import("zod").ZodTypeAny;
-                                zodClientSchema: import("zod").ZodTypeAny;
+                                zodDbSchema: any;
+                                zodClientSchema: ClientType;
                                 jsonSchema: any;
                                 defaultValue: DefaultValue;
-                                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                                toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                                 transforms: {
                                     toClient: string;
                                     toDb: string;
@@ -690,103 +613,26 @@ declare const schemas: {
                     sql: {
                         type: "int";
                     };
-                    dbType: import("zod").ZodNumber;
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodNumber;
-                    jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                        $schema?: string | undefined;
-                        definitions?: {
-                            [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                        } | undefined;
-                    };
-                    defaultValue: number;
-                    client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodTypeAny;
-                        serverType?: never;
-                    }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never) | undefined) => {
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodString;
+                    jsonSchema: any;
+                    defaultValue: string;
+                    transform: (transforms: {
+                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    }) => {
                         sql: {
                             type: "int";
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: import("zod").ZodString;
                         jsonSchema: any;
-                        defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never);
-                        transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                        }) => {
-                            sql: {
-                                type: "int";
-                            };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                            transforms: {
-                                toClient: string;
-                                toDb: string;
-                            };
-                        };
-                    };
-                    db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
-                        zod: import("zod").ZodNumber;
-                    }) => ServerType) => {
-                        sql: {
-                            type: "int";
-                        };
-                        dbType: ServerType;
-                        zodDbSchema: ServerType;
-                        zodClientSchema: ServerType;
-                        jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                            $schema?: string | undefined;
-                            definitions?: {
-                                [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                            } | undefined;
-                        };
-                        defaultValue: import("zod").TypeOf<ServerType>;
-                        client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                            zod: import("zod").ZodTypeAny;
-                            serverType?: ServerType;
-                        }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never) | undefined) => {
-                            sql: {
-                                type: "int";
-                            };
-                            zodDbSchema: import("zod").ZodTypeAny;
-                            zodClientSchema: import("zod").ZodTypeAny;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                                default: "CURRENT_TIMESTAMP";
-                                defaultValue: Date;
-                            } : never);
-                            transform: (transforms: {
-                                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                            }) => {
-                                sql: {
-                                    type: "int";
-                                };
-                                zodDbSchema: import("zod").ZodTypeAny;
-                                zodClientSchema: import("zod").ZodTypeAny;
-                                jsonSchema: any;
-                                defaultValue: DefaultValue;
-                                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                                transforms: {
-                                    toClient: string;
-                                    toDb: string;
-                                };
-                            };
+                        defaultValue: string;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                        transforms: {
+                            toClient: string;
+                            toDb: string;
                         };
                     };
                 };
@@ -794,12 +640,12 @@ declare const schemas: {
                     sql: {
                         type: "text";
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                     jsonSchema: any;
                     defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -809,12 +655,12 @@ declare const schemas: {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: import("zod").ZodBoolean;
                     jsonSchema: any;
                     defaultValue: boolean;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => boolean;
-                    toDb: (clientValue: boolean) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
+                    toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -831,24 +677,24 @@ declare const schemas: {
                 type: "int";
                 pk: true;
             };
-            zodDbSchema: import("zod").ZodTypeAny;
-            zodClientSchema: import("zod").ZodTypeAny;
+            zodDbSchema: any;
+            zodClientSchema: import("zod").ZodString;
             jsonSchema: any;
-            defaultValue: any;
+            defaultValue: string;
             transform: (transforms: {
-                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                toDb: (clientValue: string) => import("zod").TypeOf<any>;
             }) => {
                 sql: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
-                defaultValue: any;
-                toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => any;
-                toDb: (clientValue: any) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                defaultValue: string;
+                toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                toDb: (clientValue: string) => import("zod").TypeOf<any>;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -871,7 +717,7 @@ declare const schemas: {
             };
             defaultValue: string;
             client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
+                zod: import("zod").ZodString;
                 serverType?: never;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                 default: "CURRENT_TIMESTAMP";
@@ -881,27 +727,27 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -917,7 +763,7 @@ declare const schemas: {
                 };
                 dbType: ServerType;
                 zodDbSchema: ServerType;
-                zodClientSchema: ServerType;
+                zodClientSchema: import("zod").ZodString;
                 jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
                     $schema?: string | undefined;
                     definitions?: {
@@ -926,7 +772,7 @@ declare const schemas: {
                 };
                 defaultValue: import("zod").TypeOf<ServerType>;
                 client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodTypeAny;
+                    zod: import("zod").ZodString;
                     serverType?: ServerType;
                 }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
                     default: "CURRENT_TIMESTAMP";
@@ -936,27 +782,27 @@ declare const schemas: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
+                    zodDbSchema: any;
+                    zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
                         default: "CURRENT_TIMESTAMP";
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                     }) => {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
+                        zodDbSchema: any;
+                        zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -969,103 +815,26 @@ declare const schemas: {
             sql: {
                 type: "int";
             };
-            dbType: import("zod").ZodNumber;
-            zodDbSchema: import("zod").ZodNumber;
-            zodClientSchema: import("zod").ZodNumber;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: number;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodTypeAny;
-                serverType?: never;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            zodDbSchema: any;
+            zodClientSchema: import("zod").ZodString;
+            jsonSchema: any;
+            defaultValue: string;
+            transform: (transforms: {
+                toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+            }) => {
                 sql: {
                     type: "int";
                 };
-                zodDbSchema: import("zod").ZodTypeAny;
-                zodClientSchema: import("zod").ZodTypeAny;
+                zodDbSchema: any;
+                zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
-                transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                }) => {
-                    sql: {
-                        type: "int";
-                    };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                    transforms: {
-                        toClient: string;
-                        toDb: string;
-                    };
-                };
-            };
-            db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
-                zod: import("zod").ZodNumber;
-            }) => ServerType) => {
-                sql: {
-                    type: "int";
-                };
-                dbType: ServerType;
-                zodDbSchema: ServerType;
-                zodClientSchema: ServerType;
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                    $schema?: string | undefined;
-                    definitions?: {
-                        [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                    } | undefined;
-                };
-                defaultValue: import("zod").TypeOf<ServerType>;
-                client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodTypeAny;
-                    serverType?: ServerType;
-                }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never) | undefined) => {
-                    sql: {
-                        type: "int";
-                    };
-                    zodDbSchema: import("zod").ZodTypeAny;
-                    zodClientSchema: import("zod").ZodTypeAny;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never);
-                    transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                    }) => {
-                        sql: {
-                            type: "int";
-                        };
-                        zodDbSchema: import("zod").ZodTypeAny;
-                        zodClientSchema: import("zod").ZodTypeAny;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<import("zod").ZodTypeAny>;
-                        transforms: {
-                            toClient: string;
-                            toDb: string;
-                        };
-                    };
+                defaultValue: string;
+                toClient: (dbValue: import("zod").TypeOf<any>) => string;
+                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                transforms: {
+                    toClient: string;
+                    toDb: string;
                 };
             };
         };
@@ -1073,12 +842,12 @@ declare const schemas: {
             sql: {
                 type: "text";
             };
-            zodDbSchema: import("zod").ZodTypeAny;
-            zodClientSchema: import("zod").ZodTypeAny;
+            zodDbSchema: any;
+            zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
             jsonSchema: any;
             defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+            toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
             transforms: {
                 toClient: string;
                 toDb: string;
@@ -1088,12 +857,12 @@ declare const schemas: {
             sql: {
                 type: "int";
             };
-            zodDbSchema: import("zod").ZodTypeAny;
-            zodClientSchema: import("zod").ZodTypeAny;
+            zodDbSchema: any;
+            zodClientSchema: import("zod").ZodBoolean;
             jsonSchema: any;
             defaultValue: boolean;
-            toClient: (dbValue: import("zod").TypeOf<import("zod").ZodTypeAny>) => boolean;
-            toDb: (clientValue: boolean) => import("zod").TypeOf<import("zod").ZodTypeAny>;
+            toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
+            toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
             transforms: {
                 toClient: string;
                 toDb: string;

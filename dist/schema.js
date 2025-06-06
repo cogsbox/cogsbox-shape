@@ -215,7 +215,7 @@ export const shape = {
                     sql: sqlConfig,
                     dbType: serverType,
                     zodDbSchema: serverType,
-                    zodClientSchema: serverType,
+                    zodClientSchema: inferredClientType,
                     jsonSchema: zodToJsonSchema(serverType),
                     defaultValue: inferDefaultFromZod(serverType),
                     client: createClient({
