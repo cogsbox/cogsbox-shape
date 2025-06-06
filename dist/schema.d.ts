@@ -75,21 +75,21 @@ export declare function createTransforms<TTransforms extends Record<string, Cust
             serverType?: never;
         }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never) | undefined) => {
             sql: T;
-            zodDbSchema: any;
+            zodDbSchema: SQLToZodType<T, false>;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never;
             }) => {
                 sql: T;
-                zodDbSchema: any;
+                zodDbSchema: SQLToZodType<T, false>;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -104,21 +104,21 @@ export declare function createTransforms<TTransforms extends Record<string, Cust
                 serverType?: ServerType;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never) | undefined) => {
                 sql: T;
-                zodDbSchema: any;
+                zodDbSchema: SQLToZodType<T, false> | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never;
                 }) => {
                     sql: T;
-                    zodDbSchema: any;
+                    zodDbSchema: SQLToZodType<T, false> | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -169,13 +169,13 @@ export declare const shape: {
                 default?: number;
                 type: "int";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodNumber;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: number) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => number;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -184,12 +184,12 @@ export declare const shape: {
                     default?: number;
                     type: "int";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodNumber;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: number) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => number;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -227,13 +227,13 @@ export declare const shape: {
                     default?: number;
                     type: "int";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodNumber | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: number) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => number;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -242,12 +242,12 @@ export declare const shape: {
                         default?: number;
                         type: "int";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodNumber | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: number) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => number;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -287,13 +287,13 @@ export declare const shape: {
                 field?: string;
                 type: "varchar";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodString;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -303,12 +303,12 @@ export declare const shape: {
                     field?: string;
                     type: "varchar";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -348,13 +348,13 @@ export declare const shape: {
                     field?: string;
                     type: "varchar";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -364,12 +364,12 @@ export declare const shape: {
                         field?: string;
                         type: "varchar";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodString | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -409,13 +409,13 @@ export declare const shape: {
                 field?: string;
                 type: "char";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodString;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -425,12 +425,12 @@ export declare const shape: {
                     field?: string;
                     type: "char";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -470,13 +470,13 @@ export declare const shape: {
                     field?: string;
                     type: "char";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -486,12 +486,12 @@ export declare const shape: {
                         field?: string;
                         type: "char";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodString | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -529,13 +529,13 @@ export declare const shape: {
                 field?: string;
                 type: "text";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodString;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -544,12 +544,12 @@ export declare const shape: {
                     field?: string;
                     type: "text";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -587,13 +587,13 @@ export declare const shape: {
                     field?: string;
                     type: "text";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -602,12 +602,12 @@ export declare const shape: {
                         field?: string;
                         type: "text";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodString | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -645,13 +645,13 @@ export declare const shape: {
                 field?: string;
                 type: "longtext";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodString;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -660,12 +660,12 @@ export declare const shape: {
                     field?: string;
                     type: "longtext";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -703,13 +703,13 @@ export declare const shape: {
                     field?: string;
                     type: "longtext";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodString | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -718,12 +718,12 @@ export declare const shape: {
                         field?: string;
                         type: "longtext";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodString | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: string) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -761,13 +761,13 @@ export declare const shape: {
                 default?: boolean;
                 type: "boolean";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodBoolean;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: boolean) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => boolean;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -776,12 +776,12 @@ export declare const shape: {
                     default?: boolean;
                     type: "boolean";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodBoolean;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: boolean) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => boolean;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -819,13 +819,13 @@ export declare const shape: {
                     default?: boolean;
                     type: "boolean";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodBoolean | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: boolean) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => boolean;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -834,12 +834,12 @@ export declare const shape: {
                         default?: boolean;
                         type: "boolean";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodBoolean | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: boolean) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => boolean;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -877,13 +877,13 @@ export declare const shape: {
                 field?: string;
                 type: "date";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodDate;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => Date;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -892,12 +892,12 @@ export declare const shape: {
                     field?: string;
                     type: "date";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodDate;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -935,13 +935,13 @@ export declare const shape: {
                     field?: string;
                     type: "date";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodDate | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -950,12 +950,12 @@ export declare const shape: {
                         field?: string;
                         type: "date";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodDate | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -993,13 +993,13 @@ export declare const shape: {
                 field?: string;
                 type: "datetime";
             };
-            zodDbSchema: any;
+            zodDbSchema: z.ZodDate;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => Date;
             }) => {
                 sql: {
                     nullable?: boolean;
@@ -1008,12 +1008,12 @@ export declare const shape: {
                     field?: string;
                     type: "datetime";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodDate;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -1051,13 +1051,13 @@ export declare const shape: {
                     field?: string;
                     type: "datetime";
                 };
-                zodDbSchema: any;
+                zodDbSchema: z.ZodDate | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                 }) => {
                     sql: {
                         nullable?: boolean;
@@ -1066,12 +1066,12 @@ export declare const shape: {
                         field?: string;
                         type: "datetime";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: z.ZodDate | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: Date) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => Date;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -1097,21 +1097,21 @@ export declare const shape: {
             serverType?: never;
         }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never) | undefined) => {
             sql: T;
-            zodDbSchema: any;
+            zodDbSchema: SQLToZodType<T, false>;
             zodClientSchema: ClientType;
             jsonSchema: any;
             defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
             transform: (transforms: {
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never;
             }) => {
                 sql: T;
-                zodDbSchema: any;
+                zodDbSchema: SQLToZodType<T, false>;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue;
-                toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never) => z.TypeOf<ClientType>;
+                toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : never : never : never;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -1137,21 +1137,21 @@ export declare const shape: {
                 serverType?: ServerType;
             }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never) | undefined) => {
                 sql: T;
-                zodDbSchema: any;
+                zodDbSchema: SQLToZodType<T, false> | ServerType;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? CurrentTimestampConfig : never);
                 transform: (transforms: {
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never;
                 }) => {
                     sql: T;
-                    zodDbSchema: any;
+                    zodDbSchema: SQLToZodType<T, false> | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: z.infer<any>) => z.TypeOf<ClientType>;
-                    toDb: (clientValue: z.TypeOf<ClientType>) => z.infer<any>;
+                    toClient: (dbValue: SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never) => z.TypeOf<ClientType>;
+                    toDb: (clientValue: z.TypeOf<ClientType>) => SQLToZodType<T, false> extends infer T_1 ? T_1 extends SQLToZodType<T, false> ? T_1 extends z.ZodTypeAny ? z.TypeOf<SQLToZodType<T, false>> : ServerType extends z.ZodTypeAny ? z.TypeOf<ServerType> : any : never : never;
                     transforms: {
                         toClient: string;
                         toDb: string;

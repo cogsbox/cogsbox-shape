@@ -27,7 +27,7 @@ declare const schemas: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -35,19 +35,19 @@ declare const schemas: {
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
                 }) => {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -82,7 +82,7 @@ declare const schemas: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -90,19 +90,19 @@ declare const schemas: {
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
                     }) => {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodNumber | ServerType;
                         zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -137,7 +137,7 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -145,19 +145,19 @@ declare const schemas: {
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -191,7 +191,7 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -199,19 +199,19 @@ declare const schemas: {
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -245,7 +245,7 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -253,19 +253,19 @@ declare const schemas: {
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -281,24 +281,24 @@ declare const schemas: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
                 defaultValue: string;
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => string;
+                    toDb: (clientValue: string) => number;
                 }) => {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
                     defaultValue: string;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => string;
+                    toDb: (clientValue: string) => number;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -330,7 +330,7 @@ declare const schemas: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -338,19 +338,19 @@ declare const schemas: {
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     }) => {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodString;
                         zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -385,7 +385,7 @@ declare const schemas: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodString | ServerType;
                         zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -393,19 +393,19 @@ declare const schemas: {
                             defaultValue: Date;
                         } : never);
                         transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                         }) => {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: any;
+                            zodDbSchema: import("zod").ZodString | ServerType;
                             zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                             transforms: {
                                 toClient: string;
                                 toDb: string;
@@ -417,23 +417,23 @@ declare const schemas: {
                 sql: {
                     type: "int";
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
                 defaultValue: string;
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => string;
+                    toDb: (clientValue: string) => number;
                 }) => {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
                     defaultValue: string;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                    toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => string;
+                    toDb: (clientValue: string) => number;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -443,12 +443,12 @@ declare const schemas: {
                 sql: {
                     type: "text";
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodString;
                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                 jsonSchema: any;
                 defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
+                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -457,12 +457,12 @@ declare const schemas: {
                 sql: {
                     type: "int";
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: import("zod").ZodBoolean;
                 jsonSchema: any;
                 defaultValue: boolean;
-                toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
-                toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
+                toClient: (dbValue: number) => boolean;
+                toDb: (clientValue: boolean) => number;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -475,24 +475,24 @@ declare const schemas: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
                     defaultValue: string;
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
                     }) => {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodNumber;
                         zodClientSchema: import("zod").ZodString;
                         jsonSchema: any;
                         defaultValue: string;
-                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -525,7 +525,7 @@ declare const schemas: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodString;
                         zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -533,19 +533,19 @@ declare const schemas: {
                             defaultValue: Date;
                         } : never);
                         transform: (transforms: {
-                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                         }) => {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: any;
+                            zodDbSchema: import("zod").ZodString;
                             zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue;
-                            toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                             transforms: {
                                 toClient: string;
                                 toDb: string;
@@ -580,7 +580,7 @@ declare const schemas: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: any;
+                            zodDbSchema: import("zod").ZodString | ServerType;
                             zodClientSchema: ClientType;
                             jsonSchema: any;
                             defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -588,19 +588,19 @@ declare const schemas: {
                                 defaultValue: Date;
                             } : never);
                             transform: (transforms: {
-                                toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                                toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                             }) => {
                                 sql: {
                                     type: "varchar";
                                     length: number;
                                 };
-                                zodDbSchema: any;
+                                zodDbSchema: import("zod").ZodString | ServerType;
                                 zodClientSchema: ClientType;
                                 jsonSchema: any;
                                 defaultValue: DefaultValue;
-                                toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                                toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                                 transforms: {
                                     toClient: string;
                                     toDb: string;
@@ -613,23 +613,23 @@ declare const schemas: {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: import("zod").ZodString;
                     jsonSchema: any;
                     defaultValue: string;
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
                     }) => {
                         sql: {
                             type: "int";
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodNumber;
                         zodClientSchema: import("zod").ZodString;
                         jsonSchema: any;
                         defaultValue: string;
-                        toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                        toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -640,12 +640,12 @@ declare const schemas: {
                     sql: {
                         type: "text";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                     jsonSchema: any;
                     defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -655,12 +655,12 @@ declare const schemas: {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodNumber;
                     zodClientSchema: import("zod").ZodBoolean;
                     jsonSchema: any;
                     defaultValue: boolean;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
-                    toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: number) => boolean;
+                    toDb: (clientValue: boolean) => number;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -677,24 +677,24 @@ declare const schemas: {
                 type: "int";
                 pk: true;
             };
-            zodDbSchema: any;
+            zodDbSchema: import("zod").ZodNumber;
             zodClientSchema: import("zod").ZodString;
             jsonSchema: any;
             defaultValue: string;
             transform: (transforms: {
-                toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                toClient: (dbValue: number) => string;
+                toDb: (clientValue: string) => number;
             }) => {
                 sql: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
                 defaultValue: string;
-                toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                toClient: (dbValue: number) => string;
+                toDb: (clientValue: string) => number;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -727,7 +727,7 @@ declare const schemas: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodString;
                 zodClientSchema: ClientType;
                 jsonSchema: any;
                 defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -735,19 +735,19 @@ declare const schemas: {
                     defaultValue: Date;
                 } : never);
                 transform: (transforms: {
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                 }) => {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue;
-                    toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     transforms: {
                         toClient: string;
                         toDb: string;
@@ -782,7 +782,7 @@ declare const schemas: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: any;
+                    zodDbSchema: import("zod").ZodString | ServerType;
                     zodClientSchema: ClientType;
                     jsonSchema: any;
                     defaultValue: DefaultValue | (DefaultValue extends Date ? {
@@ -790,19 +790,19 @@ declare const schemas: {
                         defaultValue: Date;
                     } : never);
                     transform: (transforms: {
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                     }) => {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: any;
+                        zodDbSchema: import("zod").ZodString | ServerType;
                         zodClientSchema: ClientType;
                         jsonSchema: any;
                         defaultValue: DefaultValue;
-                        toClient: (dbValue: import("zod").TypeOf<any>) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => import("zod").TypeOf<any>;
+                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
+                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
                         transforms: {
                             toClient: string;
                             toDb: string;
@@ -815,23 +815,23 @@ declare const schemas: {
             sql: {
                 type: "int";
             };
-            zodDbSchema: any;
+            zodDbSchema: import("zod").ZodNumber;
             zodClientSchema: import("zod").ZodString;
             jsonSchema: any;
             defaultValue: string;
             transform: (transforms: {
-                toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                toClient: (dbValue: number) => string;
+                toDb: (clientValue: string) => number;
             }) => {
                 sql: {
                     type: "int";
                 };
-                zodDbSchema: any;
+                zodDbSchema: import("zod").ZodNumber;
                 zodClientSchema: import("zod").ZodString;
                 jsonSchema: any;
                 defaultValue: string;
-                toClient: (dbValue: import("zod").TypeOf<any>) => string;
-                toDb: (clientValue: string) => import("zod").TypeOf<any>;
+                toClient: (dbValue: number) => string;
+                toDb: (clientValue: string) => number;
                 transforms: {
                     toClient: string;
                     toDb: string;
@@ -842,12 +842,12 @@ declare const schemas: {
             sql: {
                 type: "text";
             };
-            zodDbSchema: any;
+            zodDbSchema: import("zod").ZodString;
             zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
             jsonSchema: any;
             defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toClient: (dbValue: import("zod").TypeOf<any>) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => import("zod").TypeOf<any>;
+            toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
             transforms: {
                 toClient: string;
                 toDb: string;
@@ -857,12 +857,12 @@ declare const schemas: {
             sql: {
                 type: "int";
             };
-            zodDbSchema: any;
+            zodDbSchema: import("zod").ZodNumber;
             zodClientSchema: import("zod").ZodBoolean;
             jsonSchema: any;
             defaultValue: boolean;
-            toClient: (dbValue: import("zod").TypeOf<any>) => boolean;
-            toDb: (clientValue: boolean) => import("zod").TypeOf<any>;
+            toClient: (dbValue: number) => boolean;
+            toDb: (clientValue: boolean) => number;
             transforms: {
                 toClient: string;
                 toDb: string;

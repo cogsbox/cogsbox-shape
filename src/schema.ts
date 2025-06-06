@@ -128,6 +128,7 @@ type CustomTransform<DbType, ClientType> = {
 };
 
 // Internal type creation helper
+
 const createClient = <
   T extends SQLType,
   DbType, // Remove the extends constraint
@@ -184,7 +185,7 @@ const createClient = <
       finalDefaultValue = defaultValue.defaultValue as DefaultValue;
     }
 
-    const effectiveDbType = serverType || (inferredDbType as any);
+    const effectiveDbType = serverType || inferredDbType;
     const clientJsonSchema = zodToJsonSchema(clientType as any);
 
     return {
@@ -200,11 +201,19 @@ const createClient = <
 
       transform: (transforms: {
         toClient: (
-          dbValue: z.infer<typeof effectiveDbType>
+          dbValue: DbType extends z.ZodTypeAny
+            ? z.infer<DbType>
+            : ServerType extends z.ZodTypeAny
+              ? z.infer<ServerType>
+              : any
         ) => z.infer<ClientType>;
         toDb: (
           clientValue: z.infer<ClientType>
-        ) => z.infer<typeof effectiveDbType>;
+        ) => DbType extends z.ZodTypeAny
+          ? z.infer<DbType>
+          : ServerType extends z.ZodTypeAny
+            ? z.infer<ServerType>
+            : any;
       }) => ({
         sql: finalSqlConfig,
         zodDbSchema: effectiveDbType,
