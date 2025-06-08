@@ -1001,8 +1001,7 @@ type InferMixedSchema<T extends Schema<any>> = {
         ? z.ZodObject<InferMixedSchema<S>>
         : never;
 };
-type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] &
-  SchemaTypes<T>["db"];
+
 export function createSchema<T extends Schema<any>>(schema: T) {
   const serialized = createSerializableSchema(schema);
   const dbFields: Record<string, z.ZodTypeAny> = {};
@@ -1080,7 +1079,32 @@ export function createSchema<T extends Schema<any>>(schema: T) {
     },
   };
 }
+type DeepConversionType<ClientType, DbType> =
+  // Handle primitives first
+  ClientType extends Date | string | number | boolean | null | undefined
+    ? ClientType | DbType
+    : DbType extends Date | string | number | boolean | null | undefined
+      ? ClientType | DbType
+      : ClientType extends Array<infer ClientItem>
+        ? DbType extends Array<infer DbItem>
+          ? Array<DeepConversionType<ClientItem, DbItem>>
+          : ClientType | DbType
+        : ClientType extends object
+          ? DbType extends object
+            ? {
+                [K in keyof (ClientType & DbType)]: DeepConversionType<
+                  K extends keyof ClientType ? ClientType[K] : never,
+                  K extends keyof DbType ? DbType[K] : never
+                >;
+              }
+            : ClientType | DbType
+          : ClientType | DbType;
 
+// Replace your ConversionType with this:
+type ConversionType<T extends Schema<any>> = DeepConversionType<
+  SchemaTypes<T>["client"],
+  SchemaTypes<T>["db"]
+>;
 type OmitNever<T> = {
   [K in keyof T as T[K] extends never ? never : K]: T[K];
 };

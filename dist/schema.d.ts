@@ -1429,7 +1429,6 @@ type InferMixedSchema<T extends Schema<any>> = {
         schema: infer S extends Schema<any>;
     } ? z.ZodObject<InferMixedSchema<S>> : never;
 };
-type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] & SchemaTypes<T>["db"];
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;
     clientSchema: z.ZodObject<Prettify<OmitNever<InferSchema<T>>>>;
@@ -1441,6 +1440,10 @@ export declare function createSchema<T extends Schema<any>>(schema: T): {
         __schemaId: string;
     };
 };
+type DeepConversionType<ClientType, DbType> = ClientType extends Date | string | number | boolean | null | undefined ? ClientType | DbType : DbType extends Date | string | number | boolean | null | undefined ? ClientType | DbType : ClientType extends Array<infer ClientItem> ? DbType extends Array<infer DbItem> ? Array<DeepConversionType<ClientItem, DbItem>> : ClientType | DbType : ClientType extends object ? DbType extends object ? {
+    [K in keyof (ClientType & DbType)]: DeepConversionType<K extends keyof ClientType ? ClientType[K] : never, K extends keyof DbType ? DbType[K] : never>;
+} : ClientType | DbType : ClientType | DbType;
+type ConversionType<T extends Schema<any>> = DeepConversionType<SchemaTypes<T>["client"], SchemaTypes<T>["db"]>;
 type OmitNever<T> = {
     [K in keyof T as T[K] extends never ? never : K]: T[K];
 };
