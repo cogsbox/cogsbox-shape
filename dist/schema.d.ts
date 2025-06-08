@@ -1426,9 +1426,10 @@ export declare function createSchema<T extends Schema<any>>(schema: T): {
         __schemaId: string;
     };
 };
-type ConversionType<T extends Schema<any>> = {
-    [K in keyof (SchemaTypes<T>["client"] & SchemaTypes<T>["db"])]: (K extends keyof SchemaTypes<T>["client"] ? SchemaTypes<T>["client"][K] : never) | (K extends keyof SchemaTypes<T>["db"] ? SchemaTypes<T>["db"][K] : never);
-};
+type DeepConversionType<ClientType, DbType> = ClientType extends Array<infer ClientItem> ? DbType extends Array<infer DbItem> ? Array<DeepConversionType<ClientItem, DbItem>> : ClientType | DbType : ClientType extends object ? DbType extends object ? {
+    [K in keyof (ClientType & DbType)]: DeepConversionType<K extends keyof ClientType ? ClientType[K] : never, K extends keyof DbType ? DbType[K] : never>;
+} : ClientType | DbType : ClientType | DbType;
+type ConversionType<T extends Schema<any>> = DeepConversionType<SchemaTypes<T>["client"], SchemaTypes<T>["db"]>;
 type OmitNever<T> = {
     [K in keyof T as T[K] extends never ? never : K]: T[K];
 };

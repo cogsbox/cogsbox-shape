@@ -1026,13 +1026,29 @@ export function createSchema<T extends Schema<any>>(schema: T) {
   };
 }
 
-type ConversionType<T extends Schema<any>> = {
-  [K in keyof (SchemaTypes<T>["client"] & SchemaTypes<T>["db"])]:
-    | (K extends keyof SchemaTypes<T>["client"]
-        ? SchemaTypes<T>["client"][K]
-        : never)
-    | (K extends keyof SchemaTypes<T>["db"] ? SchemaTypes<T>["db"][K] : never);
-};
+// Helper type to recursively merge nested types
+type DeepConversionType<ClientType, DbType> =
+  ClientType extends Array<infer ClientItem>
+    ? DbType extends Array<infer DbItem>
+      ? Array<DeepConversionType<ClientItem, DbItem>>
+      : ClientType | DbType
+    : ClientType extends object
+      ? DbType extends object
+        ? {
+            [K in keyof (ClientType & DbType)]: DeepConversionType<
+              K extends keyof ClientType ? ClientType[K] : never,
+              K extends keyof DbType ? DbType[K] : never
+            >;
+          }
+        : ClientType | DbType
+      : ClientType | DbType;
+
+// Utility type to merge client and db schemas into a single type
+// where each property can accept values from either schema, including nested objects
+type ConversionType<T extends Schema<any>> = DeepConversionType<
+  SchemaTypes<T>["client"],
+  SchemaTypes<T>["db"]
+>;
 
 type OmitNever<T> = {
   [K in keyof T as T[K] extends never ? never : K]: T[K];
