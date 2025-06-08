@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import zodToJsonSchema, { type JsonSchema7Type } from "zod-to-json-schema";
-// First the SQL types
-// Add default to the base SQLType
+
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
   defaultValue: Date;
