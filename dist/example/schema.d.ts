@@ -54,9 +54,9 @@ declare const schemas: {
                     };
                 };
             };
-            db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
+            db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
                 zod: import("zod").ZodNumber;
-            }) => ServerType) => {
+            }) => ServerType)) => {
                 sql: {
                     type: "int";
                     pk: true;
@@ -357,9 +357,9 @@ declare const schemas: {
                         };
                     };
                 };
-                db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
+                db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
                     zod: import("zod").ZodString;
-                }) => ServerType) => {
+                }) => ServerType)) => {
                     sql: {
                         type: "varchar";
                         length: number;
@@ -552,9 +552,9 @@ declare const schemas: {
                             };
                         };
                     };
-                    db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
+                    db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
                         zod: import("zod").ZodString;
-                    }) => ServerType) => {
+                    }) => ServerType)) => {
                         sql: {
                             type: "varchar";
                             length: number;
@@ -754,9 +754,9 @@ declare const schemas: {
                     };
                 };
             };
-            db: <ServerType extends import("zod").ZodTypeAny>(assert: (tools: {
+            db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
                 zod: import("zod").ZodString;
-            }) => ServerType) => {
+            }) => ServerType)) => {
                 sql: {
                     type: "varchar";
                     length: number;

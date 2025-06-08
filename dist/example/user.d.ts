@@ -54,9 +54,9 @@ export declare const userSchema: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodNumber;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 type: "int";
                 pk: true;
@@ -357,9 +357,9 @@ export declare const userSchema: {
                     };
                 };
             };
-            db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+            db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
                 zod: z.ZodString;
-            }) => ServerType) => {
+            }) => ServerType)) => {
                 sql: {
                     type: "varchar";
                     length: number;
@@ -552,9 +552,9 @@ export declare const userSchema: {
                         };
                     };
                 };
-                db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+                db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
                     zod: z.ZodString;
-                }) => ServerType) => {
+                }) => ServerType)) => {
                     sql: {
                         type: "varchar";
                         length: number;
@@ -754,9 +754,9 @@ export declare const petSchema: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodString;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 type: "varchar";
                 length: number;

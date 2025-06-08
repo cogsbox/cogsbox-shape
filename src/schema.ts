@@ -425,9 +425,13 @@ export const shape = {
       ),
 
       db: <ServerType extends z.ZodTypeAny>(
-        assert: (tools: { zod: typeof inferredDbType }) => ServerType
+        assert:
+          | ((tools: { zod: typeof inferredDbType }) => ServerType)
+          | ServerType
       ) => {
-        const serverType = assert({ zod: inferredDbType });
+        const serverType = isFunction(assert)
+          ? assert({ zod: inferredDbType })
+          : assert;
 
         return {
           sql: sqlConfig,

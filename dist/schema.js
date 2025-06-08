@@ -210,7 +210,9 @@ export const shape = {
                 baseJsonSchema: jsonSchema,
             }),
             db: (assert) => {
-                const serverType = assert({ zod: inferredDbType });
+                const serverType = isFunction(assert)
+                    ? assert({ zod: inferredDbType })
+                    : assert;
                 return {
                     sql: sqlConfig,
                     dbType: serverType,

@@ -196,9 +196,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodNumber;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 pk?: true;
@@ -315,9 +315,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodString;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: string;
@@ -437,9 +437,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodString;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: string;
@@ -556,9 +556,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodString;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: string;
@@ -672,9 +672,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodString;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: string;
@@ -788,9 +788,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodBoolean;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 pk?: true;
@@ -904,9 +904,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodDate;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: Date;
@@ -1020,9 +1020,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ServerType | ((tools: {
             zod: z.ZodDate;
-        }) => ServerType) => {
+        }) => ServerType)) => {
             sql: {
                 nullable?: boolean;
                 default?: Date;
@@ -1118,9 +1118,9 @@ export declare const shape: {
                 };
             };
         };
-        db: <ServerType extends z.ZodTypeAny>(assert: (tools: {
+        db: <ServerType extends z.ZodTypeAny>(assert: ((tools: {
             zod: SQLToZodType<T, false>;
-        }) => ServerType) => {
+        }) => ServerType) | ServerType) => {
             sql: T;
             dbType: ServerType;
             zodDbSchema: ServerType;
