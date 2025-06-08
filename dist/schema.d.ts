@@ -1416,9 +1416,24 @@ export declare function reference<TTargetField extends SchemaField, TField exten
     type: "reference";
     to: () => TTargetField;
 };
+export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T): z.ZodObject<any>;
+type InferMixedSchema<T extends Schema<any>> = {
+    [K in keyof T as K extends "_tableName" | "__schemaId" ? never : K]: T[K] extends {
+        zodClientSchema: infer C;
+        zodDbSchema: infer D;
+    } ? C extends z.ZodTypeAny ? D extends z.ZodTypeAny ? z.ZodUnion<[C, D]> : C : D extends z.ZodTypeAny ? D : never : T[K] extends () => {
+        type: "hasMany";
+        schema: infer S extends Schema<any>;
+    } ? z.ZodArray<z.ZodObject<InferMixedSchema<S>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends Schema<any>;
+    } ? z.ZodObject<InferMixedSchema<S>> : never;
+};
+type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] & SchemaTypes<T>["db"];
 export declare function createSchema<T extends Schema<any>>(schema: T): {
     dbSchema: z.ZodObject<Prettify<InferDBSchema<T>>>;
     clientSchema: z.ZodObject<Prettify<OmitNever<InferSchema<T>>>>;
+    mixedSchema: z.ZodObject<Prettify<InferMixedSchema<T>>>;
     defaultValues: Prettify<OmitNever<ConfigWithOptionalProps<T>>>;
     initialValues: () => Prettify<OmitNever<ConfigWithOptionalProps<T>>>;
     serialized: Prettify<InferSerializedSchema<T>> & {
@@ -1426,7 +1441,6 @@ export declare function createSchema<T extends Schema<any>>(schema: T): {
         __schemaId: string;
     };
 };
-type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] & SchemaTypes<T>["db"];
 type OmitNever<T> = {
     [K in keyof T as T[K] extends never ? never : K]: T[K];
 };

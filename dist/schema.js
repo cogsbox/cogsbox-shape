@@ -391,6 +391,29 @@ function createSerializableSchema(schema) {
     }
     return serializableSchema;
 }
+export function createMixedValidationSchema(schema) {
+    const { clientSchema, dbSchema } = createSchema(schema);
+    // Create a schema that accepts either client or db format for each field
+    const mixedFields = {};
+    // Get all unique keys from both schemas
+    const allKeys = new Set([
+        ...Object.keys(clientSchema.shape),
+        ...Object.keys(dbSchema.shape),
+    ]);
+    for (const key of allKeys) {
+        const clientField = clientSchema.shape[key];
+        const dbField = dbSchema.shape[key];
+        if (clientField && dbField) {
+            // If field exists in both, allow either type
+            mixedFields[key] = z.union([clientField, dbField]);
+        }
+        else {
+            // If field only exists in one, use that type
+            mixedFields[key] = clientField || dbField;
+        }
+    }
+    return z.object(mixedFields);
+}
 export function createSchema(schema) {
     const serialized = createSerializableSchema(schema);
     const dbFields = {};
@@ -444,9 +467,11 @@ export function createSchema(schema) {
         defaultValues[key] =
             value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
     }
+    const mixedSchema = createMixedValidationSchema(schema);
     return {
         dbSchema: z.object(dbFields),
         clientSchema: z.object(clientFields),
+        mixedSchema: mixedSchema,
         defaultValues: defaultValues,
         initialValues: () => defaultValues,
         serialized: serialized,

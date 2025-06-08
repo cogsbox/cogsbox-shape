@@ -949,6 +949,61 @@ function createSerializableSchema<T extends Schema<any>>(
   return serializableSchema;
 }
 
+export function createMixedValidationSchema<T extends Schema<any>>(
+  schema: T
+): z.ZodObject<any> {
+  const { clientSchema, dbSchema } = createSchema(schema);
+
+  // Create a schema that accepts either client or db format for each field
+  const mixedFields: Record<string, z.ZodTypeAny> = {};
+
+  // Get all unique keys from both schemas
+  const allKeys = new Set([
+    ...Object.keys(clientSchema.shape),
+    ...Object.keys(dbSchema.shape),
+  ]);
+
+  for (const key of allKeys) {
+    const clientField =
+      clientSchema.shape[key as keyof typeof clientSchema.shape];
+    const dbField = dbSchema.shape[key];
+
+    if (clientField && dbField) {
+      // If field exists in both, allow either type
+      mixedFields[key] = z.union([clientField, dbField]);
+    } else {
+      // If field only exists in one, use that type
+      mixedFields[key] = clientField || dbField;
+    }
+  }
+
+  return z.object(mixedFields);
+}
+type InferMixedSchema<T extends Schema<any>> = {
+  [K in keyof T as K extends "_tableName" | "__schemaId"
+    ? never
+    : K]: T[K] extends { zodClientSchema: infer C; zodDbSchema: infer D }
+    ? C extends z.ZodTypeAny
+      ? D extends z.ZodTypeAny
+        ? z.ZodUnion<[C, D]>
+        : C
+      : D extends z.ZodTypeAny
+        ? D
+        : never
+    : T[K] extends () => {
+          type: "hasMany";
+          schema: infer S extends Schema<any>;
+        }
+      ? z.ZodArray<z.ZodObject<InferMixedSchema<S>>>
+      : T[K] extends () => {
+            type: "hasOne" | "belongsTo";
+            schema: infer S extends Schema<any>;
+          }
+        ? z.ZodObject<InferMixedSchema<S>>
+        : never;
+};
+type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] &
+  SchemaTypes<T>["db"];
 export function createSchema<T extends Schema<any>>(schema: T) {
   const serialized = createSerializableSchema(schema);
   const dbFields: Record<string, z.ZodTypeAny> = {};
@@ -1008,12 +1063,13 @@ export function createSchema<T extends Schema<any>>(schema: T) {
     defaultValues[key] =
       value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
   }
-
+  const mixedSchema = createMixedValidationSchema(schema);
   return {
     dbSchema: z.object(dbFields) as z.ZodObject<Prettify<InferDBSchema<T>>>,
     clientSchema: z.object(clientFields) as z.ZodObject<
       Prettify<OmitNever<InferSchema<T>>>
     >,
+    mixedSchema: mixedSchema as z.ZodObject<Prettify<InferMixedSchema<T>>>,
     defaultValues: defaultValues as Prettify<
       OmitNever<ConfigWithOptionalProps<T>>
     >,
@@ -1026,8 +1082,6 @@ export function createSchema<T extends Schema<any>>(schema: T) {
   };
 }
 
-type ConversionType<T extends Schema<any>> = SchemaTypes<T>["client"] &
-  SchemaTypes<T>["db"];
 type OmitNever<T> = {
   [K in keyof T as T[K] extends never ? never : K]: T[K];
 };
