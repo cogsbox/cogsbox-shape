@@ -1137,5 +1137,5 @@ export type SchemaTypes<T extends Schema<any>> = {
       ? C | D
       : never
   >;
-  join: ConversionType<T>;
+  join: Prettify<ConversionType<T>>;
 };

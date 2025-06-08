@@ -1464,6 +1464,6 @@ export type SchemaTypes<T extends Schema<any>> = {
         clientSchema: infer C;
         dbSchema: infer D;
     } ? C | D : never>;
-    join: ConversionType<T>;
+    join: Prettify<ConversionType<T>>;
 };
 export {};
