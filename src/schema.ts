@@ -1028,21 +1028,25 @@ export function createSchema<T extends Schema<any>>(schema: T) {
 
 // Helper type to recursively merge nested types
 type DeepConversionType<ClientType, DbType> =
-  ClientType extends Array<infer ClientItem>
-    ? DbType extends Array<infer DbItem>
-      ? Array<DeepConversionType<ClientItem, DbItem>>
-      : ClientType | DbType
-    : ClientType extends object
-      ? DbType extends object
-        ? {
-            [K in keyof (ClientType & DbType)]: DeepConversionType<
-              K extends keyof ClientType ? ClientType[K] : never,
-              K extends keyof DbType ? DbType[K] : never
-            >;
-          }
-        : ClientType | DbType
-      : ClientType | DbType;
-
+  // Handle primitives and built-in types first
+  ClientType extends Date | string | number | boolean | null | undefined
+    ? ClientType | DbType
+    : DbType extends Date | string | number | boolean | null | undefined
+      ? ClientType | DbType
+      : ClientType extends Array<infer ClientItem>
+        ? DbType extends Array<infer DbItem>
+          ? Array<DeepConversionType<ClientItem, DbItem>>
+          : ClientType | DbType
+        : ClientType extends object
+          ? DbType extends object
+            ? {
+                [K in keyof (ClientType & DbType)]: DeepConversionType<
+                  K extends keyof ClientType ? ClientType[K] : never,
+                  K extends keyof DbType ? DbType[K] : never
+                >;
+              }
+            : ClientType | DbType
+          : ClientType | DbType;
 // Utility type to merge client and db schemas into a single type
 // where each property can accept values from either schema, including nested objects
 type ConversionType<T extends Schema<any>> = DeepConversionType<
