@@ -1440,10 +1440,11 @@ export declare function createSchema<T extends Schema<any>>(schema: T): {
         __schemaId: string;
     };
 };
+type IsOptionalKey<T, K extends keyof T> = {} extends Pick<T, K> ? true : false;
 type DeepConversionType<ClientType, DbType> = ClientType extends Date | string | number | boolean | null | undefined ? ClientType | DbType : DbType extends Date | string | number | boolean | null | undefined ? ClientType | DbType : ClientType extends Array<infer ClientItem> ? DbType extends Array<infer DbItem> ? Array<DeepConversionType<ClientItem, DbItem>> : ClientType | DbType : ClientType extends object ? DbType extends object ? {
-    [K in keyof ClientType & keyof DbType as undefined extends ClientType[K] ? never : undefined extends DbType[K] ? never : K]: DeepConversionType<ClientType[K], DbType[K]>;
+    [K in keyof ClientType & keyof DbType as IsOptionalKey<ClientType, K> extends true ? never : IsOptionalKey<DbType, K> extends true ? never : K]: DeepConversionType<ClientType[K], DbType[K]>;
 } & {
-    [K in keyof (ClientType | DbType) as K extends keyof ClientType & keyof DbType ? undefined extends ClientType[K] ? K : undefined extends DbType[K] ? K : never : K]?: K extends keyof ClientType ? K extends keyof DbType ? DeepConversionType<NonNullable<ClientType[K]>, NonNullable<DbType[K]>> : ClientType[K] : K extends keyof DbType ? DbType[K] : never;
+    [K in keyof (ClientType | DbType) as K extends keyof ClientType & keyof DbType ? IsOptionalKey<ClientType, K> extends true ? K : IsOptionalKey<DbType, K> extends true ? K : never : K]?: K extends keyof ClientType ? K extends keyof DbType ? DeepConversionType<ClientType[K], DbType[K]> : ClientType[K] : K extends keyof DbType ? DbType[K] : never;
 } : ClientType | DbType : ClientType | DbType;
 type ConversionType<T extends Schema<any>> = DeepConversionType<SchemaTypes<T>["client"], SchemaTypes<T>["db"]>;
 type OmitNever<T> = {

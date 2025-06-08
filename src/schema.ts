@@ -1079,6 +1079,8 @@ export function createSchema<T extends Schema<any>>(schema: T) {
     },
   };
 }
+type IsOptionalKey<T, K extends keyof T> = {} extends Pick<T, K> ? true : false;
+
 type DeepConversionType<ClientType, DbType> =
   // Handle primitives first
   ClientType extends Date | string | number | boolean | null | undefined
@@ -1092,30 +1094,29 @@ type DeepConversionType<ClientType, DbType> =
         : ClientType extends object
           ? DbType extends object
             ? {
-                // Required properties: exist in both and are required in both
-                [K in keyof ClientType &
-                  keyof DbType as undefined extends ClientType[K]
+                // Required properties: required in BOTH schemas
+                [K in keyof ClientType & keyof DbType as IsOptionalKey<
+                  ClientType,
+                  K
+                > extends true
                   ? never
-                  : undefined extends DbType[K]
+                  : IsOptionalKey<DbType, K> extends true
                     ? never
                     : K]: DeepConversionType<ClientType[K], DbType[K]>;
               } & {
-                // Optional properties: optional in either schema or only exist in one
+                // Optional properties: optional in EITHER schema
                 [K in keyof (
                   | ClientType
                   | DbType
                 ) as K extends keyof ClientType & keyof DbType
-                  ? undefined extends ClientType[K]
+                  ? IsOptionalKey<ClientType, K> extends true
                     ? K
-                    : undefined extends DbType[K]
+                    : IsOptionalKey<DbType, K> extends true
                       ? K
                       : never
                   : K]?: K extends keyof ClientType
                   ? K extends keyof DbType
-                    ? DeepConversionType<
-                        NonNullable<ClientType[K]>,
-                        NonNullable<DbType[K]>
-                      >
+                    ? DeepConversionType<ClientType[K], DbType[K]>
                     : ClientType[K]
                   : K extends keyof DbType
                     ? DbType[K]
