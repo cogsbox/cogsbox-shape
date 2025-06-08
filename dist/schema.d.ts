@@ -1416,7 +1416,7 @@ export declare function reference<TTargetField extends SchemaField, TField exten
     type: "reference";
     to: () => TTargetField;
 };
-export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T): z.ZodObject<any>;
+export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T, clientSchema?: z.ZodObject<any>, dbSchema?: z.ZodObject<any>): z.ZodObject<any>;
 type InferMixedSchema<T extends Schema<any>> = {
     [K in keyof T as K extends "_tableName" | "__schemaId" ? never : K]: T[K] extends {
         zodClientSchema: infer C;

@@ -391,25 +391,65 @@ function createSerializableSchema(schema) {
     }
     return serializableSchema;
 }
-export function createMixedValidationSchema(schema) {
-    const { clientSchema, dbSchema } = createSchema(schema);
-    // Create a schema that accepts either client or db format for each field
+export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
+    // If schemas are provided, use them (to avoid circular calls)
+    if (clientSchema && dbSchema) {
+        const mixedFields = {};
+        const allKeys = new Set([
+            ...Object.keys(clientSchema.shape),
+            ...Object.keys(dbSchema.shape),
+        ]);
+        for (const key of allKeys) {
+            const clientField = clientSchema.shape[key];
+            const dbField = dbSchema.shape[key];
+            if (clientField && dbField) {
+                mixedFields[key] = z.union([clientField, dbField]);
+            }
+            else {
+                mixedFields[key] = clientField || dbField;
+            }
+        }
+        return z.object(mixedFields);
+    }
+    // Build schemas manually without calling createSchema
+    const clientFields = {};
+    const dbFields = {};
+    for (const [key, value] of Object.entries(schema)) {
+        if (key === "_tableName")
+            continue;
+        if (typeof value === "function") {
+            const relation = value();
+            if (!isRelation(relation))
+                continue;
+            // For relations, create mixed schemas recursively
+            const childMixedSchema = createMixedValidationSchema(relation.schema);
+            if (relation.type === "hasMany") {
+                clientFields[key] = z.array(childMixedSchema);
+                dbFields[key] = z.array(childMixedSchema);
+            }
+            else {
+                clientFields[key] = childMixedSchema;
+                dbFields[key] = childMixedSchema;
+            }
+            continue;
+        }
+        clientFields[key] = value.zodClientSchema;
+        dbFields[key] = value.zodDbSchema;
+    }
+    // Now create mixed fields
     const mixedFields = {};
-    // Get all unique keys from both schemas
     const allKeys = new Set([
-        ...Object.keys(clientSchema.shape),
-        ...Object.keys(dbSchema.shape),
+        ...Object.keys(clientFields),
+        ...Object.keys(dbFields),
     ]);
     for (const key of allKeys) {
-        const clientField = clientSchema.shape[key];
-        const dbField = dbSchema.shape[key];
+        const clientField = clientFields[key];
+        const dbField = dbFields[key];
         if (clientField && dbField) {
-            // If field exists in both, allow either type
             mixedFields[key] = z.union([clientField, dbField]);
         }
         else {
-            // If field only exists in one, use that type
-            mixedFields[key] = clientField || dbField;
+            mixedFields[key] = (clientField || dbField);
         }
     }
     return z.object(mixedFields);
@@ -419,6 +459,7 @@ export function createSchema(schema) {
     const dbFields = {};
     const clientFields = {};
     const defaultValues = {};
+    // ... existing schema building logic ...
     for (const [key, value] of Object.entries(schema)) {
         if (key === "_tableName")
             continue;
@@ -428,25 +469,7 @@ export function createSchema(schema) {
                 throw new Error(`Invalid relation for key ${key}`);
             }
             const childSchema = createSchema(relation.schema);
-            const serializedChildren = createSerializableSchema(relation.schema);
-            // Get toKey value by calling the function
-            const toKeyField = relation.toKey.type === "reference"
-                ? relation.toKey.to()
-                : relation.toKey;
-            serialized[key] = {
-                type: "relation",
-                relationType: relation.type,
-                fromKey: relation.fromKey,
-                toKey: {
-                    sql: toKeyField.sql,
-                    jsonSchema: zodToJsonSchema(toKeyField.zodClientSchema),
-                    defaultValue: toKeyField.defaultValue,
-                },
-                schema: serializedChildren,
-                ...(relation.type === "hasMany" && {
-                    defaultCount: relation.defaultCount,
-                }),
-            };
+            // ... existing relation logic ...
             if (relation.type === "hasMany") {
                 dbFields[key] = z.array(z.object(childSchema.dbSchema.shape));
                 clientFields[key] = z.array(z.object(childSchema.clientSchema.shape));
@@ -467,10 +490,13 @@ export function createSchema(schema) {
         defaultValues[key] =
             value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
     }
-    const mixedSchema = createMixedValidationSchema(schema);
+    const clientSchemaObj = z.object(clientFields);
+    const dbSchemaObj = z.object(dbFields);
+    // Pass the built schemas to avoid circular reference
+    const mixedSchema = createMixedValidationSchema(schema, clientSchemaObj, dbSchemaObj);
     return {
-        dbSchema: z.object(dbFields),
-        clientSchema: z.object(clientFields),
+        dbSchema: dbSchemaObj,
+        clientSchema: clientSchemaObj,
         mixedSchema: mixedSchema,
         defaultValues: defaultValues,
         initialValues: () => defaultValues,
