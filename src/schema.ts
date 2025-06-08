@@ -1039,25 +1039,9 @@ type DeepConversionType<ClientType, DbType> =
         : ClientType extends object
           ? DbType extends object
             ? {
-                // Required properties: exist in both and are required in both
-                [K in keyof ClientType &
-                  keyof DbType as undefined extends ClientType[K]
-                  ? never
-                  : undefined extends DbType[K]
-                    ? never
-                    : K]: DeepConversionType<ClientType[K], DbType[K]>;
-              } & {
-                // Optional properties: optional in either schema or only exist in one
-                [K in keyof (
-                  | ClientType
-                  | DbType
-                ) as K extends keyof ClientType & keyof DbType
-                  ? undefined extends ClientType[K]
-                    ? K
-                    : undefined extends DbType[K]
-                      ? K
-                      : never
-                  : K]?: K extends keyof ClientType
+                [K in
+                  | keyof ClientType
+                  | keyof DbType]: K extends keyof ClientType
                   ? K extends keyof DbType
                     ? DeepConversionType<ClientType[K], DbType[K]>
                     : ClientType[K]
