@@ -1426,6 +1426,9 @@ export declare function createSchema<T extends Schema<any>>(schema: T): {
         __schemaId: string;
     };
 };
+type ConversionType<T extends Schema<any>> = {
+    [K in keyof (SchemaTypes<T>["client"] & SchemaTypes<T>["db"])]: (K extends keyof SchemaTypes<T>["client"] ? SchemaTypes<T>["client"][K] : never) | (K extends keyof SchemaTypes<T>["db"] ? SchemaTypes<T>["db"][K] : never);
+};
 type OmitNever<T> = {
     [K in keyof T as T[K] extends never ? never : K]: T[K];
 };
@@ -1446,5 +1449,6 @@ export type SchemaTypes<T extends Schema<any>> = {
         clientSchema: infer C;
         dbSchema: infer D;
     } ? C | D : never>;
+    join: ConversionType<T>;
 };
 export {};
