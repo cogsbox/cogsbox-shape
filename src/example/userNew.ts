@@ -1,19 +1,20 @@
 import { z } from "zod";
 
-import { belongsTo, createSchema, hasMany, shape } from "../schema";
+import { createSchema, hasMany, shape } from "../schemaNew";
 
 export const userSchema = {
   _tableName: "users",
-  id: shape.sql({ type: "int", pk: true }),
+  id: shape.sql({ type: "int", pk: true }).new(() => z.string().uuid()),
+
   firstname: shape
     .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.min(1)),
+    .db(({ sql }) => sql.min(1)),
   surname: shape
     .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.min(1)),
+    .db(({ sql }) => sql.min(1)),
   email: shape
     .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.email()),
+    .db(({ sql }) => sql.email()),
   pets: hasMany({
     fromKey: "id",
     toKey: () => petSchema.userId,
@@ -24,20 +25,23 @@ export const userSchema = {
 
 export const petSchema = {
   _tableName: "pets",
-  id: shape
-    .sql2({ type: "int", pk: true })
-    .new(({ sql }) => z.string())
-    .client(({ sql }) => z.string()),
+  id: shape.sql({ type: "int", pk: true }).new(({ zod }) => z.string()),
   name: shape.sql({ type: "varchar", length: 255 }),
   userId: shape.sql({ type: "int" }).client(z.string()),
   fluffynessScale: shape
     .sql({ type: "text" })
-    .client(({ zod }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
+    .db((s) => z.number())
+    .new(({ db }) =>
+      //db: z.ZodString | z.ZodNumber
+      z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"]))
+    )
+    .client(({ sql, db }) =>
+      z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"]))
+    )
     .transform({
       toClient: (value) => value.split(",").filter(Boolean) as any,
       toDb: (value) => value.join(","),
     }),
-
   favourite: shape
     .sql({ type: "int" })
     .client(({ zod }) => z.boolean())
