@@ -495,7 +495,7 @@ export const shape = {
     };
   },
 };
-// --- THE REST OF THE FILE IS UNCHANGED ---
+
 export function hasMany<T extends Schema<any>>(config: {
   fromKey: string;
   toKey: () => T[keyof T];

@@ -26,8 +26,10 @@ export const petSchema = {
   _tableName: "pets",
   id: shape
     .sql2({ type: "int", pk: true })
-    .new(({ sql }) => z.string())
-    .client(({ sql }) => z.string()),
+    .newState(z.string(), () => "uuidexample")
+    .client(({ sql, newState }) => z.union([sql, newState]))
+    .validation(z.string()),
+
   name: shape.sql({ type: "varchar", length: 255 }),
   userId: shape.sql({ type: "int" }).client(z.string()),
   fluffynessScale: shape

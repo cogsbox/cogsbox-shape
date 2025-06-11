@@ -452,7 +452,6 @@ export const shape = {
     };
   },
   sql2: <T extends SQLType>(sqlConfig: T) => {
-    // 1. We derive the base SQL Zod type. This is correct.
     const sqlZodType = (() => {
       let baseType: z.ZodTypeAny;
       if (sqlConfig.pk) {
@@ -479,145 +478,203 @@ export const shape = {
       }
       return baseType;
     })() as SQLToZodType<T, false>;
+
     type TSql =
       SQLToZodType<T, false> extends z.ZodTypeAny
         ? SQLToZodType<T, false>
         : never;
-    // 2. THIS IS THE FIX. We explicitly provide the generic arguments to the first call.
-    // This "locks in" the specific types so they don't get lost.
-    return createBuilder<"sql", T, TSql, TSql, TSql, TSql>({
+
+    // Initialize with sql type for all schemas
+    return createBuilder<"sql", T, TSql, TSql, undefined, TSql, TSql>({
       stage: "sql",
       sqlConfig: sqlConfig,
       sqlZod: sqlZodType,
-      dbZod: sqlZodType,
       newZod: sqlZodType,
+      newDefault: undefined,
       clientZod: sqlZodType,
+      validationZod: sqlZodType,
     });
   },
 };
 
-// This conditional type NO LONGER has the `extends z.ZodTypeAny` constraint.
 type Builder<
-  TStage extends "sql" | "db" | "new" | "client",
+  TStage extends "sql" | "new" | "client" | "validation",
   T extends SQLType,
   TSql extends z.ZodTypeAny,
-  TDb extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
+  TNewDefault,
   TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
 > = {
   sql: T;
-  zodDbSchema: TDb;
+  zodSqlSchema: TSql;
   zodNewSchema: TNew;
+  newDefault: TNewDefault;
   zodClientSchema: TClient;
+  zodValidationSchema: TValidation;
   defaultValue: any;
 } & (TStage extends "sql"
   ? {
-      db: <TDbNext extends z.ZodTypeAny>(
-        assert: ((tools: { sql: TSql }) => TDbNext) | TDbNext
-      ) => Builder<"db", T, TSql, TDbNext, TDbNext, TDbNext>;
-      new: <TNewNext extends z.ZodTypeAny>(
-        assert: ((tools: { sql: TSql; db: TDb }) => TNewNext) | TNewNext
-      ) => Builder<"new", T, TSql, TDb, TNewNext, z.ZodUnion<[TNewNext, TDb]>>;
+      newState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+        schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+        defaultValue: () => TDefaultNext
+      ) => Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>;
       client: <TClientNext extends z.ZodTypeAny>(
+        assert: ((tools: { sql: TSql; new: TNew }) => TClientNext) | TClientNext
+      ) => Builder<"client", T, TSql, TNew, TNewDefault, TClientNext, TSql>;
+      validation: <TValidationNext extends z.ZodTypeAny>(
         assert:
-          | ((tools: { sql: TSql; db: TDb; new: TNew }) => TClientNext)
-          | TClientNext
-      ) => Builder<"client", T, TSql, TDb, TNew, TClientNext>;
+          | ((tools: {
+              sql: TSql;
+              new: TNew;
+              client: TClient;
+            }) => TValidationNext)
+          | TValidationNext
+      ) => Builder<
+        "validation",
+        T,
+        TSql,
+        TNew,
+        TNewDefault,
+        TClient,
+        TValidationNext
+      >;
     }
-  : TStage extends "db"
+  : TStage extends "new"
     ? {
-        new: <TNewNext extends z.ZodTypeAny>(
-          assert: ((tools: { sql: TSql; db: TDb }) => TNewNext) | TNewNext
-        ) => Builder<
-          "new",
-          T,
-          TSql,
-          TDb,
-          TNewNext,
-          z.ZodUnion<[TNewNext, TDb]>
-        >;
         client: <TClientNext extends z.ZodTypeAny>(
           assert:
-            | ((tools: { sql: TSql; db: TDb; new: TNew }) => TClientNext)
+            | ((tools: { sql: TSql; newState: TNew }) => TClientNext)
             | TClientNext
-        ) => Builder<"client", T, TSql, TDb, TNew, TClientNext>;
+        ) => Builder<"client", T, TSql, TNew, TNewDefault, TClientNext, TSql>;
+        validation: <TValidationNext extends z.ZodTypeAny>(
+          assert:
+            | ((tools: {
+                sql: TSql;
+                newState: TNew;
+                client: TClient;
+              }) => TValidationNext)
+            | TValidationNext
+        ) => Builder<
+          "validation",
+          T,
+          TSql,
+          TNew,
+          TNewDefault,
+          TClient,
+          TValidationNext
+        >;
       }
-    : TStage extends "new"
+    : TStage extends "client"
       ? {
-          // THIS IS THE FIX: When at "new" stage, client should preserve the union
-          client: <TClientNext extends z.ZodTypeAny>(
+          validation: <TValidationNext extends z.ZodTypeAny>(
             assert:
-              | ((tools: { sql: TSql; db: TDb; new: TNew }) => TClientNext)
-              | TClientNext
-          ) => Builder<"client", T, TSql, TDb, TNew, TClient>; // Keep TClient (the union) instead of TClientNext
+              | ((tools: {
+                  sql: TSql;
+                  newState: TNew;
+                  client: TClient;
+                }) => TValidationNext)
+              | TValidationNext
+          ) => Builder<
+            "validation",
+            T,
+            TSql,
+            TNew,
+            TNewDefault,
+            TClient,
+            TValidationNext
+          >;
         }
       : {});
 
-// The implementation signature also has the constraints removed.
 function createBuilder<
-  TStage extends "sql" | "db" | "new" | "client",
+  TStage extends "sql" | "new" | "client" | "validation",
   T extends SQLType,
   TSql extends z.ZodTypeAny,
-  TDb extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
+  TNewDefault,
   TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
 >(config: {
   stage: TStage;
   sqlConfig: T;
   sqlZod: TSql;
-  dbZod: TDb;
   newZod: TNew;
+  newDefault: TNewDefault;
   clientZod: TClient;
-}): Builder<TStage, T, TSql, TDb, TNew, TClient> {
+  validationZod: TValidation;
+}): Builder<TStage, T, TSql, TNew, TNewDefault, TClient, TValidation> {
   const builderObject = {
     sql: config.sqlConfig,
-    zodDbSchema: config.dbZod,
+    zodSqlSchema: config.sqlZod,
     zodNewSchema: config.newZod,
+    newDefault: config.newDefault,
     zodClientSchema: config.clientZod,
-    defaultValue: inferDefaultFromZod(
-      config.clientZod as z.ZodTypeAny,
-      config.sqlConfig
-    ),
+    zodValidationSchema: config.validationZod,
+    defaultValue:
+      config.newDefault ||
+      inferDefaultFromZod(config.clientZod as z.ZodTypeAny, config.sqlConfig),
 
-    db: <TDbNext extends z.ZodTypeAny>(
-      assert: ((tools: { sql: TSql }) => TDbNext) | TDbNext
+    newState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+      defaultValue: () => TDefaultNext
     ) => {
-      const newDbSchema = isFunction(assert)
-        ? assert({ sql: config.sqlZod })
-        : assert;
-      return createBuilder({
-        ...config,
-        stage: "db",
-        dbZod: newDbSchema,
-        newZod: newDbSchema,
-        clientZod: newDbSchema,
-      });
-    },
-    new: <TNewNext extends z.ZodTypeAny>(
-      assert: ((tools: { sql: TSql; db: TDb }) => TNewNext) | TNewNext
-    ) => {
-      const newNewSchema = isFunction(assert)
-        ? assert({ sql: config.sqlZod, db: config.dbZod })
-        : assert;
+      const newSchema = isFunction(schema)
+        ? schema({ sql: config.sqlZod })
+        : schema;
+
       return createBuilder({
         ...config,
         stage: "new",
-        newZod: newNewSchema,
-        clientZod: z.union([newNewSchema as any, config.dbZod as any]),
+        newZod: newSchema,
+        newDefault: defaultValue(),
+        // When new is defined, client defaults to union of sql and new
+        clientZod: z.union([config.sqlZod as any, newSchema as any]),
+        // Validation also defaults to union
+        validationZod: z.union([config.sqlZod as any, newSchema as any]),
       });
     },
+
     client: <TClientNext extends z.ZodTypeAny>(
       assert:
-        | ((tools: { sql: TSql; db: TDb; new: TNew }) => TClientNext)
+        | ((tools: { sql: TSql; newState: TNew }) => TClientNext)
         | TClientNext
     ) => {
-      const newClientSchema = isFunction(assert)
-        ? assert({ sql: config.sqlZod, db: config.dbZod, new: config.newZod })
+      const clientSchema = isFunction(assert)
+        ? assert({ sql: config.sqlZod, newState: config.newZod })
         : assert;
+
       return createBuilder({
         ...config,
         stage: "client",
-        clientZod: newClientSchema,
+        clientZod: clientSchema,
+        // If we haven't set validation yet, default it to match client
+        validationZod:
+          config.stage === "sql" ? clientSchema : config.validationZod,
+      });
+    },
+
+    validation: <TValidationNext extends z.ZodTypeAny>(
+      assert:
+        | ((tools: {
+            sql: TSql;
+            new: TNew;
+            client: TClient;
+          }) => TValidationNext)
+        | TValidationNext
+    ) => {
+      const validationSchema = isFunction(assert)
+        ? assert({
+            sql: config.sqlZod,
+            new: config.newZod,
+            client: config.clientZod,
+          })
+        : assert;
+
+      return createBuilder({
+        ...config,
+        stage: "validation",
+        validationZod: validationSchema,
       });
     },
   };
