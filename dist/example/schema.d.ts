@@ -158,13 +158,13 @@ declare const schemas: {
                     zodSqlSchema: import("zod").ZodNumber;
                     zodNewSchema: TNewNext;
                     initialValue: TDefaultNext;
-                    zodClientSchema: import("zod").ZodNumber;
-                    zodValidationSchema: import("zod").ZodNumber;
+                    zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                 };
                 validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
                     sql: import("zod").ZodNumber;
                     initialState: TNewNext;
-                    client: import("zod").ZodNumber;
+                    client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                 }) => TValidationNext)) => {
                     config: {
                         sql: {
@@ -174,12 +174,12 @@ declare const schemas: {
                         zodSqlSchema: import("zod").ZodNumber;
                         zodNewSchema: TNewNext;
                         initialValue: TDefaultNext;
-                        zodClientSchema: import("zod").ZodNumber;
+                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                         zodValidationSchema: TValidationNext;
                     };
                     transform: (transforms: {
-                        toClient: (dbValue: number) => number;
-                        toDb: (clientValue: number) => number;
+                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                     }) => {
                         config: {
                             sql: {
@@ -189,12 +189,12 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodNumber;
                             zodNewSchema: TNewNext;
                             initialValue: TDefaultNext;
-                            zodClientSchema: import("zod").ZodNumber;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                             zodValidationSchema: TValidationNext;
                         } & {
                             transforms: {
-                                toClient: (dbValue: number) => number;
-                                toDb: (clientValue: number) => number;
+                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                             };
                         };
                     };
@@ -275,8 +275,8 @@ declare const schemas: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: number) => number;
-                    toDb: (clientValue: number) => number;
+                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                 }) => {
                     config: {
                         sql: {
@@ -286,12 +286,12 @@ declare const schemas: {
                         zodSqlSchema: import("zod").ZodNumber;
                         zodNewSchema: TNewNext;
                         initialValue: TDefaultNext;
-                        zodClientSchema: import("zod").ZodNumber;
-                        zodValidationSchema: import("zod").ZodNumber;
+                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: number) => number;
-                            toDb: (clientValue: number) => number;
+                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                         };
                     };
                 };
@@ -576,13 +576,13 @@ declare const schemas: {
                         zodSqlSchema: import("zod").ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: TDefaultNext;
-                        zodClientSchema: import("zod").ZodString;
-                        zodValidationSchema: import("zod").ZodString;
+                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                     };
                     validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
                         sql: import("zod").ZodString;
                         initialState: TNewNext;
-                        client: import("zod").ZodString;
+                        client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                     }) => TValidationNext)) => {
                         config: {
                             sql: {
@@ -592,12 +592,12 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodString;
                             zodNewSchema: TNewNext;
                             initialValue: TDefaultNext;
-                            zodClientSchema: import("zod").ZodString;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             zodValidationSchema: TValidationNext;
                         };
                         transform: (transforms: {
-                            toClient: (dbValue: string) => string;
-                            toDb: (clientValue: string) => string;
+                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                         }) => {
                             config: {
                                 sql: {
@@ -607,12 +607,12 @@ declare const schemas: {
                                 zodSqlSchema: import("zod").ZodString;
                                 zodNewSchema: TNewNext;
                                 initialValue: TDefaultNext;
-                                zodClientSchema: import("zod").ZodString;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                 zodValidationSchema: TValidationNext;
                             } & {
                                 transforms: {
-                                    toClient: (dbValue: string) => string;
-                                    toDb: (clientValue: string) => string;
+                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                 };
                             };
                         };
@@ -693,8 +693,8 @@ declare const schemas: {
                         };
                     };
                     transform: (transforms: {
-                        toClient: (dbValue: string) => string;
-                        toDb: (clientValue: string) => string;
+                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                     }) => {
                         config: {
                             sql: {
@@ -704,12 +704,12 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodString;
                             zodNewSchema: TNewNext;
                             initialValue: TDefaultNext;
-                            zodClientSchema: import("zod").ZodString;
-                            zodValidationSchema: import("zod").ZodString;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         } & {
                             transforms: {
-                                toClient: (dbValue: string) => string;
-                                toDb: (clientValue: string) => string;
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             };
                         };
                     };
@@ -991,13 +991,13 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodString;
                             zodNewSchema: TNewNext;
                             initialValue: TDefaultNext;
-                            zodClientSchema: import("zod").ZodString;
-                            zodValidationSchema: import("zod").ZodString;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         };
                         validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
                             sql: import("zod").ZodString;
                             initialState: TNewNext;
-                            client: import("zod").ZodString;
+                            client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         }) => TValidationNext)) => {
                             config: {
                                 sql: {
@@ -1007,12 +1007,12 @@ declare const schemas: {
                                 zodSqlSchema: import("zod").ZodString;
                                 zodNewSchema: TNewNext;
                                 initialValue: TDefaultNext;
-                                zodClientSchema: import("zod").ZodString;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                 zodValidationSchema: TValidationNext;
                             };
                             transform: (transforms: {
-                                toClient: (dbValue: string) => string;
-                                toDb: (clientValue: string) => string;
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             }) => {
                                 config: {
                                     sql: {
@@ -1022,12 +1022,12 @@ declare const schemas: {
                                     zodSqlSchema: import("zod").ZodString;
                                     zodNewSchema: TNewNext;
                                     initialValue: TDefaultNext;
-                                    zodClientSchema: import("zod").ZodString;
+                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                     zodValidationSchema: TValidationNext;
                                 } & {
                                     transforms: {
-                                        toClient: (dbValue: string) => string;
-                                        toDb: (clientValue: string) => string;
+                                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                     };
                                 };
                             };
@@ -1108,8 +1108,8 @@ declare const schemas: {
                             };
                         };
                         transform: (transforms: {
-                            toClient: (dbValue: string) => string;
-                            toDb: (clientValue: string) => string;
+                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                         }) => {
                             config: {
                                 sql: {
@@ -1119,12 +1119,12 @@ declare const schemas: {
                                 zodSqlSchema: import("zod").ZodString;
                                 zodNewSchema: TNewNext;
                                 initialValue: TDefaultNext;
-                                zodClientSchema: import("zod").ZodString;
-                                zodValidationSchema: import("zod").ZodString;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             } & {
                                 transforms: {
-                                    toClient: (dbValue: string) => string;
-                                    toDb: (clientValue: string) => string;
+                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                 };
                             };
                         };
@@ -1413,13 +1413,13 @@ declare const schemas: {
                     zodSqlSchema: import("zod").ZodString;
                     zodNewSchema: TNewNext;
                     initialValue: TDefaultNext;
-                    zodClientSchema: import("zod").ZodString;
-                    zodValidationSchema: import("zod").ZodString;
+                    zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                 };
                 validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
                     sql: import("zod").ZodString;
                     initialState: TNewNext;
-                    client: import("zod").ZodString;
+                    client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                 }) => TValidationNext)) => {
                     config: {
                         sql: {
@@ -1429,12 +1429,12 @@ declare const schemas: {
                         zodSqlSchema: import("zod").ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: TDefaultNext;
-                        zodClientSchema: import("zod").ZodString;
+                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         zodValidationSchema: TValidationNext;
                     };
                     transform: (transforms: {
-                        toClient: (dbValue: string) => string;
-                        toDb: (clientValue: string) => string;
+                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                     }) => {
                         config: {
                             sql: {
@@ -1444,12 +1444,12 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodString;
                             zodNewSchema: TNewNext;
                             initialValue: TDefaultNext;
-                            zodClientSchema: import("zod").ZodString;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             zodValidationSchema: TValidationNext;
                         } & {
                             transforms: {
-                                toClient: (dbValue: string) => string;
-                                toDb: (clientValue: string) => string;
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             };
                         };
                     };
@@ -1530,8 +1530,8 @@ declare const schemas: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: string) => string;
-                    toDb: (clientValue: string) => string;
+                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                 }) => {
                     config: {
                         sql: {
@@ -1541,12 +1541,12 @@ declare const schemas: {
                         zodSqlSchema: import("zod").ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: TDefaultNext;
-                        zodClientSchema: import("zod").ZodString;
-                        zodValidationSchema: import("zod").ZodString;
+                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: string) => string;
-                            toDb: (clientValue: string) => string;
+                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                         };
                     };
                 };

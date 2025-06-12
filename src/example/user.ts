@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { belongsTo, createSchema, hasMany, shape } from "../schema.js";
+import { belongsTo, createSchema, hasMany, shape, type InferSchemaTypes } from "../schema.js";
 
 export const userSchema = {
   _tableName: "users",

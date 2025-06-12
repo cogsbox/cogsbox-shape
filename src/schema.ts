@@ -212,7 +212,15 @@ interface IBuilderMethods<
   initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
     schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
     defaultValue: () => TDefaultNext
-  ) => Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>;
+  ) => Builder<
+    "new",
+    T,
+    TSql,
+    TNewNext,
+    TDefaultNext,
+    InferSmartClientType<TSql, TNewNext>,
+    InferSmartClientType<TSql, TNewNext>
+  >;
 
   /**
    * Defines the schema for data sent to the client.
@@ -263,13 +271,8 @@ interface IBuilderMethods<
     toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
   }) => {
     // The final, completed configuration object
-    config: BuilderConfig<
-      T,
-      TSql,
-      TNew,
-      TInitialValue,
-      TClient,
-      TValidation
+    config: Prettify<
+      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
     > & {
       transforms: typeof transforms;
     };
@@ -288,6 +291,10 @@ type StageMethods = {
   validation: "transform";
   done: never;
 };
+type InferSmartClientType<
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+> = z.infer<TNew> extends z.infer<TSql> ? TNew : z.ZodUnion<[TSql, TNew]>;
 
 // --- The Final, Refactored Builder Type ---
 type BuilderConfig<
@@ -317,7 +324,9 @@ export type Builder<
 > = Prettify<
   {
     /** The configuration object, available at every stage. */
-    config: BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>;
+    config: Prettify<
+      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
+    >;
   } & Pick<
     // We `Pick` the available methods from the full interface
     IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
@@ -612,53 +621,6 @@ type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
-// Helper type to extract the exact SQL type
-type InferSchema<T> = {
-  [K in keyof T as K extends "_tableName" | "__schemaId"
-    ? never
-    : K]: T[K] extends {
-    zodClientSchema: infer ClientType extends z.ZodTypeAny;
-    toClient?: (dbValue: any) => infer TransformedType;
-  }
-    ? T[K]["toClient"] extends Function
-      ? z.ZodType<TransformedType>
-      : ClientType extends z.ZodNever
-        ? z.ZodOptional<z.ZodDate>
-        : ClientType
-    : T[K] extends () => { type: "hasMany"; schema: infer S }
-      ? z.ZodArray<
-          z.ZodObject<{
-            [P in keyof S as P extends "_tableName" | "__schemaId"
-              ? never
-              : P]: S[P] extends {
-              zodClientSchema: z.ZodTypeAny;
-              toClient?: (dbValue: any) => any;
-            }
-              ? S[P]["toClient"] extends Function
-                ? z.ZodType<ReturnType<S[P]["toClient"]>>
-                : S[P]["zodClientSchema"] extends z.ZodNever
-                  ? z.ZodOptional<z.ZodDate>
-                  : S[P]["zodClientSchema"]
-              : never;
-          }>
-        >
-      : T[K] extends () => { type: "hasOne" | "belongsTo"; schema: infer S }
-        ? z.ZodObject<{
-            [P in keyof S as P extends "_tableName" | "__schemaId"
-              ? never
-              : P]: S[P] extends {
-              zodClientSchema: z.ZodTypeAny;
-              toClient?: (dbValue: any) => any;
-            }
-              ? S[P]["toClient"] extends Function
-                ? z.ZodType<ReturnType<S[P]["toClient"]>>
-                : S[P]["zodClientSchema"] extends z.ZodNever
-                  ? z.ZodOptional<z.ZodDate>
-                  : S[P]["zodClientSchema"]
-              : never;
-          }>
-        : never;
-};
 export type InferDBSchema<T> = {
   [K in keyof T as K extends "_tableName" | "__schemaId"
     ? never
@@ -693,39 +655,6 @@ export type InferDBSchema<T> = {
                 : never;
             }>
           : never;
-};
-type UUID = string | `${string}-${string}-${string}-${string}-${string}`;
-type InferDefaultValues<T, TDefault extends boolean = true> = {
-  [K in keyof T as K extends "_tableName" | "__schemaId"
-    ? never
-    : K]: T[K] extends {
-    sql: { pk: true };
-  }
-    ? UUID
-    : T[K] extends {
-          defaultValue: infer U;
-        }
-      ? U
-      : T[K] extends {
-            zodClientSchema: z.ZodOptional<any>;
-          }
-        ? undefined
-        : T[K] extends { zodClientSchema: z.ZodNullable<any> }
-          ? null
-          : T[K] extends { zodClientSchema: z.ZodArray<any> }
-            ? z.infer<T[K]["zodClientSchema"]> | []
-            : T[K] extends { zodClientSchema: z.ZodObject<any> }
-              ? z.infer<T[K]["zodClientSchema"]> | {}
-              : T[K] extends () => { type: "hasMany"; schema: infer S }
-                ? Array<Prettify<InferDefaultValues<S>>>
-                : T[K] extends () => {
-                      type: "hasOne" | "belongsTo";
-                      schema: infer S;
-                    }
-                  ? Prettify<InferDefaultValues<S>>
-                  : T[K] extends { zodClientSchema: z.ZodType<any> }
-                    ? z.infer<T[K]["zodClientSchema"]>
-                    : never;
 };
 
 function inferDefaultFromZod(
@@ -896,90 +825,6 @@ export function reference<
     type: "reference" as const,
     to: config.to,
   };
-}
-function createSerializableSchema<T extends Schema<any>>(
-  schema: T
-): SerializableSchema {
-  const serializableSchema = {
-    _tableName: schema._tableName,
-    __schemaId: crypto.randomUUID(),
-    _syncKey: schema._syncKey
-      ? {
-          toString: schema._syncKey.toString(),
-        }
-      : undefined,
-  } as SerializableSchema;
-
-  for (const [key, value] of Object.entries(schema)) {
-    if (key === "_tableName" || key === "__schemaId") continue;
-
-    if (typeof value === "function") {
-      const relation = value();
-      if (!isRelation(relation)) {
-        throw new Error(`Invalid relation for key ${key}`);
-      }
-
-      // Call the schema function to get the actual schema
-      const childSchema = createSerializableSchema(relation.schema);
-
-      // Get toKey value by calling the function
-      const toKeyField =
-        relation.toKey.type === "reference"
-          ? relation.toKey.to()
-          : relation.toKey;
-
-      const serializedToKey: SerializableField = {
-        sql: toKeyField.sql,
-        jsonSchema: zodToJsonSchema(toKeyField.zodClientSchema),
-        defaultValue: toKeyField.defaultValue,
-      };
-
-      serializableSchema[key] = {
-        type: "relation",
-        relationType: relation.type,
-        fromKey: relation.fromKey,
-        toKey: serializedToKey,
-        schema: childSchema,
-        ...(relation.type === "hasMany" && {
-          defaultCount: relation.defaultCount,
-        }),
-      };
-    } else {
-      // Handle regular fields or references (unchanged)
-      if (value.type === "reference") {
-        const referencedField = value.to();
-        const serializedField: SerializableField = {
-          sql: referencedField.sql,
-          jsonSchema: zodToJsonSchema(referencedField.zodClientSchema),
-          defaultValue: referencedField.defaultValue,
-          ...(referencedField.toClient &&
-            referencedField.toDb && {
-              transforms: {
-                toClient: referencedField.toClient.toString(),
-                toDb: referencedField.toDb.toString(),
-              },
-            }),
-        };
-        serializableSchema[key] = serializedField;
-      } else {
-        const serializedField: SerializableField = {
-          sql: value.sql,
-          jsonSchema: zodToJsonSchema(value.zodClientSchema),
-          defaultValue: value.defaultValue,
-          ...(value.toClient &&
-            value.toDb && {
-              transforms: {
-                toClient: value.toClient.toString(),
-                toDb: value.toDb.toString(),
-              },
-            }),
-        };
-        serializableSchema[key] = serializedField;
-      }
-    }
-  }
-
-  return serializableSchema;
 }
 export function createMixedValidationSchema<T extends Schema<any>>(
   schema: T,
