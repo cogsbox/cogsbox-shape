@@ -239,7 +239,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
             };
@@ -258,7 +258,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -276,7 +276,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -301,7 +301,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -320,7 +320,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -338,7 +338,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -363,7 +363,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -388,7 +388,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                 } & {
@@ -592,7 +592,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
             };
@@ -612,7 +612,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -631,7 +631,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -657,7 +657,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -677,7 +677,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -696,7 +696,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -722,7 +722,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -748,7 +748,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 } & {
@@ -952,7 +952,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
             };
@@ -972,7 +972,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -991,7 +991,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1017,7 +1017,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -1037,7 +1037,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -1056,7 +1056,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -1082,7 +1082,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -1108,7 +1108,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 } & {
@@ -1303,7 +1303,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
             };
@@ -1322,7 +1322,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1340,7 +1340,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1365,7 +1365,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -1384,7 +1384,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -1402,7 +1402,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -1427,7 +1427,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -1452,7 +1452,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 } & {
@@ -1647,7 +1647,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
             };
@@ -1666,7 +1666,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1684,7 +1684,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1709,7 +1709,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -1728,7 +1728,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -1746,7 +1746,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -1771,7 +1771,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -1796,7 +1796,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 } & {
@@ -1991,7 +1991,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodBoolean;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
             };
@@ -2010,7 +2010,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2028,7 +2028,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodBoolean;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2053,7 +2053,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -2072,7 +2072,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodBoolean;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -2090,7 +2090,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodBoolean;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -2115,7 +2115,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodBoolean;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -2140,7 +2140,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                 } & {
@@ -2335,7 +2335,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
             };
@@ -2354,7 +2354,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2372,7 +2372,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2397,7 +2397,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -2416,7 +2416,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -2434,7 +2434,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodDate;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -2459,7 +2459,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -2484,7 +2484,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 } & {
@@ -2679,7 +2679,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
             };
@@ -2698,7 +2698,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2716,7 +2716,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2741,7 +2741,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -2760,7 +2760,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -2778,7 +2778,7 @@ export declare const shape: {
                             };
                             zodSqlSchema: z.ZodDate;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -2803,7 +2803,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -2828,7 +2828,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 } & {
@@ -2969,7 +2969,7 @@ export declare const shape: {
                 sql: T;
                 zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                 zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
             };
@@ -2982,7 +2982,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2994,7 +2994,7 @@ export declare const shape: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -3013,7 +3013,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -3026,7 +3026,7 @@ export declare const shape: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -3038,7 +3038,7 @@ export declare const shape: {
                             sql: T;
                             zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -3057,7 +3057,7 @@ export declare const shape: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -3076,7 +3076,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                     zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                 } & {
@@ -3096,7 +3096,7 @@ interface IBuilderMethods<T extends SQLType, TSql extends z.ZodTypeAny, TNew ext
      */
     initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: ((tools: {
         sql: TSql;
-    }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext) => Builder<"new", T, TSql, TNewNext, TDefaultNext, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>;
+    }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext) => Builder<"new", T, TSql, TNewNext, z.infer<TNewNext>, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>;
     /**
      * Defines the schema for data sent to the client.
      * Moves the builder to the 'client' stage.

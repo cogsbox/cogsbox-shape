@@ -217,7 +217,7 @@ interface IBuilderMethods<
     T,
     TSql,
     TNewNext,
-    TDefaultNext,
+    z.infer<TNewNext>,
     InferSmartClientType<TSql, TNewNext>,
     InferSmartClientType<TSql, TNewNext>
   >;

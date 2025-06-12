@@ -157,7 +157,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
                 zodValidationSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
             };
@@ -173,7 +173,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -188,7 +188,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -210,7 +210,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -226,7 +226,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -241,7 +241,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -263,7 +263,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -285,7 +285,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
                     zodValidationSchema: z.TypeOf<TNewNext> extends number ? TNewNext : z.ZodUnion<[z.ZodNumber, TNewNext]>;
                 } & {
@@ -575,7 +575,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                     zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                 };
@@ -591,7 +591,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                         zodValidationSchema: TValidationNext;
                     };
@@ -606,7 +606,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -628,7 +628,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     };
@@ -644,7 +644,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         };
@@ -659,7 +659,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodString;
                                 zodNewSchema: TNewNext;
-                                initialValue: TDefaultNext;
+                                initialValue: z.TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TValidationNext;
                             } & {
@@ -681,7 +681,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TClientNext;
                         } & {
@@ -703,7 +703,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                         zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                     } & {
@@ -990,7 +990,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                         zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                     };
@@ -1006,7 +1006,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                             zodValidationSchema: TValidationNext;
                         };
@@ -1021,7 +1021,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodString;
                                 zodNewSchema: TNewNext;
-                                initialValue: TDefaultNext;
+                                initialValue: z.TypeOf<TNewNext>;
                                 zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                                 zodValidationSchema: TValidationNext;
                             } & {
@@ -1043,7 +1043,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TClientNext;
                         };
@@ -1059,7 +1059,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodString;
                                 zodNewSchema: TNewNext;
-                                initialValue: TDefaultNext;
+                                initialValue: z.TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TValidationNext;
                             };
@@ -1074,7 +1074,7 @@ export declare const userSchema: {
                                     };
                                     zodSqlSchema: z.ZodString;
                                     zodNewSchema: TNewNext;
-                                    initialValue: TDefaultNext;
+                                    initialValue: z.TypeOf<TNewNext>;
                                     zodClientSchema: TClientNext;
                                     zodValidationSchema: TValidationNext;
                                 } & {
@@ -1096,7 +1096,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodString;
                                 zodNewSchema: TNewNext;
-                                initialValue: TDefaultNext;
+                                initialValue: z.TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TClientNext;
                             } & {
@@ -1118,7 +1118,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                             zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                         } & {
@@ -1412,7 +1412,7 @@ export declare const petSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: TNewNext;
-                initialValue: TDefaultNext;
+                initialValue: z.TypeOf<TNewNext>;
                 zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                 zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
             };
@@ -1428,7 +1428,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1443,7 +1443,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1465,7 +1465,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -1481,7 +1481,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -1496,7 +1496,7 @@ export declare const petSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: TNewNext;
-                            initialValue: TDefaultNext;
+                            initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -1518,7 +1518,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
-                        initialValue: TDefaultNext;
+                        initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -1540,7 +1540,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: TNewNext;
-                    initialValue: TDefaultNext;
+                    initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                     zodValidationSchema: z.TypeOf<TNewNext> extends string ? TNewNext : z.ZodUnion<[z.ZodString, TNewNext]>;
                 } & {
