@@ -277,31 +277,19 @@ declare const schemas: {
             type: "hasMany";
             fromKey: string;
             toKey: string | {
-                sql: {
-                    type: "int";
-                    pk: true;
-                };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: any;
-                defaultValue: string;
-                transform: (transforms: {
-                    toClient: (dbValue: number) => string;
-                    toDb: (clientValue: string) => number;
-                }) => {
+                config: {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodString;
-                    jsonSchema: any;
-                    defaultValue: string;
-                    toClient: (dbValue: number) => string;
-                    toDb: (clientValue: string) => number;
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: string;
+                    zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                    zodValidationSchema: import("zod").ZodString;
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: number) => string | number;
+                        toDb: (clientValue: string | number) => number;
                     };
                 };
             } | {
@@ -471,31 +459,19 @@ declare const schemas: {
             schema: {
                 _tableName: string;
                 id: {
-                    sql: {
-                        type: "int";
-                        pk: true;
-                    };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodString;
-                    jsonSchema: any;
-                    defaultValue: string;
-                    transform: (transforms: {
-                        toClient: (dbValue: number) => string;
-                        toDb: (clientValue: string) => number;
-                    }) => {
+                    config: {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: import("zod").ZodNumber;
-                        zodClientSchema: import("zod").ZodString;
-                        jsonSchema: any;
-                        defaultValue: string;
-                        toClient: (dbValue: number) => string;
-                        toDb: (clientValue: string) => number;
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: string;
+                        zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                        zodValidationSchema: import("zod").ZodString;
                         transforms: {
-                            toClient: string;
-                            toDb: string;
+                            toClient: (dbValue: number) => string | number;
+                            toDb: (clientValue: string | number) => number;
                         };
                     };
                 };
@@ -673,31 +649,19 @@ declare const schemas: {
     pet: {
         _tableName: string;
         id: {
-            sql: {
-                type: "int";
-                pk: true;
-            };
-            zodDbSchema: import("zod").ZodNumber;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: any;
-            defaultValue: string;
-            transform: (transforms: {
-                toClient: (dbValue: number) => string;
-                toDb: (clientValue: string) => number;
-            }) => {
+            config: {
                 sql: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: any;
-                defaultValue: string;
-                toClient: (dbValue: number) => string;
-                toDb: (clientValue: string) => number;
+                zodSqlSchema: import("zod").ZodNumber;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: string;
+                zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                zodValidationSchema: import("zod").ZodString;
                 transforms: {
-                    toClient: string;
-                    toDb: string;
+                    toClient: (dbValue: number) => string | number;
+                    toDb: (clientValue: string | number) => number;
                 };
             };
         };

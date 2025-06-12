@@ -231,7 +231,159 @@ export const shape = {
             },
         };
     },
+    sql2: (sqlConfig) => {
+        const sqlZodType = (() => {
+            let baseType;
+            if (sqlConfig.pk) {
+                baseType = z.number();
+            }
+            else {
+                switch (sqlConfig.type) {
+                    case "int":
+                        baseType = z.number();
+                        break;
+                    case "boolean":
+                        baseType = z.boolean();
+                        break;
+                    case "date":
+                    case "datetime":
+                        baseType = z.date();
+                        break;
+                    default:
+                        baseType = z.string();
+                        break;
+                }
+            }
+            if (sqlConfig.nullable) {
+                baseType = baseType.nullable();
+            }
+            return baseType;
+        })();
+        // Initialize with sql type for all schemas
+        return createBuilder({
+            stage: "sql",
+            sqlConfig: sqlConfig,
+            sqlZod: sqlZodType,
+            newZod: sqlZodType,
+            initialValue: undefined,
+            clientZod: sqlZodType,
+            validationZod: sqlZodType,
+        });
+    },
 };
+function createBuilder(config) {
+    // Initialize completed stages tracker
+    const completedStages = config.completedStages || new Set(["sql"]);
+    const builderObject = {
+        config: {
+            sql: config.sqlConfig,
+            zodSqlSchema: config.sqlZod,
+            zodNewSchema: config.newZod,
+            initialValue: config.initialValue ||
+                inferDefaultFromZod(config.clientZod, config.sqlConfig),
+            zodClientSchema: config.clientZod,
+            zodValidationSchema: config.validationZod,
+        },
+        initialState: (schemaOrDefault, defaultValue) => {
+            // Runtime validation
+            if (completedStages.has("new")) {
+                throw new Error("initialState() can only be called once in the chain");
+            }
+            if (completedStages.has("client")) {
+                throw new Error("initialState() must be called before client()");
+            }
+            if (completedStages.has("validation")) {
+                throw new Error("initialState() must be called before validation()");
+            }
+            // Handle overload - if no second param, first param is the default
+            const hasTypeParam = defaultValue !== undefined;
+            const newSchema = hasTypeParam
+                ? isFunction(schemaOrDefault)
+                    ? schemaOrDefault({ sql: config.sqlZod })
+                    : schemaOrDefault
+                : config.sqlZod; // Keep SQL type if just setting default
+            const finalDefaultValue = hasTypeParam
+                ? defaultValue()
+                : schemaOrDefault();
+            const newCompletedStages = new Set(completedStages);
+            newCompletedStages.add("new");
+            const newClientZod = hasTypeParam
+                ? z.union([config.sqlZod, newSchema])
+                : config.sqlZod;
+            return createBuilder({
+                ...config,
+                stage: "new",
+                newZod: newSchema,
+                initialValue: finalDefaultValue,
+                clientZod: newClientZod,
+                validationZod: hasTypeParam
+                    ? z.union([config.sqlZod, newSchema])
+                    : config.sqlZod,
+                completedStages: newCompletedStages,
+            });
+        },
+        client: (assert) => {
+            // Runtime validation
+            if (completedStages.has("client")) {
+                throw new Error("client() can only be called once in the chain");
+            }
+            if (completedStages.has("validation")) {
+                throw new Error("client() must be called before validation()");
+            }
+            const clientSchema = isFunction(assert)
+                ? assert({ sql: config.sqlZod, initialState: config.newZod })
+                : assert;
+            const newCompletedStages = new Set(completedStages);
+            newCompletedStages.add("client");
+            return createBuilder({
+                ...config,
+                stage: "client",
+                clientZod: clientSchema,
+                // Always set validation to match client when client is set
+                validationZod: clientSchema,
+                completedStages: newCompletedStages,
+            });
+        },
+        validation: (assert) => {
+            // Runtime validation
+            if (completedStages.has("validation")) {
+                throw new Error("validation() can only be called once in the chain");
+            }
+            const validationSchema = isFunction(assert)
+                ? assert({
+                    sql: config.sqlZod,
+                    initialState: config.newZod,
+                    client: config.clientZod,
+                })
+                : assert;
+            const newCompletedStages = new Set(completedStages);
+            newCompletedStages.add("validation");
+            return createBuilder({
+                ...config,
+                stage: "validation",
+                validationZod: validationSchema,
+                completedStages: newCompletedStages,
+            });
+        },
+        transform: (transforms) => {
+            // Runtime validation
+            if (!completedStages.has("validation") &&
+                !completedStages.has("client")) {
+                throw new Error("transform() requires at least client() or validation() to be called first");
+            }
+            return {
+                config: {
+                    ...builderObject.config,
+                    transforms: {
+                        toClient: transforms.toClient,
+                        toDb: transforms.toDb,
+                    },
+                },
+            };
+        },
+    };
+    return builderObject;
+}
 export function hasMany(config) {
     return () => ({
         type: "hasMany",
@@ -501,5 +653,28 @@ export function createSchema(schema) {
         defaultValues: defaultValues,
         initialValues: () => defaultValues,
         serialized: serialized,
+    };
+}
+export function createSchema2(schema) {
+    const sqlFields = {};
+    const clientFields = {};
+    const validationFields = {};
+    const defaultValues = {};
+    for (const key in schema) {
+        if (key === "_tableName")
+            continue;
+        const field = schema[key];
+        if (field && typeof field === "object" && "config" in field) {
+            sqlFields[key] = field.config.zodSqlSchema; //field.config' is of type 'unknown
+            clientFields[key] = field.config.zodClientSchema;
+            validationFields[key] = field.config.zodValidationSchema;
+            defaultValues[key] = field.config.initialValue;
+        }
+    }
+    return {
+        sqlSchema: z.object(sqlFields),
+        clientSchema: z.object(clientFields),
+        validationSchema: z.object(validationFields),
+        defaultValues: defaultValues,
     };
 }

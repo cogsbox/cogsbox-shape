@@ -1160,7 +1160,65 @@ export declare const shape: {
             };
         };
     };
+    sql2: <T extends SQLType>(sqlConfig: T) => Builder<"sql", T, SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, undefined, SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
 };
+type Builder<TStage extends "sql" | "new" | "client" | "validation", T extends SQLType, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> = {
+    config: {
+        sql: T;
+        zodSqlSchema: TSql;
+        zodNewSchema: TNew;
+        initialValue: TInitialValue;
+        zodClientSchema: TClient;
+        zodValidationSchema: TValidation;
+    };
+} & (TStage extends "sql" ? {
+    initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: ((tools: {
+        sql: TSql;
+    }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext) => Prettify<Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>>;
+    client: <TClientNext extends z.ZodTypeAny>(assert: ((tools: {
+        sql: TSql;
+        initialState: TNew;
+    }) => TClientNext) | TClientNext) => Prettify<Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>>;
+    validation: <TValidationNext extends z.ZodTypeAny>(assert: ((tools: {
+        sql: TSql;
+        initialState: TNew;
+        client: TClient;
+    }) => TValidationNext) | TValidationNext) => Prettify<Builder<"validation", T, TSql, TNew, TInitialValue, TClient, TValidationNext>>;
+} : TStage extends "new" ? {
+    client: <TClientNext extends z.ZodTypeAny>(assert: ((tools: {
+        sql: TSql;
+        initialState: TNew;
+    }) => TClientNext) | TClientNext) => Prettify<Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>>;
+    validation: <TValidationNext extends z.ZodTypeAny>(assert: ((tools: {
+        sql: TSql;
+        initialState: TNew;
+        client: TClient;
+    }) => TValidationNext) | TValidationNext) => Prettify<Builder<"validation", T, TSql, TNew, TInitialValue, TClient, TValidationNext>>;
+} : TStage extends "client" ? {
+    validation: <TValidationNext extends z.ZodTypeAny>(assert: ((tools: {
+        sql: TSql;
+        initialState: TNew;
+        client: TClient;
+    }) => TValidationNext) | TValidationNext) => Prettify<Builder<"validation", T, TSql, TNew, TInitialValue, TClient, TValidationNext>>;
+} : TStage extends "validation" ? {
+    transform: (transforms: {
+        toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+        toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+    }) => {
+        config: {
+            sql: T;
+            zodSqlSchema: TSql;
+            zodNewSchema: TNew;
+            initialValue: TInitialValue;
+            zodClientSchema: TClient;
+            zodValidationSchema: TValidation;
+            transforms: {
+                toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+                toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+            };
+        };
+    };
+} : {});
 export declare function hasMany<T extends Schema<any>>(config: {
     fromKey: string;
     toKey: () => T[keyof T];
@@ -1468,5 +1526,43 @@ export type SchemaTypes<T extends Schema<any>> = {
         dbSchema: infer D;
     } ? C | D : never>;
     join: Prettify<ConversionType<T>>;
+};
+type InferSqlSchema<T> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            zodSqlSchema: infer S extends z.ZodTypeAny;
+        };
+    } ? S : never;
+};
+type InferClientSchema<T> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            zodClientSchema: infer C extends z.ZodTypeAny;
+        };
+    } ? C : never;
+};
+type InferValidationSchema<T> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            zodValidationSchema: infer V extends z.ZodTypeAny;
+        };
+    } ? V : never;
+};
+type InferDefaultValues2<T> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            initialValue: infer D;
+        };
+    } ? D : never;
+};
+export declare function createSchema2<T extends {
+    _tableName: string;
+}>(schema: T extends {
+    _tableName: string;
+} ? T : never): {
+    sqlSchema: z.ZodObject<Prettify<InferSqlSchema<T>>>;
+    clientSchema: z.ZodObject<Prettify<InferClientSchema<T>>>;
+    validationSchema: z.ZodObject<Prettify<InferValidationSchema<T>>>;
+    defaultValues: Prettify<InferDefaultValues2<T>>;
 };
 export {};

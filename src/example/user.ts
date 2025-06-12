@@ -6,7 +6,7 @@ import {
   createSchema2,
   hasMany,
   shape,
-} from "../schema";
+} from "../schema.js";
 
 export const userSchema = {
   _tableName: "users",
@@ -82,33 +82,6 @@ const testPets = {
       toDb: (str: string) => new Date(str),
     }),
 };
-/*const testPets: {
-    _tableName: string;
-    id: Builder<"validation", {
-        type: "int";
-        pk: true;
-    }, z.ZodNumber, z.ZodString, string, z.ZodUnion<[z.ZodNumber, z.ZodString]>, z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
-    email: Builder<"validation", {
-        type: "varchar";
-        length: number;
-    }, z.ZodString, z.ZodString, undefined, z.ZodString, z.ZodString>;
-    createdAt: {
-        config: {
-            sql: {
-                type: "datetime";
-            };
-            zodSqlSchema: z.ZodDate;
-            zodNewSchema: z.ZodDate;
-            initialValue: undefined;
-            zodClientSchema: z.ZodString;
-            zodValidationSchema: z.ZodOptional<z.ZodDate>;
-            transforms: {
-                toClient: (dbValue: Date) => string;
-                toDb: (clientValue: string) => Date;
-            };
-        };
-    };
-}*/
 
 const {
   sqlSchema,
@@ -116,13 +89,9 @@ const {
   defaultValues,
   validationSchema,
 } = createSchema2(testPets);
-/*All destructured elements are unused.ts(6198)
-const sqlSchema: z.ZodObject<any, "strip", z.ZodTypeAny, {
-    [x: string]: any;
-}, {
-    [x: string]: any;
-}>*/
-// Clean type inference
+
+console.log(sqlSchema);
+
 type User = z.infer<typeof sqlSchema>;
 type UserDb = z.infer<typeof clSchema>;
 type UserValidation = z.infer<typeof validationSchema>;

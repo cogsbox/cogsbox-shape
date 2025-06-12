@@ -277,31 +277,19 @@ export declare const userSchema: {
         type: "hasMany";
         fromKey: string;
         toKey: string | {
-            sql: {
-                type: "int";
-                pk: true;
-            };
-            zodDbSchema: z.ZodNumber;
-            zodClientSchema: z.ZodString;
-            jsonSchema: any;
-            defaultValue: string;
-            transform: (transforms: {
-                toClient: (dbValue: number) => string;
-                toDb: (clientValue: string) => number;
-            }) => {
+            config: {
                 sql: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: z.ZodNumber;
-                zodClientSchema: z.ZodString;
-                jsonSchema: any;
-                defaultValue: string;
-                toClient: (dbValue: number) => string;
-                toDb: (clientValue: string) => number;
+                zodSqlSchema: z.ZodNumber;
+                zodNewSchema: z.ZodString;
+                initialValue: string;
+                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+                zodValidationSchema: z.ZodString;
                 transforms: {
-                    toClient: string;
-                    toDb: string;
+                    toClient: (dbValue: number) => string | number;
+                    toDb: (clientValue: string | number) => number;
                 };
             };
         } | {
@@ -471,31 +459,19 @@ export declare const userSchema: {
         schema: {
             _tableName: string;
             id: {
-                sql: {
-                    type: "int";
-                    pk: true;
-                };
-                zodDbSchema: z.ZodNumber;
-                zodClientSchema: z.ZodString;
-                jsonSchema: any;
-                defaultValue: string;
-                transform: (transforms: {
-                    toClient: (dbValue: number) => string;
-                    toDb: (clientValue: string) => number;
-                }) => {
+                config: {
                     sql: {
                         type: "int";
                         pk: true;
                     };
-                    zodDbSchema: z.ZodNumber;
-                    zodClientSchema: z.ZodString;
-                    jsonSchema: any;
-                    defaultValue: string;
-                    toClient: (dbValue: number) => string;
-                    toDb: (clientValue: string) => number;
+                    zodSqlSchema: z.ZodNumber;
+                    zodNewSchema: z.ZodString;
+                    initialValue: string;
+                    zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+                    zodValidationSchema: z.ZodString;
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: number) => string | number;
+                        toDb: (clientValue: string | number) => number;
                     };
                 };
             };
@@ -673,31 +649,19 @@ export declare const userSchema: {
 export declare const petSchema: {
     _tableName: string;
     id: {
-        sql: {
-            type: "int";
-            pk: true;
-        };
-        zodDbSchema: z.ZodNumber;
-        zodClientSchema: z.ZodString;
-        jsonSchema: any;
-        defaultValue: string;
-        transform: (transforms: {
-            toClient: (dbValue: number) => string;
-            toDb: (clientValue: string) => number;
-        }) => {
+        config: {
             sql: {
                 type: "int";
                 pk: true;
             };
-            zodDbSchema: z.ZodNumber;
-            zodClientSchema: z.ZodString;
-            jsonSchema: any;
-            defaultValue: string;
-            toClient: (dbValue: number) => string;
-            toDb: (clientValue: string) => number;
+            zodSqlSchema: z.ZodNumber;
+            zodNewSchema: z.ZodString;
+            initialValue: string;
+            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+            zodValidationSchema: z.ZodString;
             transforms: {
-                toClient: string;
-                toDb: string;
+                toClient: (dbValue: number) => string | number;
+                toDb: (clientValue: string | number) => number;
             };
         };
     };
@@ -875,103 +839,103 @@ export declare const dbSchema: z.ZodObject<{
     surname: z.ZodString;
     email: z.ZodString;
     pets: z.ZodArray<z.ZodObject<{
-        id: z.ZodNumber;
+        id: never;
         name: z.ZodString;
         userId: z.ZodNumber;
         fluffynessScale: z.ZodString;
         favourite: z.ZodNumber;
     }, z.UnknownKeysParam, z.ZodTypeAny, {
         name: string;
-        id: number;
+        id: never;
         userId: number;
         fluffynessScale: string;
         favourite: number;
     }, {
         name: string;
-        id: number;
+        id: never;
         userId: number;
         fluffynessScale: string;
         favourite: number;
     }>, "many">;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
+    email: string;
     id: number;
     pets: {
         name: string;
-        id: number;
+        id: never;
         userId: number;
         fluffynessScale: string;
         favourite: number;
     }[];
     firstname: string;
     surname: string;
-    email: string;
 }, {
+    email: string;
     id: number;
     pets: {
         name: string;
-        id: number;
+        id: never;
         userId: number;
         fluffynessScale: string;
         favourite: number;
     }[];
     firstname: string;
     surname: string;
-    email: string;
 }>, clientSchema: z.ZodObject<{
     id: z.ZodString;
     firstname: z.ZodString;
     surname: z.ZodString;
     email: z.ZodString;
     pets: z.ZodArray<z.ZodObject<{
-        id: z.ZodString;
+        id: never;
         name: z.ZodString;
         userId: z.ZodString;
         fluffynessScale: z.ZodType<("bald" | "fuzzy" | "fluffy" | "poof")[], z.ZodTypeDef, ("bald" | "fuzzy" | "fluffy" | "poof")[]>;
         favourite: z.ZodType<boolean, z.ZodTypeDef, boolean>;
     }, z.UnknownKeysParam, z.ZodTypeAny, {
         name: string;
-        id: string;
+        id: never;
         userId: string;
         fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
         favourite: boolean;
     }, {
         name: string;
-        id: string;
+        id: never;
         userId: string;
         fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
         favourite: boolean;
     }>, "many">;
 }, z.UnknownKeysParam, z.ZodTypeAny, {
+    email: string;
     id: string;
     pets: {
         name: string;
-        id: string;
+        id: never;
         userId: string;
         fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
         favourite: boolean;
     }[];
     firstname: string;
     surname: string;
-    email: string;
 }, {
+    email: string;
     id: string;
     pets: {
         name: string;
-        id: string;
+        id: never;
         userId: string;
         fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
         favourite: boolean;
     }[];
     firstname: string;
     surname: string;
-    email: string;
 }>, initialValues: () => {
     id: string;
     firstname: string;
     surname: string;
     email: string;
     pets: {
-        id: string;
+        id: never;
         name: string;
         userId: string;
         fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -1032,17 +996,6 @@ export declare const dbSchema: z.ZodObject<{
         fromKey: string;
         toKey: {
             sql: {
-                type: "int";
-                pk: true;
-            };
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type;
-            defaultValue: string;
-            transforms?: {
-                toClient: string;
-                toDb: string;
-            };
-        } | {
-            sql: {
                 type: "varchar";
                 length: number;
             };
@@ -1084,18 +1037,7 @@ export declare const dbSchema: z.ZodObject<{
             };
         };
         schema: {
-            id: {
-                sql: {
-                    type: "int";
-                    pk: true;
-                };
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type;
-                defaultValue: string;
-                transforms?: {
-                    toClient: string;
-                    toDb: string;
-                };
-            };
+            id: never;
             name: {
                 sql: {
                     type: "varchar";
