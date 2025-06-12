@@ -1204,3 +1204,18 @@ export function createSchema<T extends { _tableName: string }>(
     defaultValues: defaultValues as Prettify<InferDefaultValues2<T>>,
   };
 }
+export type InferSchemaTypes<
+  T extends { _tableName: string } & { [key: string]: any },
+> = Prettify<{
+  /** The TypeScript type for data as it exists in the database. */
+  sql: z.infer<ReturnType<typeof createSchema<T>>["sqlSchema"]>;
+
+  /** The TypeScript type for data as it is represented on the client. */
+  client: z.infer<ReturnType<typeof createSchema<T>>["clientSchema"]>;
+
+  /** The TypeScript type for data during validation, often the most flexible shape. */
+  validation: z.infer<ReturnType<typeof createSchema<T>>["validationSchema"]>;
+
+  /** The TypeScript type for the default values object. */
+  defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
+}>;
