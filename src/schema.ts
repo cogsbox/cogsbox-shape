@@ -61,30 +61,6 @@ type StringConfig = BaseConfig & {
   default?: string;
 };
 
-type SQLToDefaultType<T extends SQLType> = T["nullable"] extends true
-  ? T["type"] extends "varchar" | "char" | "text" | "longtext"
-    ? string | null
-    : T["type"] extends "int"
-      ? number | null
-      : T["type"] extends "boolean"
-        ? boolean | null
-        : T["type"] extends "date" | "datetime"
-          ? T extends { default: "CURRENT_TIMESTAMP" }
-            ? never
-            : Date | null
-          : never
-  : T["type"] extends "varchar" | "char" | "text" | "longtext"
-    ? string
-    : T["type"] extends "int"
-      ? number
-      : T["type"] extends "boolean"
-        ? boolean
-        : T["type"] extends "date" | "datetime"
-          ? T extends { default: "CURRENT_TIMESTAMP" }
-            ? never
-            : Date
-          : never;
-
 type SQLToZodType<
   T extends SQLType,
   TDefault extends boolean,
@@ -120,158 +96,7 @@ type SQLToZodType<
               : z.ZodDate
             : never;
 
-// Basic shape of a transform
-type CustomTransform<DbType, ClientType> = {
-  toClient: (dbValue: DbType) => ClientType;
-  toDb: (clientValue: ClientType) => DbType;
-};
-
 // Internal type creation helper
-
-const createClient = <
-  T extends SQLType,
-  DbType, // Remove the extends constraint
-  ClientType, // Remove the extends constraint
-  ServerType extends z.ZodTypeAny = never,
->({
-  sqlConfig,
-  inferredDbType,
-  inferredClientType,
-  baseJsonSchema,
-  serverType,
-}: {
-  sqlConfig: T;
-  inferredDbType: DbType;
-  inferredClientType: ClientType;
-  baseJsonSchema: any;
-  serverType?: ServerType;
-}) => {
-  return <
-    ClientType extends z.ZodTypeAny,
-    DefaultValue extends z.infer<ClientType>,
-  >(
-    assert?:
-      | ((tools: {
-          zod: typeof inferredClientType;
-          serverType?: ServerType;
-        }) => ClientType)
-      | ClientType,
-    defaultValue?:
-      | DefaultValue
-      | (DefaultValue extends Date ? CurrentTimestampConfig : never)
-  ) => {
-    const clientType = isFunction(assert)
-      ? assert({
-          zod: inferredClientType,
-          ...(serverType && { serverType }),
-        })
-      : assert || inferredClientType;
-
-    // Handle timestamp default
-    let finalSqlConfig = sqlConfig;
-    let finalDefaultValue = defaultValue;
-
-    if (
-      defaultValue &&
-      typeof defaultValue === "object" &&
-      "default" in defaultValue &&
-      defaultValue.default === "CURRENT_TIMESTAMP"
-    ) {
-      finalSqlConfig = {
-        ...sqlConfig,
-        default: "CURRENT_TIMESTAMP",
-      };
-      finalDefaultValue = defaultValue.defaultValue as DefaultValue;
-    }
-
-    const effectiveDbType = serverType || inferredDbType;
-    const clientJsonSchema = zodToJsonSchema(clientType as any);
-
-    return {
-      sql: finalSqlConfig,
-      zodDbSchema: effectiveDbType,
-      zodClientSchema: clientType as ClientType,
-      jsonSchema: serverType ? clientJsonSchema : baseJsonSchema,
-      defaultValue:
-        finalDefaultValue ??
-        (serverType
-          ? (inferDefaultFromZod(serverType) as DefaultValue)
-          : (finalDefaultValue as DefaultValue)),
-
-      transform: (transforms: {
-        toClient: (
-          dbValue: DbType extends z.ZodTypeAny
-            ? z.infer<DbType>
-            : ServerType extends z.ZodTypeAny
-              ? z.infer<ServerType>
-              : any
-        ) => z.infer<ClientType>;
-        toDb: (
-          clientValue: z.infer<ClientType>
-        ) => DbType extends z.ZodTypeAny
-          ? z.infer<DbType>
-          : ServerType extends z.ZodTypeAny
-            ? z.infer<ServerType>
-            : any;
-      }) => ({
-        sql: finalSqlConfig,
-        zodDbSchema: effectiveDbType,
-        zodClientSchema: clientType as ClientType,
-        jsonSchema: serverType ? clientJsonSchema : baseJsonSchema,
-        defaultValue: finalDefaultValue as DefaultValue,
-        toClient: transforms.toClient,
-        toDb: transforms.toDb,
-        transforms: {
-          toClient: transforms.toClient.toString(),
-          toDb: transforms.toDb.toString(),
-        },
-      }),
-    };
-  };
-};
-export function createTransforms<
-  TTransforms extends Record<string, CustomTransform<any, any>>,
->(transforms: TTransforms) {
-  return {
-    sql: <T extends SQLType>(config: T) => {
-      const base = shape.sql(config);
-
-      return {
-        sql: base.sql,
-        dbType: base.dbType,
-        zodDbSchema: base.zodDbSchema,
-        zodClientSchema: base.zodClientSchema,
-
-        client: base.client,
-        db: <ServerType extends z.ZodTypeAny>(
-          dbType: ({ zod }: { zod: SQLToZodType<T, false> }) => ServerType
-        ) => {
-          const baseDb = base.db(dbType);
-          const transformMethods = Object.entries(transforms).reduce(
-            (acc, [key, transform]) => ({
-              ...acc,
-              [key]: () => ({
-                sql: config,
-                zodDbSchema: baseDb.zodDbSchema,
-                zodClientSchema: z.unknown() as z.ZodType<
-                  ReturnType<typeof transform.toClient>
-                >,
-                toClient: transform.toClient,
-                toDb: transform.toDb,
-              }),
-            }),
-            {}
-          );
-
-          return {
-            ...baseDb,
-            client: Object.assign(baseDb.client, transformMethods),
-          };
-        },
-      };
-    },
-  };
-}
 
 export const shape = {
   // Integer fields
@@ -327,131 +152,6 @@ export const shape = {
     }),
 
   sql: <T extends SQLType>(sqlConfig: T) => {
-    const inferredDbType = (() => {
-      let baseType: z.ZodTypeAny;
-
-      if (sqlConfig.pk) {
-        baseType = z.number(); // DB PKs are always numbers
-      } else {
-        switch (sqlConfig.type) {
-          case "int":
-            baseType = z.number();
-            break;
-          case "varchar":
-          case "char":
-          case "text":
-          case "longtext":
-            baseType = z.string();
-            break;
-          case "boolean":
-            baseType = z.boolean();
-            break;
-          case "date":
-          case "datetime":
-            baseType = z.date();
-            break;
-          default:
-            throw new Error(`Unsupported type: ${sqlConfig}`);
-        }
-      }
-
-      if (sqlConfig.nullable) {
-        baseType = baseType.nullable();
-      }
-
-      return baseType;
-    })() as SQLToZodType<T, false>;
-
-    const inferredClientType = (() => {
-      let baseType: z.ZodTypeAny;
-
-      if (sqlConfig.pk) {
-        baseType = z.string(); // Client PKs are always strings
-      } else {
-        switch (sqlConfig.type) {
-          case "int":
-            baseType = z.number();
-            break;
-          case "varchar":
-          case "char":
-          case "text":
-          case "longtext":
-            baseType = z.string();
-            break;
-          case "boolean":
-            baseType = z.boolean();
-            break;
-          case "date":
-          case "datetime":
-            if (sqlConfig.default === "CURRENT_TIMESTAMP") {
-              baseType = z.date().optional();
-            }
-            baseType = z.date();
-            break;
-          default:
-            throw new Error(`Unsupported type: ${sqlConfig}`);
-        }
-      }
-
-      if (sqlConfig.nullable) {
-        baseType = baseType.nullable();
-      }
-
-      return baseType;
-    })() as SQLToZodType<T, true>;
-
-    // Create JSON Schema version immediately
-    const jsonSchema = zodToJsonSchema(inferredDbType);
-
-    return {
-      sql: sqlConfig,
-      dbType: inferredDbType,
-      zodDbSchema: inferredDbType,
-      zodClientSchema: inferredClientType,
-      jsonSchema,
-      defaultValue: inferDefaultFromZod(
-        inferredDbType,
-        sqlConfig
-      ) as SQLToDefaultType<T>,
-
-      client: createClient<T, typeof inferredDbType, typeof inferredClientType>(
-        {
-          sqlConfig,
-          inferredDbType,
-          inferredClientType,
-          baseJsonSchema: jsonSchema,
-        }
-      ),
-
-      db: <ServerType extends z.ZodTypeAny>(
-        assert:
-          | ((tools: { zod: typeof inferredDbType }) => ServerType)
-          | ServerType
-      ) => {
-        const serverType = isFunction(assert)
-          ? assert({ zod: inferredDbType })
-          : assert;
-
-        return {
-          sql: sqlConfig,
-          dbType: serverType,
-          zodDbSchema: serverType,
-          zodClientSchema: inferredClientType,
-          jsonSchema: zodToJsonSchema(serverType),
-          defaultValue: inferDefaultFromZod(serverType) as z.infer<ServerType>,
-
-          client: createClient({
-            sqlConfig,
-            inferredDbType,
-            inferredClientType,
-            baseJsonSchema: jsonSchema,
-            serverType,
-          }),
-        };
-      },
-    };
-  },
-  sql2: <T extends SQLType>(sqlConfig: T) => {
     const sqlZodType = (() => {
       let baseType: z.ZodTypeAny;
       if (sqlConfig.pk) {
@@ -496,8 +196,101 @@ export const shape = {
     });
   },
 };
-type Builder<
-  TStage extends "sql" | "new" | "client" | "validation",
+
+interface IBuilderMethods<
+  T extends SQLType,
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+  TInitialValue,
+  TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
+> {
+  /**
+   * Defines the schema and default value for creating a new item.
+   * Moves the builder to the 'new' stage.
+   */
+  initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+    schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+    defaultValue: () => TDefaultNext
+  ) => Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>;
+
+  /**
+   * Defines the schema for data sent to the client.
+   * Moves the builder to the 'client' stage.
+   */
+  client: <TClientNext extends z.ZodTypeAny>(
+    schema:
+      | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
+      | TClientNext
+  ) => Builder<
+    "client",
+    T,
+    TSql,
+    TNew,
+    TInitialValue,
+    TClientNext,
+    TClientNext
+  >;
+
+  /**
+   * Defines a validation schema for updates or inputs.
+   * Moves the builder to the 'validation' stage.
+   */
+  validation: <TValidationNext extends z.ZodTypeAny>(
+    schema:
+      | ((tools: {
+          sql: TSql;
+          initialState: TNew;
+          client: TClient;
+        }) => TValidationNext)
+      | TValidationNext
+  ) => Builder<
+    "validation",
+    T,
+    TSql,
+    TNew,
+    TInitialValue,
+    TClient,
+    TValidationNext
+  >;
+
+  /**
+   * Finalizes the builder by providing data transformation functions.
+   * This is the terminal step.
+   */
+  transform: (transforms: {
+    toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+    toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+  }) => {
+    // The final, completed configuration object
+    config: BuilderConfig<
+      T,
+      TSql,
+      TNew,
+      TInitialValue,
+      TClient,
+      TValidation
+    > & {
+      transforms: typeof transforms;
+    };
+  };
+}
+
+// 3. Types to manage the state machine
+type Stage = "sql" | "new" | "client" | "validation" | "done";
+
+// This mapping defines which methods are available at each stage.
+// This is the key to removing the repetition!
+type StageMethods = {
+  sql: "initialState" | "client" | "validation" | "transform";
+  new: "client" | "validation" | "transform";
+  client: "validation" | "transform";
+  validation: "transform";
+  done: never;
+};
+
+// --- The Final, Refactored Builder Type ---
+type BuilderConfig<
   T extends SQLType,
   TSql extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
@@ -505,137 +298,32 @@ type Builder<
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > = {
-  config: {
-    sql: T;
-    zodSqlSchema: TSql;
-    zodNewSchema: TNew;
-    initialValue: TInitialValue;
-    zodClientSchema: TClient;
-    zodValidationSchema: TValidation;
-  };
-} & (TStage extends "sql"
-  ? {
-      initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
-        schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-        defaultValue: () => TDefaultNext
-      ) => Prettify<
-        Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>
-      >;
-      client: <TClientNext extends z.ZodTypeAny>(
-        assert:
-          | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
-          | TClientNext
-      ) => Prettify<
-        Builder<
-          "client",
-          T,
-          TSql,
-          TNew,
-          TInitialValue,
-          TClientNext,
-          TClientNext
-        >
-      >;
-      validation: <TValidationNext extends z.ZodTypeAny>(
-        assert:
-          | ((tools: {
-              sql: TSql;
-              initialState: TNew;
-              client: TClient;
-            }) => TValidationNext)
-          | TValidationNext
-      ) => Prettify<
-        Builder<
-          "validation",
-          T,
-          TSql,
-          TNew,
-          TInitialValue,
-          TClient,
-          TValidationNext
-        >
-      >;
-    }
-  : TStage extends "new"
-    ? {
-        client: <TClientNext extends z.ZodTypeAny>(
-          assert:
-            | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
-            | TClientNext
-        ) => Prettify<
-          Builder<
-            "client",
-            T,
-            TSql,
-            TNew,
-            TInitialValue,
-            TClientNext,
-            TClientNext
-          >
-        >;
-        validation: <TValidationNext extends z.ZodTypeAny>(
-          assert:
-            | ((tools: {
-                sql: TSql;
-                initialState: TNew;
-                client: TClient;
-              }) => TValidationNext)
-            | TValidationNext
-        ) => Prettify<
-          Builder<
-            "validation",
-            T,
-            TSql,
-            TNew,
-            TInitialValue,
-            TClient,
-            TValidationNext
-          >
-        >;
-      }
-    : TStage extends "client"
-      ? {
-          validation: <TValidationNext extends z.ZodTypeAny>(
-            assert:
-              | ((tools: {
-                  sql: TSql;
-                  initialState: TNew;
-                  client: TClient;
-                }) => TValidationNext)
-              | TValidationNext
-          ) => Prettify<
-            Builder<
-              "validation",
-              T,
-              TSql,
-              TNew,
-              TInitialValue,
-              TClient,
-              TValidationNext
-            >
-          >;
-        }
-      : TStage extends "validation"
-        ? {
-            transform: (transforms: {
-              toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
-              toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
-            }) => {
-              config: {
-                sql: T;
-                zodSqlSchema: TSql;
-                zodNewSchema: TNew;
-                initialValue: TInitialValue;
-                zodClientSchema: TClient;
-                zodValidationSchema: TValidation;
-                transforms: {
-                  toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
-                  toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
-                };
-              };
-            };
-          }
-        : {});
+  sql: T;
+  zodSqlSchema: TSql;
+  zodNewSchema: TNew;
+  initialValue: TInitialValue;
+  zodClientSchema: TClient;
+  zodValidationSchema: TValidation;
+};
+
+export type Builder<
+  TStage extends Stage,
+  T extends SQLType,
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+  TInitialValue,
+  TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
+> = Prettify<
+  {
+    /** The configuration object, available at every stage. */
+    config: BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>;
+  } & Pick<
+    // We `Pick` the available methods from the full interface
+    IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
+    StageMethods[TStage] // Based on the current stage
+  >
+>;
 
 function createBuilder<
   TStage extends "sql" | "new" | "client" | "validation",
@@ -1380,181 +1068,6 @@ export function createMixedValidationSchema<T extends Schema<any>>(
 
   return z.object(mixedFields);
 }
-type InferMixedSchema<T extends Schema<any>> = {
-  [K in keyof T as K extends "_tableName" | "__schemaId"
-    ? never
-    : K]: T[K] extends { zodClientSchema: infer C; zodDbSchema: infer D }
-    ? C extends z.ZodTypeAny
-      ? D extends z.ZodTypeAny
-        ? z.ZodUnion<[C, D]>
-        : C
-      : D extends z.ZodTypeAny
-        ? D
-        : never
-    : T[K] extends () => {
-          type: "hasMany";
-          schema: infer S extends Schema<any>;
-        }
-      ? z.ZodArray<z.ZodObject<InferMixedSchema<S>>>
-      : T[K] extends () => {
-            type: "hasOne" | "belongsTo";
-            schema: infer S extends Schema<any>;
-          }
-        ? z.ZodObject<InferMixedSchema<S>>
-        : never;
-};
-export function createSchema<T extends Schema<any>>(schema: T) {
-  const serialized = createSerializableSchema(schema);
-  const dbFields: Record<string, z.ZodTypeAny> = {};
-  const clientFields: Record<string, z.ZodTypeAny> = {};
-  const defaultValues = {} as Record<string, any>;
-
-  // ... existing schema building logic ...
-  for (const [key, value] of Object.entries(schema)) {
-    if (key === "_tableName") continue;
-
-    if (typeof value === "function") {
-      const relation = value();
-      if (!isRelation(relation)) {
-        throw new Error(`Invalid relation for key ${key}`);
-      }
-
-      const childSchema = createSchema(relation.schema);
-      // ... existing relation logic ...
-
-      if (relation.type === "hasMany") {
-        dbFields[key] = z.array(z.object(childSchema.dbSchema.shape));
-        clientFields[key] = z.array(z.object(childSchema.clientSchema.shape));
-        const count = relation.defaultCount || 0;
-        defaultValues[key] = Array.from({ length: count }, () => ({
-          ...childSchema.defaultValues,
-        }));
-      } else {
-        dbFields[key] = z.object(childSchema.dbSchema.shape);
-        clientFields[key] = z.object(childSchema.clientSchema.shape);
-        defaultValues[key] = childSchema.defaultValues;
-      }
-      continue;
-    }
-
-    dbFields[key] = value.zodDbSchema;
-    clientFields[key] = value.zodClientSchema;
-    defaultValues[key] =
-      value.defaultValue ?? inferDefaultFromZod(value.zodClientSchema);
-  }
-
-  const clientSchemaObj = z.object(clientFields);
-  const dbSchemaObj = z.object(dbFields);
-
-  // Pass the built schemas to avoid circular reference
-  const mixedSchema = createMixedValidationSchema(
-    schema,
-    clientSchemaObj,
-    dbSchemaObj
-  );
-
-  return {
-    dbSchema: dbSchemaObj as z.ZodObject<Prettify<InferDBSchema<T>>>,
-    clientSchema: clientSchemaObj as z.ZodObject<
-      Prettify<OmitNever<InferSchema<T>>>
-    >,
-    mixedSchema: mixedSchema as z.ZodObject<Prettify<InferMixedSchema<T>>>,
-    defaultValues: defaultValues as Prettify<
-      OmitNever<ConfigWithOptionalProps<T>>
-    >,
-    initialValues: () =>
-      defaultValues as Prettify<OmitNever<ConfigWithOptionalProps<T>>>,
-    serialized: serialized as Prettify<InferSerializedSchema<T>> & {
-      _tableName: string;
-      __schemaId: string;
-    },
-  };
-}
-type IsOptionalKey<T, K extends keyof T> = {} extends Pick<T, K> ? true : false;
-
-type DeepConversionType<ClientType, DbType> =
-  // Handle primitives first
-  ClientType extends Date | string | number | boolean | null | undefined
-    ? ClientType | DbType
-    : DbType extends Date | string | number | boolean | null | undefined
-      ? ClientType | DbType
-      : ClientType extends Array<infer ClientItem>
-        ? DbType extends Array<infer DbItem>
-          ? Array<DeepConversionType<ClientItem, DbItem>>
-          : ClientType | DbType
-        : ClientType extends object
-          ? DbType extends object
-            ? {
-                // Required properties: required in BOTH schemas
-                [K in keyof ClientType & keyof DbType as IsOptionalKey<
-                  ClientType,
-                  K
-                > extends true
-                  ? never
-                  : IsOptionalKey<DbType, K> extends true
-                    ? never
-                    : K]: DeepConversionType<ClientType[K], DbType[K]>;
-              } & {
-                // Optional properties: optional in EITHER schema
-                [K in keyof (
-                  | ClientType
-                  | DbType
-                ) as K extends keyof ClientType & keyof DbType
-                  ? IsOptionalKey<ClientType, K> extends true
-                    ? K
-                    : IsOptionalKey<DbType, K> extends true
-                      ? K
-                      : never
-                  : K]?: K extends keyof ClientType
-                  ? K extends keyof DbType
-                    ? DeepConversionType<ClientType[K], DbType[K]>
-                    : ClientType[K]
-                  : K extends keyof DbType
-                    ? DbType[K]
-                    : never;
-              }
-            : ClientType | DbType
-          : ClientType | DbType;
-
-// Replace your ConversionType with this:
-type ConversionType<T extends Schema<any>> = DeepConversionType<
-  SchemaTypes<T>["client"],
-  SchemaTypes<T>["db"]
->;
-type OmitNever<T> = {
-  [K in keyof T as T[K] extends never ? never : K]: T[K];
-};
-type DefaultValue<T> = Prettify<DeepWriteable<InferDefaultValues<T>>>;
-type GetMandatoryKeys<T> = {
-  [P in keyof T]: T[P] extends Exclude<T[P], undefined> ? P : never;
-}[keyof T];
-type MandatoryProps<T> = Pick<
-  DefaultValue<T>,
-  GetMandatoryKeys<DefaultValue<T>>
->;
-type ConfigWithOptionalProps<T> = Partial<DefaultValue<T>> & MandatoryProps<T>;
-
-export type SchemaTypes<T extends Schema<any>> = {
-  client: z.infer<
-    typeof createSchema<T> extends (...args: any) => { clientSchema: infer R }
-      ? R
-      : never
-  >;
-  db: z.infer<
-    typeof createSchema<T> extends (...args: any) => { dbSchema: infer R }
-      ? R
-      : never
-  >;
-  both: z.infer<
-    typeof createSchema<T> extends (...args: any) => {
-      clientSchema: infer C;
-      dbSchema: infer D;
-    }
-      ? C | D
-      : never
-  >;
-  join: Prettify<ConversionType<T>>;
-};
 
 type InferSqlSchema<T> = {
   [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
@@ -1588,7 +1101,7 @@ type InferDefaultValues2<T> = {
     : never;
 };
 
-export function createSchema2<T extends { _tableName: string }>(
+export function createSchema<T extends { _tableName: string }>(
   schema: T extends { _tableName: string } ? T : never
 ) {
   const sqlFields = {} as any;

@@ -2,273 +2,399 @@ declare const schemas: {
     user: {
         _tableName: string;
         id: {
-            sql: {
-                type: "int";
-                pk: true;
-            };
-            dbType: import("zod").ZodNumber;
-            zodDbSchema: import("zod").ZodNumber;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: number;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodString;
-                serverType?: never;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            config: {
                 sql: {
                     type: "int";
                     pk: true;
                 };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: ClientType;
-                jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
+                zodSqlSchema: import("zod").ZodNumber;
+                zodNewSchema: import("zod").ZodNumber;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodNumber;
+                zodValidationSchema: import("zod").ZodNumber;
+            };
+            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                sql: import("zod").ZodNumber;
+                initialState: import("zod").ZodNumber;
+                client: import("zod").ZodNumber;
+            }) => TValidationNext)) => {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodNumber;
+                    zodValidationSchema: TValidationNext;
+                };
                 transform: (transforms: {
-                    toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
+                    toClient: (dbValue: number) => number;
+                    toDb: (clientValue: number) => number;
                 }) => {
-                    sql: {
-                        type: "int";
-                        pk: true;
-                    };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
-                    transforms: {
-                        toClient: string;
-                        toDb: string;
-                    };
-                };
-            };
-            db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
-                zod: import("zod").ZodNumber;
-            }) => ServerType)) => {
-                sql: {
-                    type: "int";
-                    pk: true;
-                };
-                dbType: ServerType;
-                zodDbSchema: ServerType;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                    $schema?: string | undefined;
-                    definitions?: {
-                        [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                    } | undefined;
-                };
-                defaultValue: import("zod").TypeOf<ServerType>;
-                client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodString;
-                    serverType?: ServerType;
-                }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never) | undefined) => {
-                    sql: {
-                        type: "int";
-                        pk: true;
-                    };
-                    zodDbSchema: import("zod").ZodNumber | ServerType;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never);
-                    transform: (transforms: {
-                        toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
-                    }) => {
+                    config: {
                         sql: {
                             type: "int";
                             pk: true;
                         };
-                        zodDbSchema: import("zod").ZodNumber | ServerType;
-                        zodClientSchema: ClientType;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue;
-                        toClient: (dbValue: number) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => number;
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodNumber;
+                        zodValidationSchema: TValidationNext;
+                    } & {
                         transforms: {
-                            toClient: string;
-                            toDb: string;
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
+                        };
+                    };
+                };
+            };
+            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                sql: import("zod").ZodNumber;
+                initialState: import("zod").ZodNumber;
+            }) => TClientNext)) => {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: TClientNext;
+                    zodValidationSchema: TClientNext;
+                };
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodNumber;
+                    initialState: import("zod").ZodNumber;
+                    client: TClientNext;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: undefined;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                        };
+                    };
+                };
+            };
+            transform: (transforms: {
+                toClient: (dbValue: number) => number;
+                toDb: (clientValue: number) => number;
+            }) => {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodNumber;
+                    zodValidationSchema: import("zod").ZodNumber;
+                } & {
+                    transforms: {
+                        toClient: (dbValue: number) => number;
+                        toDb: (clientValue: number) => number;
+                    };
+                };
+            };
+            initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
+                sql: import("zod").ZodNumber;
+            }) => TNewNext), defaultValue: () => TDefaultNext) => {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: TNewNext;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: import("zod").ZodNumber;
+                    zodValidationSchema: import("zod").ZodNumber;
+                };
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodNumber;
+                    initialState: TNewNext;
+                    client: import("zod").ZodNumber;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodNumber;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => number;
+                        toDb: (clientValue: number) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodNumber;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: import("zod").ZodNumber;
+                    initialState: TNewNext;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodNumber;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: number) => number;
+                    toDb: (clientValue: number) => number;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodNumber;
+                        zodValidationSchema: import("zod").ZodNumber;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
                         };
                     };
                 };
             };
         };
         firstname: {
-            sql: {
-                type: "varchar";
-                length: number;
-            };
-            dbType: import("zod").ZodString;
-            zodDbSchema: import("zod").ZodString;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: string;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodString;
-                serverType?: import("zod").ZodString;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            config: {
                 sql: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: ClientType;
-                jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
-                transform: (transforms: {
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                }) => {
+                zodSqlSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodString;
+                zodValidationSchema: import("zod").ZodString;
+            };
+            transform: (transforms: {
+                toClient: (dbValue: string) => string;
+                toDb: (clientValue: string) => string;
+            }) => {
+                config: {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                } & {
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
                     };
                 };
             };
         };
         surname: {
-            sql: {
-                type: "varchar";
-                length: number;
-            };
-            dbType: import("zod").ZodString;
-            zodDbSchema: import("zod").ZodString;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: string;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodString;
-                serverType?: import("zod").ZodString;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            config: {
                 sql: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: ClientType;
-                jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
-                transform: (transforms: {
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                }) => {
+                zodSqlSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodString;
+                zodValidationSchema: import("zod").ZodString;
+            };
+            transform: (transforms: {
+                toClient: (dbValue: string) => string;
+                toDb: (clientValue: string) => string;
+            }) => {
+                config: {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                } & {
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
                     };
                 };
             };
         };
         email: {
-            sql: {
-                type: "varchar";
-                length: number;
-            };
-            dbType: import("zod").ZodString;
-            zodDbSchema: import("zod").ZodString;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: string;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodString;
-                serverType?: import("zod").ZodString;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            config: {
                 sql: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: ClientType;
-                jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
-                transform: (transforms: {
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                }) => {
+                zodSqlSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodString;
+                zodValidationSchema: import("zod").ZodString;
+            };
+            transform: (transforms: {
+                toClient: (dbValue: string) => string;
+                toDb: (clientValue: string) => string;
+            }) => {
+                config: {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                } & {
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
                     };
                 };
             };
@@ -287,173 +413,405 @@ declare const schemas: {
                     initialValue: string;
                     zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
                     zodValidationSchema: import("zod").ZodString;
+                } & {
                     transforms: {
                         toClient: (dbValue: number) => string | number;
                         toDb: (clientValue: string | number) => number;
                     };
                 };
             } | {
-                sql: {
-                    type: "varchar";
-                    length: number;
-                };
-                dbType: import("zod").ZodString;
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                    $schema?: string | undefined;
-                    definitions?: {
-                        [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                    } | undefined;
-                };
-                defaultValue: string;
-                client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodString;
-                    serverType?: never;
-                }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never) | undefined) => {
+                config: {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never);
-                    transform: (transforms: {
-                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                    }) => {
-                        sql: {
-                            type: "varchar";
-                            length: number;
-                        };
-                        zodDbSchema: import("zod").ZodString;
-                        zodClientSchema: ClientType;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue;
-                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                        transforms: {
-                            toClient: string;
-                            toDb: string;
-                        };
-                    };
-                };
-                db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
-                    zod: import("zod").ZodString;
-                }) => ServerType)) => {
-                    sql: {
-                        type: "varchar";
-                        length: number;
-                    };
-                    dbType: ServerType;
-                    zodDbSchema: ServerType;
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
                     zodClientSchema: import("zod").ZodString;
-                    jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                        $schema?: string | undefined;
-                        definitions?: {
-                            [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                        } | undefined;
-                    };
-                    defaultValue: import("zod").TypeOf<ServerType>;
-                    client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodString;
-                        serverType?: ServerType;
-                    }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never) | undefined) => {
+                    zodValidationSchema: import("zod").ZodString;
+                };
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodString;
+                    initialState: import("zod").ZodString;
+                    client: import("zod").ZodString;
+                }) => TValidationNext)) => {
+                    config: {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodString | ServerType;
-                        zodClientSchema: ClientType;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never);
-                        transform: (transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                        }) => {
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: import("zod").ZodString | ServerType;
-                            zodClientSchema: ClientType;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue;
-                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
                             transforms: {
-                                toClient: string;
-                                toDb: string;
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: import("zod").ZodString;
+                    initialState: import("zod").ZodString;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: import("zod").ZodString;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: undefined;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
+                initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
+                    sql: import("zod").ZodString;
+                }) => TNewNext), defaultValue: () => TDefaultNext) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
+                    };
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: TNewNext;
+                        client: import("zod").ZodString;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
+                                };
+                            };
+                        };
+                    };
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: TNewNext;
+                    }) => TClientNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: TNewNext;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
                             };
                         };
                     };
                 };
             } | {
-                sql: {
-                    type: "int";
+                config: {
+                    sql: {
+                        type: "int";
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
                 };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: any;
-                defaultValue: string;
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodNumber;
+                    initialState: import("zod").ZodNumber;
+                    client: import("zod").ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => string;
+                                toDb: (clientValue: string) => number;
+                            };
+                        };
+                    };
+                };
                 transform: (transforms: {
                     toClient: (dbValue: number) => string;
                     toDb: (clientValue: string) => number;
                 }) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => string;
+                            toDb: (clientValue: string) => number;
+                        };
+                    };
+                };
+            } | {
+                config: {
+                    sql: {
+                        type: "text";
+                    };
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                } & {
+                    transforms: {
+                        toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
+                    };
+                };
+            } | {
+                config: {
                     sql: {
                         type: "int";
                     };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodString;
-                    jsonSchema: any;
-                    defaultValue: string;
-                    toClient: (dbValue: number) => string;
-                    toDb: (clientValue: string) => number;
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodBoolean;
+                    zodValidationSchema: import("zod").ZodBoolean;
+                } & {
                     transforms: {
-                        toClient: string;
-                        toDb: string;
+                        toClient: (dbValue: number) => boolean;
+                        toDb: (clientValue: boolean) => number;
                     };
-                };
-            } | {
-                sql: {
-                    type: "text";
-                };
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                jsonSchema: any;
-                defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                transforms: {
-                    toClient: string;
-                    toDb: string;
-                };
-            } | {
-                sql: {
-                    type: "int";
-                };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodBoolean;
-                jsonSchema: any;
-                defaultValue: boolean;
-                toClient: (dbValue: number) => boolean;
-                toDb: (clientValue: boolean) => number;
-                transforms: {
-                    toClient: string;
-                    toDb: string;
                 };
             };
             schema: {
@@ -469,6 +827,7 @@ declare const schemas: {
                         initialValue: string;
                         zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
                         zodValidationSchema: import("zod").ZodString;
+                    } & {
                         transforms: {
                             toClient: (dbValue: number) => string | number;
                             toDb: (clientValue: string | number) => number;
@@ -476,170 +835,401 @@ declare const schemas: {
                     };
                 };
                 name: {
-                    sql: {
-                        type: "varchar";
-                        length: number;
-                    };
-                    dbType: import("zod").ZodString;
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: import("zod").ZodString;
-                    jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                        $schema?: string | undefined;
-                        definitions?: {
-                            [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                        } | undefined;
-                    };
-                    defaultValue: string;
-                    client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                        zod: import("zod").ZodString;
-                        serverType?: never;
-                    }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never) | undefined) => {
+                    config: {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodString;
-                        zodClientSchema: ClientType;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never);
-                        transform: (transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                        }) => {
-                            sql: {
-                                type: "varchar";
-                                length: number;
-                            };
-                            zodDbSchema: import("zod").ZodString;
-                            zodClientSchema: ClientType;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue;
-                            toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                            toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                            transforms: {
-                                toClient: string;
-                                toDb: string;
-                            };
-                        };
-                    };
-                    db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
-                        zod: import("zod").ZodString;
-                    }) => ServerType)) => {
-                        sql: {
-                            type: "varchar";
-                            length: number;
-                        };
-                        dbType: ServerType;
-                        zodDbSchema: ServerType;
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
                         zodClientSchema: import("zod").ZodString;
-                        jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                            $schema?: string | undefined;
-                            definitions?: {
-                                [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                            } | undefined;
-                        };
-                        defaultValue: import("zod").TypeOf<ServerType>;
-                        client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                            zod: import("zod").ZodString;
-                            serverType?: ServerType;
-                        }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                            default: "CURRENT_TIMESTAMP";
-                            defaultValue: Date;
-                        } : never) | undefined) => {
+                        zodValidationSchema: import("zod").ZodString;
+                    };
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: import("zod").ZodString;
+                        client: import("zod").ZodString;
+                    }) => TValidationNext)) => {
+                        config: {
                             sql: {
                                 type: "varchar";
                                 length: number;
                             };
-                            zodDbSchema: import("zod").ZodString | ServerType;
-                            zodClientSchema: ClientType;
-                            jsonSchema: any;
-                            defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                                default: "CURRENT_TIMESTAMP";
-                                defaultValue: Date;
-                            } : never);
-                            transform: (transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                            }) => {
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        }) => {
+                            config: {
                                 sql: {
                                     type: "varchar";
                                     length: number;
                                 };
-                                zodDbSchema: import("zod").ZodString | ServerType;
-                                zodClientSchema: ClientType;
-                                jsonSchema: any;
-                                defaultValue: DefaultValue;
-                                toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                                toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: undefined;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            } & {
                                 transforms: {
-                                    toClient: string;
-                                    toDb: string;
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
+                                };
+                            };
+                        };
+                    };
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: import("zod").ZodString;
+                    }) => TClientNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: import("zod").ZodString;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: undefined;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: undefined;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: undefined;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                    initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
+                        sql: import("zod").ZodString;
+                    }) => TNewNext), defaultValue: () => TDefaultNext) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: TNewNext;
+                            client: import("zod").ZodString;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodString;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => string;
+                                        toDb: (clientValue: string) => string;
+                                    };
+                                };
+                            };
+                        };
+                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: TNewNext;
+                        }) => TClientNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            };
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: TNewNext;
+                                client: TClientNext;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                        };
+                                    };
+                                };
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TClientNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: import("zod").ZodString;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
                                 };
                             };
                         };
                     };
                 };
                 userId: {
-                    sql: {
-                        type: "int";
+                    config: {
+                        sql: {
+                            type: "int";
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
                     };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodString;
-                    jsonSchema: any;
-                    defaultValue: string;
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodNumber;
+                        initialState: import("zod").ZodNumber;
+                        client: import("zod").ZodString;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => string;
+                            toDb: (clientValue: string) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: undefined;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => string;
+                                    toDb: (clientValue: string) => number;
+                                };
+                            };
+                        };
+                    };
                     transform: (transforms: {
                         toClient: (dbValue: number) => string;
                         toDb: (clientValue: string) => number;
                     }) => {
-                        sql: {
-                            type: "int";
-                        };
-                        zodDbSchema: import("zod").ZodNumber;
-                        zodClientSchema: import("zod").ZodString;
-                        jsonSchema: any;
-                        defaultValue: string;
-                        toClient: (dbValue: number) => string;
-                        toDb: (clientValue: string) => number;
-                        transforms: {
-                            toClient: string;
-                            toDb: string;
+                        config: {
+                            sql: {
+                                type: "int";
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: undefined;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => string;
+                                toDb: (clientValue: string) => number;
+                            };
                         };
                     };
                 };
                 fluffynessScale: {
-                    sql: {
-                        type: "text";
-                    };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                    jsonSchema: any;
-                    defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                    transforms: {
-                        toClient: string;
-                        toDb: string;
+                    config: {
+                        sql: {
+                            type: "text";
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                        zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
+                        };
                     };
                 };
                 favourite: {
-                    sql: {
-                        type: "int";
-                    };
-                    zodDbSchema: import("zod").ZodNumber;
-                    zodClientSchema: import("zod").ZodBoolean;
-                    jsonSchema: any;
-                    defaultValue: boolean;
-                    toClient: (dbValue: number) => boolean;
-                    toDb: (clientValue: boolean) => number;
-                    transforms: {
-                        toClient: string;
-                        toDb: string;
+                    config: {
+                        sql: {
+                            type: "int";
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodBoolean;
+                        zodValidationSchema: import("zod").ZodBoolean;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => boolean;
+                            toDb: (clientValue: boolean) => number;
+                        };
                     };
                 };
             };
@@ -659,6 +1249,7 @@ declare const schemas: {
                 initialValue: string;
                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
                 zodValidationSchema: import("zod").ZodString;
+            } & {
                 transforms: {
                     toClient: (dbValue: number) => string | number;
                     toDb: (clientValue: string | number) => number;
@@ -666,170 +1257,401 @@ declare const schemas: {
             };
         };
         name: {
-            sql: {
-                type: "varchar";
-                length: number;
-            };
-            dbType: import("zod").ZodString;
-            zodDbSchema: import("zod").ZodString;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                $schema?: string | undefined;
-                definitions?: {
-                    [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                } | undefined;
-            };
-            defaultValue: string;
-            client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                zod: import("zod").ZodString;
-                serverType?: never;
-            }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                default: "CURRENT_TIMESTAMP";
-                defaultValue: Date;
-            } : never) | undefined) => {
+            config: {
                 sql: {
                     type: "varchar";
                     length: number;
                 };
-                zodDbSchema: import("zod").ZodString;
-                zodClientSchema: ClientType;
-                jsonSchema: any;
-                defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never);
-                transform: (transforms: {
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                }) => {
-                    sql: {
-                        type: "varchar";
-                        length: number;
-                    };
-                    zodDbSchema: import("zod").ZodString;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue;
-                    toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                    toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                    transforms: {
-                        toClient: string;
-                        toDb: string;
-                    };
-                };
-            };
-            db: <ServerType extends import("zod").ZodTypeAny>(assert: ServerType | ((tools: {
-                zod: import("zod").ZodString;
-            }) => ServerType)) => {
-                sql: {
-                    type: "varchar";
-                    length: number;
-                };
-                dbType: ServerType;
-                zodDbSchema: ServerType;
+                zodSqlSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: undefined;
                 zodClientSchema: import("zod").ZodString;
-                jsonSchema: import("zod-to-json-schema").JsonSchema7Type & {
-                    $schema?: string | undefined;
-                    definitions?: {
-                        [key: string]: import("zod-to-json-schema").JsonSchema7Type;
-                    } | undefined;
-                };
-                defaultValue: import("zod").TypeOf<ServerType>;
-                client: <ClientType extends import("zod").ZodTypeAny, DefaultValue extends import("zod").TypeOf<ClientType>>(assert?: ClientType | ((tools: {
-                    zod: import("zod").ZodString;
-                    serverType?: ServerType;
-                }) => ClientType) | undefined, defaultValue?: DefaultValue | (DefaultValue extends Date ? {
-                    default: "CURRENT_TIMESTAMP";
-                    defaultValue: Date;
-                } : never) | undefined) => {
+                zodValidationSchema: import("zod").ZodString;
+            };
+            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                sql: import("zod").ZodString;
+                initialState: import("zod").ZodString;
+                client: import("zod").ZodString;
+            }) => TValidationNext)) => {
+                config: {
                     sql: {
                         type: "varchar";
                         length: number;
                     };
-                    zodDbSchema: import("zod").ZodString | ServerType;
-                    zodClientSchema: ClientType;
-                    jsonSchema: any;
-                    defaultValue: DefaultValue | (DefaultValue extends Date ? {
-                        default: "CURRENT_TIMESTAMP";
-                        defaultValue: Date;
-                    } : never);
-                    transform: (transforms: {
-                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
-                    }) => {
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: TValidationNext;
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
                         sql: {
                             type: "varchar";
                             length: number;
                         };
-                        zodDbSchema: import("zod").ZodString | ServerType;
-                        zodClientSchema: ClientType;
-                        jsonSchema: any;
-                        defaultValue: DefaultValue;
-                        toClient: (dbValue: string) => import("zod").TypeOf<ClientType>;
-                        toDb: (clientValue: import("zod").TypeOf<ClientType>) => string;
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: TValidationNext;
+                    } & {
                         transforms: {
-                            toClient: string;
-                            toDb: string;
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
+            };
+            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                sql: import("zod").ZodString;
+                initialState: import("zod").ZodString;
+            }) => TClientNext)) => {
+                config: {
+                    sql: {
+                        type: "varchar";
+                        length: number;
+                    };
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: TClientNext;
+                    zodValidationSchema: TClientNext;
+                };
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodString;
+                    initialState: import("zod").ZodString;
+                    client: TClientNext;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: undefined;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: undefined;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        };
+                    };
+                };
+            };
+            transform: (transforms: {
+                toClient: (dbValue: string) => string;
+                toDb: (clientValue: string) => string;
+            }) => {
+                config: {
+                    sql: {
+                        type: "varchar";
+                        length: number;
+                    };
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodString;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                } & {
+                    transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    };
+                };
+            };
+            initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
+                sql: import("zod").ZodString;
+            }) => TNewNext), defaultValue: () => TDefaultNext) => {
+                config: {
+                    sql: {
+                        type: "varchar";
+                        length: number;
+                    };
+                    zodSqlSchema: import("zod").ZodString;
+                    zodNewSchema: TNewNext;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                };
+                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: import("zod").ZodString;
+                    initialState: TNewNext;
+                    client: import("zod").ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: import("zod").ZodString;
+                    initialState: TNewNext;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: TNewNext;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
                         };
                     };
                 };
             };
         };
         userId: {
-            sql: {
-                type: "int";
+            config: {
+                sql: {
+                    type: "int";
+                };
+                zodSqlSchema: import("zod").ZodNumber;
+                zodNewSchema: import("zod").ZodNumber;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodString;
+                zodValidationSchema: import("zod").ZodString;
             };
-            zodDbSchema: import("zod").ZodNumber;
-            zodClientSchema: import("zod").ZodString;
-            jsonSchema: any;
-            defaultValue: string;
+            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                sql: import("zod").ZodNumber;
+                initialState: import("zod").ZodNumber;
+                client: import("zod").ZodString;
+            }) => TValidationNext)) => {
+                config: {
+                    sql: {
+                        type: "int";
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: TValidationNext;
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: number) => string;
+                    toDb: (clientValue: string) => number;
+                }) => {
+                    config: {
+                        sql: {
+                            type: "int";
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: undefined;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: TValidationNext;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => string;
+                            toDb: (clientValue: string) => number;
+                        };
+                    };
+                };
+            };
             transform: (transforms: {
                 toClient: (dbValue: number) => string;
                 toDb: (clientValue: string) => number;
             }) => {
-                sql: {
-                    type: "int";
-                };
-                zodDbSchema: import("zod").ZodNumber;
-                zodClientSchema: import("zod").ZodString;
-                jsonSchema: any;
-                defaultValue: string;
-                toClient: (dbValue: number) => string;
-                toDb: (clientValue: string) => number;
-                transforms: {
-                    toClient: string;
-                    toDb: string;
+                config: {
+                    sql: {
+                        type: "int";
+                    };
+                    zodSqlSchema: import("zod").ZodNumber;
+                    zodNewSchema: import("zod").ZodNumber;
+                    initialValue: undefined;
+                    zodClientSchema: import("zod").ZodString;
+                    zodValidationSchema: import("zod").ZodString;
+                } & {
+                    transforms: {
+                        toClient: (dbValue: number) => string;
+                        toDb: (clientValue: string) => number;
+                    };
                 };
             };
         };
         fluffynessScale: {
-            sql: {
-                type: "text";
-            };
-            zodDbSchema: import("zod").ZodString;
-            zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-            jsonSchema: any;
-            defaultValue: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-            transforms: {
-                toClient: string;
-                toDb: string;
+            config: {
+                sql: {
+                    type: "text";
+                };
+                zodSqlSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodString;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+            } & {
+                transforms: {
+                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
+                };
             };
         };
         favourite: {
-            sql: {
-                type: "int";
-            };
-            zodDbSchema: import("zod").ZodNumber;
-            zodClientSchema: import("zod").ZodBoolean;
-            jsonSchema: any;
-            defaultValue: boolean;
-            toClient: (dbValue: number) => boolean;
-            toDb: (clientValue: boolean) => number;
-            transforms: {
-                toClient: string;
-                toDb: string;
+            config: {
+                sql: {
+                    type: "int";
+                };
+                zodSqlSchema: import("zod").ZodNumber;
+                zodNewSchema: import("zod").ZodNumber;
+                initialValue: undefined;
+                zodClientSchema: import("zod").ZodBoolean;
+                zodValidationSchema: import("zod").ZodBoolean;
+            } & {
+                transforms: {
+                    toClient: (dbValue: number) => boolean;
+                    toDb: (clientValue: boolean) => number;
+                };
             };
         };
     };

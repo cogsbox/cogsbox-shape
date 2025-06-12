@@ -1,17 +1,17 @@
 import { z } from "zod";
-import { belongsTo, createSchema, createSchema2, hasMany, shape, } from "../schema.js";
+import { belongsTo, createSchema, hasMany, shape } from "../schema.js";
 export const userSchema = {
     _tableName: "users",
     id: shape.sql({ type: "int", pk: true }),
     firstname: shape
         .sql({ type: "varchar", length: 255 })
-        .db(({ zod }) => zod.min(1)),
+        .validation(({ sql }) => sql.min(1)),
     surname: shape
         .sql({ type: "varchar", length: 255 })
-        .db(({ zod }) => zod.min(1)),
+        .validation(({ sql }) => sql.min(1)),
     email: shape
         .sql({ type: "varchar", length: 255 })
-        .db(({ zod }) => zod.email()),
+        .validation(({ sql }) => sql.email()),
     pets: hasMany({
         fromKey: "id",
         toKey: () => petSchema.userId,
@@ -22,7 +22,7 @@ export const userSchema = {
 export const petSchema = {
     _tableName: "pets",
     id: shape
-        .sql2({ type: "int", pk: true })
+        .sql({ type: "int", pk: true })
         .initialState(z.string(), () => "uuidexample")
         .client(({ sql, initialState }) => z.union([sql, initialState]))
         .validation(z.string())
@@ -34,31 +34,37 @@ export const petSchema = {
     userId: shape.sql({ type: "int" }).client(z.string()),
     fluffynessScale: shape
         .sql({ type: "text" })
-        .client(({ zod }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
+        .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
         .transform({
         toClient: (value) => value.split(",").filter(Boolean),
         toDb: (value) => value.join(","),
     }),
     favourite: shape
         .sql({ type: "int" })
-        .client(({ zod }) => z.boolean())
+        .client(({ sql }) => z.boolean())
         .transform({
         toClient: (dbValue) => dbValue === 1,
         toDb: (clientValue) => (clientValue ? 1 : 0),
     }),
 };
-export const { dbSchema, clientSchema, initialValues, serialized } = createSchema(userSchema);
+// export const { dbSchema, clientSchema, initialValues, serialized } =
+//   createSchema(userSchema);
 const testPets = {
     _tableName: "users",
     id: shape
-        .sql2({ type: "int", pk: true })
+        .sql({ type: "int", pk: true })
         .initialState(z.string().uuid(), () => "sdasdsad")
-        .client(({ sql, initialState }) => z.union([sql, initialState])),
+        .client(({ sql, initialState }) => z.union([sql, initialState]))
+        .validation(({ sql }) => sql)
+        .transform({
+        toClient: (dbValue) => dbValue,
+        toDb: (clientValue) => Number(clientValue),
+    }),
     email: shape
-        .sql2({ type: "varchar", length: 255 })
-        .validation(({ sql }) => sql.email()),
+        .sql({ type: "varchar", length: 255 })
+        .validation(({ sql }) => sql),
     createdAt: shape
-        .sql2({ type: "datetime" })
+        .sql({ type: "datetime" })
         .client(({ sql }) => z.string())
         .validation(({ sql }) => sql.optional())
         .transform({
@@ -66,5 +72,4 @@ const testPets = {
         toDb: (str) => new Date(str),
     }),
 };
-const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema2(testPets);
-console.log(sqlSchema);
+const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema(testPets);

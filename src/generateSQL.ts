@@ -1,6 +1,6 @@
 import fs from "fs/promises";
-
 import type { Schema } from "./schema";
+
 type SQLTypeKey =
   | "int"
   | "varchar"
