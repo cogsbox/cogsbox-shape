@@ -234,14 +234,6 @@ export function manyToMany(config) {
         defaultCount: config.defaultCount,
     });
 }
-function isRelation(value) {
-    return (value &&
-        typeof value === "object" &&
-        "type" in value &&
-        "fromKey" in value &&
-        "toKey" in value &&
-        "schema" in value);
-}
 function inferDefaultFromZod(zodType, sqlConfig) {
     if (sqlConfig?.pk) {
         return uuidv4();
@@ -421,6 +413,14 @@ export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
         }
     }
     return z.object(mixedFields);
+}
+function isRelation(value) {
+    return (value &&
+        typeof value === "object" &&
+        "type" in value &&
+        "fromKey" in value &&
+        "toKey" in value &&
+        "schema" in value);
 }
 export function createSchema(schema) {
     const sqlFields = {};

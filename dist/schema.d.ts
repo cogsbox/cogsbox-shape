@@ -2276,33 +2276,62 @@ export declare function reference<TTargetField extends SchemaField, TField exten
     to: () => TTargetField;
 };
 export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T, clientSchema?: z.ZodObject<any>, dbSchema?: z.ZodObject<any>): z.ZodObject<any>;
+type SchemaDefinition = {
+    _tableName: string;
+    [key: string]: any;
+};
 type InferSqlSchema<T> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
             zodSqlSchema: infer S extends z.ZodTypeAny;
         };
-    } ? S : never;
+    } ? S : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodObject<Prettify<InferSqlSchema<S>>> : never;
 };
 type InferClientSchema<T> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
             zodClientSchema: infer C extends z.ZodTypeAny;
         };
-    } ? C : never;
+    } ? C : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodArray<z.ZodObject<Prettify<InferClientSchema<S>>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodObject<Prettify<InferClientSchema<S>>> : never;
 };
 type InferValidationSchema<T> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
             zodValidationSchema: infer V extends z.ZodTypeAny;
         };
-    } ? V : never;
+    } ? V : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodArray<z.ZodObject<Prettify<InferValidationSchema<S>>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodObject<Prettify<InferValidationSchema<S>>> : never;
 };
 type InferDefaultValues2<T> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
             initialValue: infer D;
         };
-    } ? D : never;
+    } ? D : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+        defaultCount?: number;
+    } ? Array<Prettify<InferDefaultValues2<S>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? Prettify<InferDefaultValues2<S>> : never;
 };
 export declare function createSchema<T extends {
     _tableName: string;

@@ -728,17 +728,6 @@ type InferDefaultValues<T, TDefault extends boolean = true> = {
                     : never;
 };
 
-function isRelation(value: any): value is Relation<any> {
-  return (
-    value &&
-    typeof value === "object" &&
-    "type" in value &&
-    "fromKey" in value &&
-    "toKey" in value &&
-    "schema" in value
-  );
-}
-
 function inferDefaultFromZod(
   zodType: z.ZodType<any>,
   sqlConfig?: SQLType
@@ -1068,13 +1057,33 @@ export function createMixedValidationSchema<T extends Schema<any>>(
 
   return z.object(mixedFields);
 }
-
+function isRelation(value: any): value is Relation<any> {
+  return (
+    value &&
+    typeof value === "object" &&
+    "type" in value &&
+    "fromKey" in value &&
+    "toKey" in value &&
+    "schema" in value
+  );
+}
+type SchemaDefinition = { _tableName: string; [key: string]: any };
 type InferSqlSchema<T> = {
   [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
     config: { zodSqlSchema: infer S extends z.ZodTypeAny };
   }
     ? S
-    : never;
+    : T[K] extends () => {
+          type: "hasMany" | "manyToMany";
+          schema: infer S extends SchemaDefinition;
+        }
+      ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>>
+      : T[K] extends () => {
+            type: "hasOne" | "belongsTo";
+            schema: infer S extends SchemaDefinition;
+          }
+        ? z.ZodObject<Prettify<InferSqlSchema<S>>>
+        : never;
 };
 
 type InferClientSchema<T> = {
@@ -1082,7 +1091,17 @@ type InferClientSchema<T> = {
     config: { zodClientSchema: infer C extends z.ZodTypeAny };
   }
     ? C
-    : never;
+    : T[K] extends () => {
+          type: "hasMany" | "manyToMany";
+          schema: infer S extends SchemaDefinition;
+        }
+      ? z.ZodArray<z.ZodObject<Prettify<InferClientSchema<S>>>>
+      : T[K] extends () => {
+            type: "hasOne" | "belongsTo";
+            schema: infer S extends SchemaDefinition;
+          }
+        ? z.ZodObject<Prettify<InferClientSchema<S>>>
+        : never;
 };
 
 type InferValidationSchema<T> = {
@@ -1090,7 +1109,17 @@ type InferValidationSchema<T> = {
     config: { zodValidationSchema: infer V extends z.ZodTypeAny };
   }
     ? V
-    : never;
+    : T[K] extends () => {
+          type: "hasMany" | "manyToMany";
+          schema: infer S extends SchemaDefinition;
+        }
+      ? z.ZodArray<z.ZodObject<Prettify<InferValidationSchema<S>>>>
+      : T[K] extends () => {
+            type: "hasOne" | "belongsTo";
+            schema: infer S extends SchemaDefinition;
+          }
+        ? z.ZodObject<Prettify<InferValidationSchema<S>>>
+        : never;
 };
 
 type InferDefaultValues2<T> = {
@@ -1098,7 +1127,18 @@ type InferDefaultValues2<T> = {
     config: { initialValue: infer D };
   }
     ? D
-    : never;
+    : T[K] extends () => {
+          type: "hasMany" | "manyToMany";
+          schema: infer S extends SchemaDefinition;
+          defaultCount?: number;
+        }
+      ? Array<Prettify<InferDefaultValues2<S>>>
+      : T[K] extends () => {
+            type: "hasOne" | "belongsTo";
+            schema: infer S extends SchemaDefinition;
+          }
+        ? Prettify<InferDefaultValues2<S>>
+        : never;
 };
 
 export function createSchema<T extends { _tableName: string }>(
