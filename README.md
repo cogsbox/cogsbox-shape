@@ -12,11 +12,9 @@ A TypeScript library for creating type-safe database schemas with Zod validation
 - Type-safe schema definitions with TypeScript
 - Built-in Zod validation
 - Automatic type transformations between client and database
-- SQL migrations codegen from schemas
 - Relationship handling (hasMany, hasOne, belongsTo)
 - Schema serialization
 - Default value generation
-- CLI tool for SQL generation
 
 ## Installation
 
@@ -29,69 +27,37 @@ npm install cogsbox-shape
 ```typescript
 import { shape, hasMany, createSchema } from "cogsbox-shape";
 
-// Define your schemas with type safety
-const userSchema = {
-  _tableName: "users",
+const productSchema = {
+  _tableName: "products",
   id: shape.sql({ type: "int", pk: true }),
-  firstname: shape
-    .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.min(1)),
-  surname: shape
-    .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.min(1)),
-  email: shape
-    .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.email()),
-  pets: hasMany({
+  sku: shape
+    .sql({ type: "varchar", length: 50 })
+    .initialState(
+      z.string(),
+      () => "PRD-" + Math.random().toString(36).slice(2)
+    )
+    .validation(({ sql }) => sql.min(5).max(50)),
+  price: shape
+    .sql({ type: "int" })
+    .client(({ sql }) => z.number().multipleOf(0.01))
+    .transform({
+      toClient: (dbValue) => dbValue / 100,
+      toDb: (clientValue) => Math.round(clientValue * 100),
+    }),
+  inStock: shape
+    .sql({ type: "boolean" })
+    .client(({ sql }) => z.boolean())
+    .initialState(z.boolean(), () => true),
+  categories: hasMany({
     fromKey: "id",
-    toKey: () => petSchema.userId,
-    schema: () => petSchema,
-    defaultCount: 1,
+    toKey: () => categorySchema.productId,
+    schema: () => categorySchema,
   }),
 };
 
-// Create your schema and get typed utilities
-const { dbSchema, clientSchema, initialValues, serialized } =
-  createSchema(userSchema);
+const { sqlSchema, clientSchema, validationSchema, defaultValues } =
+  createSchema(productSchema);
 ```
-
-## Schema Export and SQL Generation
-
-### Exporting Schemas
-
-You can export your schemas for use with the CLI tool:
-
-```typescript
-// schemas.ts
-import { petSchema, userSchema } from "./schemas";
-
-const schemas = {
-  user: userSchema,
-  pet: petSchema,
-};
-
-export { schemas };
-```
-
-### Using the CLI
-
-The package includes a CLI tool for generating SQL from your schemas. After installation, you can use it with:
-
-```bash
-npx cogsbox-shape generate-sql <file>
-```
-
-The CLI supports both TypeScript and JavaScript files:
-
-```bash
-# For TypeScript files
-npx cogsbox-shape generate-sql schemas.ts
-
-# For JavaScript files
-npx cogsbox-shape generate-sql schemas.js
-```
-
-This will generate a SQL file (`cogsbox-shape-sql.sql`) containing the table definitions for all your schemas.
 
 ## Advanced Features
 
@@ -100,21 +66,35 @@ This will generate a SQL file (`cogsbox-shape-sql.sql`) containing the table def
 Transform data between client and database representations:
 
 ```typescript
-const petSchema = {
-  _tableName: "pets",
-  fluffynessScale: shape
+const orderSchema = {
+  _tableName: "orders",
+  id: shape
+    .sql({ type: "int", pk: true })
+    .initialState(z.string().uuid(), () => crypto.randomUUID())
+    .client(({ sql, initialState }) => z.union([sql, initialState])),
+  status: shape
+    .sql({ type: "varchar", length: 20 })
+    .client(({ sql }) =>
+      z.enum(["pending", "processing", "shipped", "delivered"])
+    )
+    .validation(({ sql }) =>
+      sql.refine((val) =>
+        ["pending", "processing", "shipped", "delivered"].includes(val)
+      )
+    ),
+  metadata: shape
     .sql({ type: "text" })
-    .client(({ zod }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
+    .client(({ sql }) => z.record(z.unknown()))
     .transform({
-      toClient: (value) => value.split(",").filter(Boolean),
-      toDb: (value) => value.join(","),
+      toClient: (value) => JSON.parse(value),
+      toDb: (value) => JSON.stringify(value),
     }),
-  favourite: shape
-    .sql({ type: "int" })
-    .client(({ zod }) => z.boolean())
+  createdAt: shape
+    .sql({ type: "datetime" })
+    .client(({ sql }) => z.string().datetime())
     .transform({
-      toClient: (dbValue) => dbValue === 1,
-      toDb: (clientValue) => (clientValue ? 1 : 0),
+      toClient: (date) => date.toISOString(),
+      toDb: (isoString) => new Date(isoString),
     }),
 };
 ```
@@ -124,23 +104,27 @@ const petSchema = {
 Define relationships between schemas:
 
 ```typescript
-const userSchema = {
-  // ... other fields
-  pets: hasMany({
+const customerSchema = {
+  _tableName: "customers",
+  id: shape.sql({ type: "int", pk: true }),
+  name: shape.sql({ type: "varchar", length: 100 }),
+  orders: hasMany({
     fromKey: "id",
-    toKey: () => petSchema.userId,
-    schema: () => petSchema,
-    defaultCount: 1,
+    toKey: () => orderSchema.customerId,
+    schema: () => orderSchema,
+  }),
+  primaryAddress: hasOne({
+    fromKey: "id",
+    toKey: () => addressSchema.customerId,
+    schema: () => addressSchema,
+  }),
+  company: belongsTo({
+    fromKey: "companyId",
+    toKey: () => companySchema.id,
+    schema: () => companySchema,
   }),
 };
 ```
-
-Supported relationships:
-
-- `hasMany`
-- `hasOne`
-- `belongsTo`
-- `manyToMany`
 
 ### SQL Types
 
@@ -161,11 +145,22 @@ shape.longtext();
 Add Zod validation to your schemas:
 
 ```typescript
-const schema = {
+const userSchema = {
+  _tableName: "users",
   email: shape
     .sql({ type: "varchar", length: 255 })
-    .db(({ zod }) => zod.email()),
-  age: shape.sql({ type: "int" }).db(({ zod }) => zod.min(0).max(120)),
+    .validation(({ sql }) => sql.email().toLowerCase()),
+  password: shape
+    .sql({ type: "varchar", length: 255 })
+    .validation(({ sql }) =>
+      sql
+        .min(8)
+        .regex(/[A-Z]/, "Must contain uppercase letter")
+        .regex(/[0-9]/, "Must contain number")
+    ),
+  birthDate: shape
+    .sql({ type: "date" })
+    .validation(({ sql }) => sql.min(new Date("1900-01-01")).max(new Date())),
 };
 ```
 
@@ -174,12 +169,14 @@ const schema = {
 The library provides full type inference:
 
 ```typescript
-const { dbSchema, clientSchema, initialValues } = createSchema(userSchema);
+const { sqlSchema, clientSchema, validationSchema, defaultValues } =
+  createSchema(userSchema);
 
 // These are fully typed:
-type DBUser = z.infer<typeof dbSchema>;
+type DBUser = z.infer<typeof sqlSchema>;
 type ClientUser = z.infer<typeof clientSchema>;
-const defaults: typeof initialValues = {
+type ValidationUser = z.infer<typeof validationSchema>;
+const defaults: typeof defaultValues = {
   // TypeScript will ensure this matches your schema
 };
 ```
