@@ -490,79 +490,107 @@ export const shape = {
       sqlConfig: sqlConfig,
       sqlZod: sqlZodType,
       newZod: sqlZodType,
-      newDefault: undefined,
+      initialValue: undefined,
       clientZod: sqlZodType,
       validationZod: sqlZodType,
     });
   },
 };
-
 type Builder<
   TStage extends "sql" | "new" | "client" | "validation",
   T extends SQLType,
   TSql extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
-  TNewDefault,
+  TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > = {
-  sql: T;
-  zodSqlSchema: TSql;
-  zodNewSchema: TNew;
-  newDefault: TNewDefault;
-  zodClientSchema: TClient;
-  zodValidationSchema: TValidation;
-  defaultValue: any;
+  config: {
+    sql: T;
+    zodSqlSchema: TSql;
+    zodNewSchema: TNew;
+    initialValue: TInitialValue;
+    zodClientSchema: TClient;
+    zodValidationSchema: TValidation;
+  };
 } & (TStage extends "sql"
   ? {
-      newState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+      initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
         schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
         defaultValue: () => TDefaultNext
-      ) => Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>;
+      ) => Prettify<
+        Builder<"new", T, TSql, TNewNext, TDefaultNext, TSql, TSql>
+      >;
       client: <TClientNext extends z.ZodTypeAny>(
-        assert: ((tools: { sql: TSql; new: TNew }) => TClientNext) | TClientNext
-      ) => Builder<"client", T, TSql, TNew, TNewDefault, TClientNext, TSql>;
+        assert:
+          | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
+          | TClientNext
+      ) => Prettify<
+        Builder<
+          "client",
+          T,
+          TSql,
+          TNew,
+          TInitialValue,
+          TClientNext,
+          TClientNext
+        >
+      >;
       validation: <TValidationNext extends z.ZodTypeAny>(
         assert:
           | ((tools: {
               sql: TSql;
-              new: TNew;
+              initialState: TNew;
               client: TClient;
             }) => TValidationNext)
           | TValidationNext
-      ) => Builder<
-        "validation",
-        T,
-        TSql,
-        TNew,
-        TNewDefault,
-        TClient,
-        TValidationNext
+      ) => Prettify<
+        Builder<
+          "validation",
+          T,
+          TSql,
+          TNew,
+          TInitialValue,
+          TClient,
+          TValidationNext
+        >
       >;
     }
   : TStage extends "new"
     ? {
         client: <TClientNext extends z.ZodTypeAny>(
           assert:
-            | ((tools: { sql: TSql; newState: TNew }) => TClientNext)
+            | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
             | TClientNext
-        ) => Builder<"client", T, TSql, TNew, TNewDefault, TClientNext, TSql>;
+        ) => Prettify<
+          Builder<
+            "client",
+            T,
+            TSql,
+            TNew,
+            TInitialValue,
+            TClientNext,
+            TClientNext
+          >
+        >;
         validation: <TValidationNext extends z.ZodTypeAny>(
           assert:
             | ((tools: {
                 sql: TSql;
-                newState: TNew;
+                initialState: TNew;
                 client: TClient;
               }) => TValidationNext)
             | TValidationNext
-        ) => Builder<
-          "validation",
-          T,
-          TSql,
-          TNew,
-          TNewDefault,
-          TClient,
-          TValidationNext
+        ) => Prettify<
+          Builder<
+            "validation",
+            T,
+            TSql,
+            TNew,
+            TInitialValue,
+            TClient,
+            TValidationNext
+          >
         >;
       }
     : TStage extends "client"
@@ -571,28 +599,50 @@ type Builder<
             assert:
               | ((tools: {
                   sql: TSql;
-                  newState: TNew;
+                  initialState: TNew;
                   client: TClient;
                 }) => TValidationNext)
               | TValidationNext
-          ) => Builder<
-            "validation",
-            T,
-            TSql,
-            TNew,
-            TNewDefault,
-            TClient,
-            TValidationNext
+          ) => Prettify<
+            Builder<
+              "validation",
+              T,
+              TSql,
+              TNew,
+              TInitialValue,
+              TClient,
+              TValidationNext
+            >
           >;
         }
-      : {});
+      : TStage extends "validation"
+        ? {
+            transform: (transforms: {
+              toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+              toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+            }) => {
+              config: {
+                sql: T;
+                zodSqlSchema: TSql;
+                zodNewSchema: TNew;
+                initialValue: TInitialValue;
+                zodClientSchema: TClient;
+                zodValidationSchema: TValidation;
+                transforms: {
+                  toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+                  toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+                };
+              };
+            };
+          }
+        : {});
 
 function createBuilder<
   TStage extends "sql" | "new" | "client" | "validation",
   T extends SQLType,
   TSql extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
-  TNewDefault,
+  TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 >(config: {
@@ -600,57 +650,101 @@ function createBuilder<
   sqlConfig: T;
   sqlZod: TSql;
   newZod: TNew;
-  newDefault: TNewDefault;
+  initialValue: TInitialValue;
   clientZod: TClient;
   validationZod: TValidation;
-}): Builder<TStage, T, TSql, TNew, TNewDefault, TClient, TValidation> {
-  const builderObject = {
-    sql: config.sqlConfig,
-    zodSqlSchema: config.sqlZod,
-    zodNewSchema: config.newZod,
-    newDefault: config.newDefault,
-    zodClientSchema: config.clientZod,
-    zodValidationSchema: config.validationZod,
-    defaultValue:
-      config.newDefault ||
-      inferDefaultFromZod(config.clientZod as z.ZodTypeAny, config.sqlConfig),
+  completedStages?: Set<string>; // Track what's been done
+}): Builder<TStage, T, TSql, TNew, TInitialValue, TClient, TValidation> {
+  // Initialize completed stages tracker
+  const completedStages = config.completedStages || new Set<string>(["sql"]);
 
-    newState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
-      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: () => TDefaultNext
+  const builderObject = {
+    config: {
+      sql: config.sqlConfig,
+      zodSqlSchema: config.sqlZod,
+      zodNewSchema: config.newZod,
+      initialValue:
+        config.initialValue ||
+        inferDefaultFromZod(config.clientZod as z.ZodTypeAny, config.sqlConfig),
+      zodClientSchema: config.clientZod,
+      zodValidationSchema: config.validationZod,
+    },
+
+    initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+      schemaOrDefault:
+        | ((tools: { sql: TSql }) => TNewNext)
+        | TNewNext
+        | (() => TDefaultNext),
+      defaultValue?: () => TDefaultNext
     ) => {
-      const newSchema = isFunction(schema)
-        ? schema({ sql: config.sqlZod })
-        : schema;
+      // Runtime validation
+      if (completedStages.has("new")) {
+        throw new Error("initialState() can only be called once in the chain");
+      }
+      if (completedStages.has("client")) {
+        throw new Error("initialState() must be called before client()");
+      }
+      if (completedStages.has("validation")) {
+        throw new Error("initialState() must be called before validation()");
+      }
+
+      // Handle overload - if no second param, first param is the default
+      const hasTypeParam = defaultValue !== undefined;
+      const newSchema = hasTypeParam
+        ? isFunction(schemaOrDefault)
+          ? (schemaOrDefault as any)({ sql: config.sqlZod })
+          : schemaOrDefault
+        : config.sqlZod; // Keep SQL type if just setting default
+
+      const finalDefaultValue = hasTypeParam
+        ? defaultValue!()
+        : (schemaOrDefault as () => TDefaultNext)();
+
+      const newCompletedStages = new Set(completedStages);
+      newCompletedStages.add("new");
+      const newClientZod = hasTypeParam
+        ? z.union([config.sqlZod as any, newSchema as any])
+        : config.sqlZod;
 
       return createBuilder({
         ...config,
         stage: "new",
         newZod: newSchema,
-        newDefault: defaultValue(),
-        // When new is defined, client defaults to union of sql and new
-        clientZod: z.union([config.sqlZod as any, newSchema as any]),
-        // Validation also defaults to union
-        validationZod: z.union([config.sqlZod as any, newSchema as any]),
+        initialValue: finalDefaultValue,
+        clientZod: newClientZod,
+        validationZod: hasTypeParam
+          ? z.union([config.sqlZod as any, newSchema as any])
+          : config.sqlZod,
+        completedStages: newCompletedStages,
       });
     },
-
     client: <TClientNext extends z.ZodTypeAny>(
       assert:
-        | ((tools: { sql: TSql; newState: TNew }) => TClientNext)
+        | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
         | TClientNext
     ) => {
+      // Runtime validation
+      if (completedStages.has("client")) {
+        throw new Error("client() can only be called once in the chain");
+      }
+      if (completedStages.has("validation")) {
+        throw new Error("client() must be called before validation()");
+      }
+
       const clientSchema = isFunction(assert)
-        ? assert({ sql: config.sqlZod, newState: config.newZod })
+        ? assert({ sql: config.sqlZod, initialState: config.newZod })
         : assert;
+
+      const newCompletedStages = new Set(completedStages);
+      newCompletedStages.add("client");
 
       return createBuilder({
         ...config,
         stage: "client",
         clientZod: clientSchema,
-        // If we haven't set validation yet, default it to match client
-        validationZod:
-          config.stage === "sql" ? clientSchema : config.validationZod,
+        // Always set validation to match client when client is set
+        validationZod: clientSchema,
+        completedStages: newCompletedStages,
       });
     },
 
@@ -658,24 +752,58 @@ function createBuilder<
       assert:
         | ((tools: {
             sql: TSql;
-            new: TNew;
+            initialState: TNew;
             client: TClient;
           }) => TValidationNext)
         | TValidationNext
     ) => {
+      // Runtime validation
+      if (completedStages.has("validation")) {
+        throw new Error("validation() can only be called once in the chain");
+      }
+
       const validationSchema = isFunction(assert)
         ? assert({
             sql: config.sqlZod,
-            new: config.newZod,
+            initialState: config.newZod,
             client: config.clientZod,
           })
         : assert;
+
+      const newCompletedStages = new Set(completedStages);
+      newCompletedStages.add("validation");
 
       return createBuilder({
         ...config,
         stage: "validation",
         validationZod: validationSchema,
+        completedStages: newCompletedStages,
       });
+    },
+
+    transform: (transforms: {
+      toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+      toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+    }) => {
+      // Runtime validation
+      if (
+        !completedStages.has("validation") &&
+        !completedStages.has("client")
+      ) {
+        throw new Error(
+          "transform() requires at least client() or validation() to be called first"
+        );
+      }
+
+      return {
+        config: {
+          ...builderObject.config,
+          transforms: {
+            toClient: transforms.toClient,
+            toDb: transforms.toDb,
+          },
+        },
+      };
     },
   };
 
@@ -1427,3 +1555,66 @@ export type SchemaTypes<T extends Schema<any>> = {
   >;
   join: Prettify<ConversionType<T>>;
 };
+
+type InferSqlSchema<T> = {
+  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+    config: { zodSqlSchema: infer S extends z.ZodTypeAny };
+  }
+    ? S
+    : never;
+};
+
+type InferClientSchema<T> = {
+  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+    config: { zodClientSchema: infer C extends z.ZodTypeAny };
+  }
+    ? C
+    : never;
+};
+
+type InferValidationSchema<T> = {
+  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+    config: { zodValidationSchema: infer V extends z.ZodTypeAny };
+  }
+    ? V
+    : never;
+};
+
+type InferDefaultValues2<T> = {
+  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+    config: { initialValue: infer D };
+  }
+    ? D
+    : never;
+};
+
+export function createSchema2<T extends { _tableName: string }>(
+  schema: T extends { _tableName: string } ? T : never
+) {
+  const sqlFields = {} as any;
+  const clientFields = {} as any;
+  const validationFields = {} as any;
+  const defaultValues = {} as any;
+
+  for (const key in schema) {
+    if (key === "_tableName") continue;
+
+    const field = schema[key] as any;
+    if (field && typeof field === "object" && "config" in field) {
+      sqlFields[key] = field.config.zodSqlSchema; //field.config' is of type 'unknown
+      clientFields[key] = field.config.zodClientSchema;
+      validationFields[key] = field.config.zodValidationSchema;
+      defaultValues[key] = field.config.initialValue;
+    }
+  }
+  return {
+    sqlSchema: z.object(sqlFields) as z.ZodObject<Prettify<InferSqlSchema<T>>>,
+    clientSchema: z.object(clientFields) as z.ZodObject<
+      Prettify<InferClientSchema<T>>
+    >,
+    validationSchema: z.object(validationFields) as z.ZodObject<
+      Prettify<InferValidationSchema<T>>
+    >,
+    defaultValues: defaultValues as Prettify<InferDefaultValues2<T>>,
+  };
+}
