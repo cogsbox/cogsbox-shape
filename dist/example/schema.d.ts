@@ -147,25 +147,157 @@ declare const schemas: {
                     };
                 };
             };
-            initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                sql: import("zod").ZodNumber;
-            }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                config: {
-                    sql: {
-                        type: "int";
-                        pk: true;
+            initialState: {
+                <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                    config: {
+                        sql: {
+                            type: "int";
+                            pk: true;
+                        };
+                        zodSqlSchema: import("zod").ZodNumber;
+                        zodNewSchema: import("zod").ZodNumber;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodNumber;
+                        zodValidationSchema: import("zod").ZodNumber;
                     };
-                    zodSqlSchema: import("zod").ZodNumber;
-                    zodNewSchema: TNewNext;
-                    initialValue: import("zod").TypeOf<TNewNext>;
-                    zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodNumber;
+                        initialState: import("zod").ZodNumber;
+                        client: import("zod").ZodNumber;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodNumber;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodNumber;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => number;
+                                    toDb: (clientValue: number) => number;
+                                };
+                            };
+                        };
+                    };
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                        sql: import("zod").ZodNumber;
+                        initialState: import("zod").ZodNumber;
+                    }) => TClientNext)) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodNumber;
+                            initialState: import("zod").ZodNumber;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => number;
+                        toDb: (clientValue: number) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodNumber;
+                            zodValidationSchema: import("zod").ZodNumber;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
+                            };
+                        };
+                    };
                 };
-                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                     sql: import("zod").ZodNumber;
-                    initialState: TNewNext;
-                    client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                }) => TValidationNext)) => {
+                }) => TNewNext), defaultValue: () => TDefaultNext): {
                     config: {
                         sql: {
                             type: "int";
@@ -175,12 +307,13 @@ declare const schemas: {
                         zodNewSchema: TNewNext;
                         initialValue: import("zod").TypeOf<TNewNext>;
                         zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                     };
-                    transform: (transforms: {
-                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                    }) => {
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodNumber;
+                        initialState: TNewNext;
+                        client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                    }) => TValidationNext)) => {
                         config: {
                             sql: {
                                 type: "int";
@@ -191,34 +324,33 @@ declare const schemas: {
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                             zodValidationSchema: TValidationNext;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: TNewNext;
+                                initialValue: import("zod").TypeOf<TNewNext>;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                };
                             };
                         };
                     };
-                };
-                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                    sql: import("zod").ZodNumber;
-                    initialState: TNewNext;
-                }) => TClientNext)) => {
-                    config: {
-                        sql: {
-                            type: "int";
-                            pk: true;
-                        };
-                        zodSqlSchema: import("zod").ZodNumber;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
-                    };
-                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                         sql: import("zod").ZodNumber;
                         initialState: TNewNext;
-                        client: TClientNext;
-                    }) => TValidationNext)) => {
+                    }) => TClientNext)) => {
                         config: {
                             sql: {
                                 type: "int";
@@ -228,7 +360,45 @@ declare const schemas: {
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodNumber;
+                            initialState: TNewNext;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: TNewNext;
+                                initialValue: import("zod").TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    };
+                                };
+                            };
                         };
                         transform: (transforms: {
                             toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -243,7 +413,7 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: TClientNext;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -253,8 +423,8 @@ declare const schemas: {
                         };
                     };
                     transform: (transforms: {
-                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                     }) => {
                         config: {
                             sql: {
@@ -264,34 +434,13 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodNumber;
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: TClientNext;
-                            zodValidationSchema: TClientNext;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                         } & {
                             transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                             };
-                        };
-                    };
-                };
-                transform: (transforms: {
-                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                }) => {
-                    config: {
-                        sql: {
-                            type: "int";
-                            pk: true;
-                        };
-                        zodSqlSchema: import("zod").ZodNumber;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                         };
                     };
                 };
@@ -409,14 +558,14 @@ declare const schemas: {
                         pk: true;
                     };
                     zodSqlSchema: import("zod").ZodNumber;
-                    zodNewSchema: import("zod").ZodString;
+                    zodNewSchema: import("zod").ZodNumber;
                     initialValue: string;
-                    zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                    zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                     zodValidationSchema: import("zod").ZodString;
                 } & {
                     transforms: {
-                        toClient: (dbValue: number) => string | number;
-                        toDb: (clientValue: string | number) => number;
+                        toClient: (dbValue: number) => number;
+                        toDb: (clientValue: number) => number;
                     };
                 };
             } | {
@@ -565,25 +714,157 @@ declare const schemas: {
                         };
                     };
                 };
-                initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                    sql: import("zod").ZodString;
-                }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                    config: {
-                        sql: {
-                            type: "varchar";
-                            length: number;
+                initialState: {
+                    <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
                         };
-                        zodSqlSchema: import("zod").ZodString;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: import("zod").ZodString;
+                            client: import("zod").ZodString;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodString;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => string;
+                                        toDb: (clientValue: string) => string;
+                                    };
+                                };
+                            };
+                        };
+                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: import("zod").ZodString;
+                        }) => TClientNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            };
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: import("zod").ZodString;
+                                client: TClientNext;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: import("zod").ZodString;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                        };
+                                    };
+                                };
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TClientNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: import("zod").ZodString;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
+                                };
+                            };
+                        };
                     };
-                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                         sql: import("zod").ZodString;
-                        initialState: TNewNext;
-                        client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                    }) => TValidationNext)) => {
+                    }) => TNewNext), defaultValue: () => TDefaultNext): {
                         config: {
                             sql: {
                                 type: "varchar";
@@ -593,12 +874,13 @@ declare const schemas: {
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         };
-                        transform: (transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                        }) => {
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: TNewNext;
+                            client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                        }) => TValidationNext)) => {
                             config: {
                                 sql: {
                                     type: "varchar";
@@ -609,34 +891,33 @@ declare const schemas: {
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                 zodValidationSchema: TValidationNext;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                                    };
                                 };
                             };
                         };
-                    };
-                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                        sql: import("zod").ZodString;
-                        initialState: TNewNext;
-                    }) => TClientNext)) => {
-                        config: {
-                            sql: {
-                                type: "varchar";
-                                length: number;
-                            };
-                            zodSqlSchema: import("zod").ZodString;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: TClientNext;
-                            zodValidationSchema: TClientNext;
-                        };
-                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                             sql: import("zod").ZodString;
                             initialState: TNewNext;
-                            client: TClientNext;
-                        }) => TValidationNext)) => {
+                        }) => TClientNext)) => {
                             config: {
                                 sql: {
                                     type: "varchar";
@@ -646,7 +927,45 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: TClientNext;
+                            };
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: TNewNext;
+                                client: TClientNext;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                        };
+                                    };
+                                };
                             };
                             transform: (transforms: {
                                 toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -661,7 +980,7 @@ declare const schemas: {
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: TClientNext;
-                                    zodValidationSchema: TValidationNext;
+                                    zodValidationSchema: TClientNext;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -671,8 +990,8 @@ declare const schemas: {
                             };
                         };
                         transform: (transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                         }) => {
                             config: {
                                 sql: {
@@ -682,34 +1001,13 @@ declare const schemas: {
                                 zodSqlSchema: import("zod").ZodString;
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: TClientNext;
-                                zodValidationSchema: TClientNext;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             } & {
                                 transforms: {
-                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                 };
-                            };
-                        };
-                    };
-                    transform: (transforms: {
-                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                    }) => {
-                        config: {
-                            sql: {
-                                type: "varchar";
-                                length: number;
-                            };
-                            zodSqlSchema: import("zod").ZodString;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             };
                         };
                     };
@@ -863,25 +1161,157 @@ declare const schemas: {
                             };
                         };
                     };
-                    initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                        sql: import("zod").ZodNumber;
-                    }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
+                    initialState: {
+                        <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodNumber;
+                                zodValidationSchema: import("zod").ZodNumber;
                             };
-                            zodSqlSchema: import("zod").ZodNumber;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodNumber;
+                                initialState: import("zod").ZodNumber;
+                                client: import("zod").ZodNumber;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodNumber;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => number;
+                                    toDb: (clientValue: number) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: import("zod").ZodNumber;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => number;
+                                            toDb: (clientValue: number) => number;
+                                        };
+                                    };
+                                };
+                            };
+                            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                                sql: import("zod").ZodNumber;
+                                initialState: import("zod").ZodNumber;
+                            }) => TClientNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TClientNext;
+                                };
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodNumber;
+                                    initialState: import("zod").ZodNumber;
+                                    client: TClientNext;
+                                }) => TValidationNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: import("zod").ZodNumber;
+                                            initialValue: TDefaultNext;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                            };
+                                        };
+                                    };
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TClientNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        };
+                                    };
+                                };
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodNumber;
+                                    zodValidationSchema: import("zod").ZodNumber;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => number;
+                                        toDb: (clientValue: number) => number;
+                                    };
+                                };
+                            };
                         };
-                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                             sql: import("zod").ZodNumber;
-                            initialState: TNewNext;
-                            client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                        }) => TValidationNext)) => {
+                        }) => TNewNext), defaultValue: () => TDefaultNext): {
                             config: {
                                 sql: {
                                     type: "int";
@@ -891,12 +1321,13 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                             };
-                            transform: (transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                            }) => {
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodNumber;
+                                initialState: TNewNext;
+                                client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                            }) => TValidationNext)) => {
                                 config: {
                                     sql: {
                                         type: "int";
@@ -907,34 +1338,33 @@ declare const schemas: {
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                     zodValidationSchema: TValidationNext;
-                                } & {
-                                    transforms: {
-                                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                        };
                                     };
                                 };
                             };
-                        };
-                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                            sql: import("zod").ZodNumber;
-                            initialState: TNewNext;
-                        }) => TClientNext)) => {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: import("zod").ZodNumber;
-                                zodNewSchema: TNewNext;
-                                initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: TClientNext;
-                                zodValidationSchema: TClientNext;
-                            };
-                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                                 sql: import("zod").ZodNumber;
                                 initialState: TNewNext;
-                                client: TClientNext;
-                            }) => TValidationNext)) => {
+                            }) => TClientNext)) => {
                                 config: {
                                     sql: {
                                         type: "int";
@@ -944,7 +1374,45 @@ declare const schemas: {
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: TClientNext;
-                                    zodValidationSchema: TValidationNext;
+                                    zodValidationSchema: TClientNext;
+                                };
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodNumber;
+                                    initialState: TNewNext;
+                                    client: TClientNext;
+                                }) => TValidationNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: TNewNext;
+                                            initialValue: import("zod").TypeOf<TNewNext>;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                            };
+                                        };
+                                    };
                                 };
                                 transform: (transforms: {
                                     toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -959,7 +1427,7 @@ declare const schemas: {
                                         zodNewSchema: TNewNext;
                                         initialValue: import("zod").TypeOf<TNewNext>;
                                         zodClientSchema: TClientNext;
-                                        zodValidationSchema: TValidationNext;
+                                        zodValidationSchema: TClientNext;
                                     } & {
                                         transforms: {
                                             toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -969,8 +1437,8 @@ declare const schemas: {
                                 };
                             };
                             transform: (transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                             }) => {
                                 config: {
                                     sql: {
@@ -980,34 +1448,13 @@ declare const schemas: {
                                     zodSqlSchema: import("zod").ZodNumber;
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
-                                    zodClientSchema: TClientNext;
-                                    zodValidationSchema: TClientNext;
+                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                 } & {
                                     transforms: {
-                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                     };
-                                };
-                            };
-                        };
-                        transform: (transforms: {
-                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                        }) => {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: import("zod").ZodNumber;
-                                zodNewSchema: TNewNext;
-                                initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                 };
                             };
                         };
@@ -1055,14 +1502,14 @@ declare const schemas: {
                             pk: true;
                         };
                         zodSqlSchema: import("zod").ZodNumber;
-                        zodNewSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodNumber;
                         initialValue: string;
-                        zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                        zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                         zodValidationSchema: import("zod").ZodString;
                     } & {
                         transforms: {
-                            toClient: (dbValue: number) => string | number;
-                            toDb: (clientValue: string | number) => number;
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
                         };
                     };
                 };
@@ -1212,25 +1659,157 @@ declare const schemas: {
                             };
                         };
                     };
-                    initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                        sql: import("zod").ZodString;
-                    }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                        config: {
-                            sql: {
-                                type: "varchar";
-                                length: number;
+                    initialState: {
+                        <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: import("zod").ZodString;
                             };
-                            zodSqlSchema: import("zod").ZodString;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: import("zod").ZodString;
+                                client: import("zod").ZodString;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodString;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: import("zod").ZodString;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: import("zod").ZodString;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => string;
+                                            toDb: (clientValue: string) => string;
+                                        };
+                                    };
+                                };
+                            };
+                            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: import("zod").ZodString;
+                            }) => TClientNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TClientNext;
+                                };
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodString;
+                                    initialState: import("zod").ZodString;
+                                    client: TClientNext;
+                                }) => TValidationNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: import("zod").ZodString;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "varchar";
+                                                length: number;
+                                            };
+                                            zodSqlSchema: import("zod").ZodString;
+                                            zodNewSchema: import("zod").ZodString;
+                                            initialValue: TDefaultNext;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                            };
+                                        };
+                                    };
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: import("zod").ZodString;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TClientNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                        };
+                                    };
+                                };
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodString;
+                                    zodValidationSchema: import("zod").ZodString;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => string;
+                                        toDb: (clientValue: string) => string;
+                                    };
+                                };
+                            };
                         };
-                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                             sql: import("zod").ZodString;
-                            initialState: TNewNext;
-                            client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                        }) => TValidationNext)) => {
+                        }) => TNewNext), defaultValue: () => TDefaultNext): {
                             config: {
                                 sql: {
                                     type: "varchar";
@@ -1240,12 +1819,13 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             };
-                            transform: (transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                            }) => {
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodString;
+                                initialState: TNewNext;
+                                client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                            }) => TValidationNext)) => {
                                 config: {
                                     sql: {
                                         type: "varchar";
@@ -1256,34 +1836,33 @@ declare const schemas: {
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                     zodValidationSchema: TValidationNext;
-                                } & {
-                                    transforms: {
-                                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                                        };
                                     };
                                 };
                             };
-                        };
-                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                            sql: import("zod").ZodString;
-                            initialState: TNewNext;
-                        }) => TClientNext)) => {
-                            config: {
-                                sql: {
-                                    type: "varchar";
-                                    length: number;
-                                };
-                                zodSqlSchema: import("zod").ZodString;
-                                zodNewSchema: TNewNext;
-                                initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: TClientNext;
-                                zodValidationSchema: TClientNext;
-                            };
-                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                                 sql: import("zod").ZodString;
                                 initialState: TNewNext;
-                                client: TClientNext;
-                            }) => TValidationNext)) => {
+                            }) => TClientNext)) => {
                                 config: {
                                     sql: {
                                         type: "varchar";
@@ -1293,7 +1872,45 @@ declare const schemas: {
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: TClientNext;
-                                    zodValidationSchema: TValidationNext;
+                                    zodValidationSchema: TClientNext;
+                                };
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodString;
+                                    initialState: TNewNext;
+                                    client: TClientNext;
+                                }) => TValidationNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "varchar";
+                                            length: number;
+                                        };
+                                        zodSqlSchema: import("zod").ZodString;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "varchar";
+                                                length: number;
+                                            };
+                                            zodSqlSchema: import("zod").ZodString;
+                                            zodNewSchema: TNewNext;
+                                            initialValue: import("zod").TypeOf<TNewNext>;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                            };
+                                        };
+                                    };
                                 };
                                 transform: (transforms: {
                                     toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -1308,7 +1925,7 @@ declare const schemas: {
                                         zodNewSchema: TNewNext;
                                         initialValue: import("zod").TypeOf<TNewNext>;
                                         zodClientSchema: TClientNext;
-                                        zodValidationSchema: TValidationNext;
+                                        zodValidationSchema: TClientNext;
                                     } & {
                                         transforms: {
                                             toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -1318,8 +1935,8 @@ declare const schemas: {
                                 };
                             };
                             transform: (transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             }) => {
                                 config: {
                                     sql: {
@@ -1329,34 +1946,13 @@ declare const schemas: {
                                     zodSqlSchema: import("zod").ZodString;
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
-                                    zodClientSchema: TClientNext;
-                                    zodValidationSchema: TClientNext;
+                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                                 } & {
                                     transforms: {
-                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                     };
-                                };
-                            };
-                        };
-                        transform: (transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                        }) => {
-                            config: {
-                                sql: {
-                                    type: "varchar";
-                                    length: number;
-                                };
-                                zodSqlSchema: import("zod").ZodString;
-                                zodNewSchema: TNewNext;
-                                initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                                 };
                             };
                         };
@@ -1511,25 +2107,157 @@ declare const schemas: {
                                 };
                             };
                         };
-                        initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                            sql: import("zod").ZodNumber;
-                        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
+                        initialState: {
+                            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodNumber;
+                                    zodValidationSchema: import("zod").ZodNumber;
                                 };
-                                zodSqlSchema: import("zod").ZodNumber;
-                                zodNewSchema: TNewNext;
-                                initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodNumber;
+                                    initialState: import("zod").ZodNumber;
+                                    client: import("zod").ZodNumber;
+                                }) => TValidationNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: import("zod").ZodNumber;
+                                        zodValidationSchema: TValidationNext;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: number) => number;
+                                        toDb: (clientValue: number) => number;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: import("zod").ZodNumber;
+                                            initialValue: TDefaultNext;
+                                            zodClientSchema: import("zod").ZodNumber;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: number) => number;
+                                                toDb: (clientValue: number) => number;
+                                            };
+                                        };
+                                    };
+                                };
+                                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                                    sql: import("zod").ZodNumber;
+                                    initialState: import("zod").ZodNumber;
+                                }) => TClientNext)) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TClientNext;
+                                    };
+                                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                        sql: import("zod").ZodNumber;
+                                        initialState: import("zod").ZodNumber;
+                                        client: TClientNext;
+                                    }) => TValidationNext)) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: import("zod").ZodNumber;
+                                            initialValue: TDefaultNext;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        };
+                                        transform: (transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        }) => {
+                                            config: {
+                                                sql: {
+                                                    type: "int";
+                                                    pk: true;
+                                                };
+                                                zodSqlSchema: import("zod").ZodNumber;
+                                                zodNewSchema: import("zod").ZodNumber;
+                                                initialValue: TDefaultNext;
+                                                zodClientSchema: TClientNext;
+                                                zodValidationSchema: TValidationNext;
+                                            } & {
+                                                transforms: {
+                                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                                };
+                                            };
+                                        };
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: import("zod").ZodNumber;
+                                            initialValue: TDefaultNext;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TClientNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                            };
+                                        };
+                                    };
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => number;
+                                    toDb: (clientValue: number) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: import("zod").ZodNumber;
+                                        zodValidationSchema: import("zod").ZodNumber;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => number;
+                                            toDb: (clientValue: number) => number;
+                                        };
+                                    };
+                                };
                             };
-                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                                 sql: import("zod").ZodNumber;
-                                initialState: TNewNext;
-                                client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                            }) => TValidationNext)) => {
+                            }) => TNewNext), defaultValue: () => TDefaultNext): {
                                 config: {
                                     sql: {
                                         type: "int";
@@ -1539,12 +2267,13 @@ declare const schemas: {
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                    zodValidationSchema: TValidationNext;
+                                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                 };
-                                transform: (transforms: {
-                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                                }) => {
+                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                    sql: import("zod").ZodNumber;
+                                    initialState: TNewNext;
+                                    client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                }) => TValidationNext)) => {
                                     config: {
                                         sql: {
                                             type: "int";
@@ -1555,34 +2284,33 @@ declare const schemas: {
                                         initialValue: import("zod").TypeOf<TNewNext>;
                                         zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                         zodValidationSchema: TValidationNext;
-                                    } & {
-                                        transforms: {
-                                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                    };
+                                    transform: (transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                    }) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: TNewNext;
+                                            initialValue: import("zod").TypeOf<TNewNext>;
+                                            zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                            zodValidationSchema: TValidationNext;
+                                        } & {
+                                            transforms: {
+                                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                            };
                                         };
                                     };
                                 };
-                            };
-                            client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                                sql: import("zod").ZodNumber;
-                                initialState: TNewNext;
-                            }) => TClientNext)) => {
-                                config: {
-                                    sql: {
-                                        type: "int";
-                                        pk: true;
-                                    };
-                                    zodSqlSchema: import("zod").ZodNumber;
-                                    zodNewSchema: TNewNext;
-                                    initialValue: import("zod").TypeOf<TNewNext>;
-                                    zodClientSchema: TClientNext;
-                                    zodValidationSchema: TClientNext;
-                                };
-                                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                                     sql: import("zod").ZodNumber;
                                     initialState: TNewNext;
-                                    client: TClientNext;
-                                }) => TValidationNext)) => {
+                                }) => TClientNext)) => {
                                     config: {
                                         sql: {
                                             type: "int";
@@ -1592,7 +2320,45 @@ declare const schemas: {
                                         zodNewSchema: TNewNext;
                                         initialValue: import("zod").TypeOf<TNewNext>;
                                         zodClientSchema: TClientNext;
-                                        zodValidationSchema: TValidationNext;
+                                        zodValidationSchema: TClientNext;
+                                    };
+                                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                        sql: import("zod").ZodNumber;
+                                        initialState: TNewNext;
+                                        client: TClientNext;
+                                    }) => TValidationNext)) => {
+                                        config: {
+                                            sql: {
+                                                type: "int";
+                                                pk: true;
+                                            };
+                                            zodSqlSchema: import("zod").ZodNumber;
+                                            zodNewSchema: TNewNext;
+                                            initialValue: import("zod").TypeOf<TNewNext>;
+                                            zodClientSchema: TClientNext;
+                                            zodValidationSchema: TValidationNext;
+                                        };
+                                        transform: (transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        }) => {
+                                            config: {
+                                                sql: {
+                                                    type: "int";
+                                                    pk: true;
+                                                };
+                                                zodSqlSchema: import("zod").ZodNumber;
+                                                zodNewSchema: TNewNext;
+                                                initialValue: import("zod").TypeOf<TNewNext>;
+                                                zodClientSchema: TClientNext;
+                                                zodValidationSchema: TValidationNext;
+                                            } & {
+                                                transforms: {
+                                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                                };
+                                            };
+                                        };
                                     };
                                     transform: (transforms: {
                                         toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -1607,7 +2373,7 @@ declare const schemas: {
                                             zodNewSchema: TNewNext;
                                             initialValue: import("zod").TypeOf<TNewNext>;
                                             zodClientSchema: TClientNext;
-                                            zodValidationSchema: TValidationNext;
+                                            zodValidationSchema: TClientNext;
                                         } & {
                                             transforms: {
                                                 toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -1617,8 +2383,8 @@ declare const schemas: {
                                     };
                                 };
                                 transform: (transforms: {
-                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                 }) => {
                                     config: {
                                         sql: {
@@ -1628,34 +2394,13 @@ declare const schemas: {
                                         zodSqlSchema: import("zod").ZodNumber;
                                         zodNewSchema: TNewNext;
                                         initialValue: import("zod").TypeOf<TNewNext>;
-                                        zodClientSchema: TClientNext;
-                                        zodValidationSchema: TClientNext;
+                                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                     } & {
                                         transforms: {
-                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                         };
-                                    };
-                                };
-                            };
-                            transform: (transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                            }) => {
-                                config: {
-                                    sql: {
-                                        type: "int";
-                                        pk: true;
-                                    };
-                                    zodSqlSchema: import("zod").ZodNumber;
-                                    zodNewSchema: TNewNext;
-                                    initialValue: import("zod").TypeOf<TNewNext>;
-                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                                } & {
-                                    transforms: {
-                                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                     };
                                 };
                             };
@@ -1709,14 +2454,14 @@ declare const schemas: {
                     pk: true;
                 };
                 zodSqlSchema: import("zod").ZodNumber;
-                zodNewSchema: import("zod").ZodString;
+                zodNewSchema: import("zod").ZodNumber;
                 initialValue: string;
-                zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodString]>;
+                zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                 zodValidationSchema: import("zod").ZodString;
             } & {
                 transforms: {
-                    toClient: (dbValue: number) => string | number;
-                    toDb: (clientValue: string | number) => number;
+                    toClient: (dbValue: number) => number;
+                    toDb: (clientValue: number) => number;
                 };
             };
         };
@@ -1866,25 +2611,157 @@ declare const schemas: {
                     };
                 };
             };
-            initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                sql: import("zod").ZodString;
-            }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                config: {
-                    sql: {
-                        type: "varchar";
-                        length: number;
+            initialState: {
+                <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                    config: {
+                        sql: {
+                            type: "varchar";
+                            length: number;
+                        };
+                        zodSqlSchema: import("zod").ZodString;
+                        zodNewSchema: import("zod").ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: import("zod").ZodString;
+                        zodValidationSchema: import("zod").ZodString;
                     };
-                    zodSqlSchema: import("zod").ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: import("zod").TypeOf<TNewNext>;
-                    zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                    zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: import("zod").ZodString;
+                        client: import("zod").ZodString;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodString;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => string;
+                                    toDb: (clientValue: string) => string;
+                                };
+                            };
+                        };
+                    };
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: import("zod").ZodString;
+                    }) => TClientNext)) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: import("zod").ZodString;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: import("zod").ZodString;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: import("zod").ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                type: "varchar";
+                                length: number;
+                            };
+                            zodSqlSchema: import("zod").ZodString;
+                            zodNewSchema: import("zod").ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodString;
+                            zodValidationSchema: import("zod").ZodString;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
                 };
-                validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                     sql: import("zod").ZodString;
-                    initialState: TNewNext;
-                    client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                }) => TValidationNext)) => {
+                }) => TNewNext), defaultValue: () => TDefaultNext): {
                     config: {
                         sql: {
                             type: "varchar";
@@ -1894,12 +2771,13 @@ declare const schemas: {
                         zodNewSchema: TNewNext;
                         initialValue: import("zod").TypeOf<TNewNext>;
                         zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                     };
-                    transform: (transforms: {
-                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                    }) => {
+                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: import("zod").ZodString;
+                        initialState: TNewNext;
+                        client: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                    }) => TValidationNext)) => {
                         config: {
                             sql: {
                                 type: "varchar";
@@ -1910,34 +2788,33 @@ declare const schemas: {
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                             zodValidationSchema: TValidationNext;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: import("zod").TypeOf<TNewNext>;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
+                                };
                             };
                         };
                     };
-                };
-                client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                    sql: import("zod").ZodString;
-                    initialState: TNewNext;
-                }) => TClientNext)) => {
-                    config: {
-                        sql: {
-                            type: "varchar";
-                            length: number;
-                        };
-                        zodSqlSchema: import("zod").ZodString;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
-                    };
-                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                         sql: import("zod").ZodString;
                         initialState: TNewNext;
-                        client: TClientNext;
-                    }) => TValidationNext)) => {
+                    }) => TClientNext)) => {
                         config: {
                             sql: {
                                 type: "varchar";
@@ -1947,7 +2824,45 @@ declare const schemas: {
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
+                        };
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodString;
+                            initialState: TNewNext;
+                            client: TClientNext;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "varchar";
+                                    length: number;
+                                };
+                                zodSqlSchema: import("zod").ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: import("zod").TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "varchar";
+                                        length: number;
+                                    };
+                                    zodSqlSchema: import("zod").ZodString;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                    };
+                                };
+                            };
                         };
                         transform: (transforms: {
                             toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -1962,7 +2877,7 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: TClientNext;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
@@ -1972,8 +2887,8 @@ declare const schemas: {
                         };
                     };
                     transform: (transforms: {
-                        toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                        toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                     }) => {
                         config: {
                             sql: {
@@ -1983,34 +2898,13 @@ declare const schemas: {
                             zodSqlSchema: import("zod").ZodString;
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: TClientNext;
-                            zodValidationSchema: TClientNext;
+                            zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
                         } & {
                             transforms: {
-                                toClient: (dbValue: string) => import("zod").TypeOf<TClientNext>;
-                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => string;
+                                toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                             };
-                        };
-                    };
-                };
-                transform: (transforms: {
-                    toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
-                }) => {
-                    config: {
-                        sql: {
-                            type: "varchar";
-                            length: number;
-                        };
-                        zodSqlSchema: import("zod").ZodString;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: string) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends string ? TNewNext : import("zod").ZodUnion<[import("zod").ZodString, TNewNext]>>) => string;
                         };
                     };
                 };
@@ -2165,25 +3059,157 @@ declare const schemas: {
                         };
                     };
                 };
-                initialState: <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-                    sql: import("zod").ZodNumber;
-                }) => TNewNext), defaultValue: () => TDefaultNext) => {
-                    config: {
-                        sql: {
-                            type: "int";
-                            pk: true;
+                initialState: {
+                    <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                        config: {
+                            sql: {
+                                type: "int";
+                                pk: true;
+                            };
+                            zodSqlSchema: import("zod").ZodNumber;
+                            zodNewSchema: import("zod").ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: import("zod").ZodNumber;
+                            zodValidationSchema: import("zod").ZodNumber;
                         };
-                        zodSqlSchema: import("zod").ZodNumber;
-                        zodNewSchema: TNewNext;
-                        initialValue: import("zod").TypeOf<TNewNext>;
-                        zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                        zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodNumber;
+                            initialState: import("zod").ZodNumber;
+                            client: import("zod").ZodNumber;
+                        }) => TValidationNext)) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodNumber;
+                                zodValidationSchema: TValidationNext;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: import("zod").ZodNumber;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => number;
+                                        toDb: (clientValue: number) => number;
+                                    };
+                                };
+                            };
+                        };
+                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
+                            sql: import("zod").ZodNumber;
+                            initialState: import("zod").ZodNumber;
+                        }) => TClientNext)) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TClientNext;
+                            };
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodNumber;
+                                initialState: import("zod").ZodNumber;
+                                client: TClientNext;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: import("zod").ZodNumber;
+                                        initialValue: TDefaultNext;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        };
+                                    };
+                                };
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: import("zod").ZodNumber;
+                                    initialValue: TDefaultNext;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TClientNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                        toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    };
+                                };
+                            };
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    type: "int";
+                                    pk: true;
+                                };
+                                zodSqlSchema: import("zod").ZodNumber;
+                                zodNewSchema: import("zod").ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: import("zod").ZodNumber;
+                                zodValidationSchema: import("zod").ZodNumber;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => number;
+                                    toDb: (clientValue: number) => number;
+                                };
+                            };
+                        };
                     };
-                    validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    <TNewNext extends import("zod").ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                         sql: import("zod").ZodNumber;
-                        initialState: TNewNext;
-                        client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                    }) => TValidationNext)) => {
+                    }) => TNewNext), defaultValue: () => TDefaultNext): {
                         config: {
                             sql: {
                                 type: "int";
@@ -2193,12 +3219,13 @@ declare const schemas: {
                             zodNewSchema: TNewNext;
                             initialValue: import("zod").TypeOf<TNewNext>;
                             zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                         };
-                        transform: (transforms: {
-                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                        }) => {
+                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                            sql: import("zod").ZodNumber;
+                            initialState: TNewNext;
+                            client: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                        }) => TValidationNext)) => {
                             config: {
                                 sql: {
                                     type: "int";
@@ -2209,34 +3236,33 @@ declare const schemas: {
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                                 zodValidationSchema: TValidationNext;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                            };
+                            transform: (transforms: {
+                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                            }) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                    zodValidationSchema: TValidationNext;
+                                } & {
+                                    transforms: {
+                                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
+                                    };
                                 };
                             };
                         };
-                    };
-                    client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
-                        sql: import("zod").ZodNumber;
-                        initialState: TNewNext;
-                    }) => TClientNext)) => {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: import("zod").ZodNumber;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: TClientNext;
-                            zodValidationSchema: TClientNext;
-                        };
-                        validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        client: <TClientNext extends import("zod").ZodTypeAny>(schema: TClientNext | ((tools: {
                             sql: import("zod").ZodNumber;
                             initialState: TNewNext;
-                            client: TClientNext;
-                        }) => TValidationNext)) => {
+                        }) => TClientNext)) => {
                             config: {
                                 sql: {
                                     type: "int";
@@ -2246,7 +3272,45 @@ declare const schemas: {
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
                                 zodClientSchema: TClientNext;
-                                zodValidationSchema: TValidationNext;
+                                zodValidationSchema: TClientNext;
+                            };
+                            validation: <TValidationNext extends import("zod").ZodTypeAny>(schema: TValidationNext | ((tools: {
+                                sql: import("zod").ZodNumber;
+                                initialState: TNewNext;
+                                client: TClientNext;
+                            }) => TValidationNext)) => {
+                                config: {
+                                    sql: {
+                                        type: "int";
+                                        pk: true;
+                                    };
+                                    zodSqlSchema: import("zod").ZodNumber;
+                                    zodNewSchema: TNewNext;
+                                    initialValue: import("zod").TypeOf<TNewNext>;
+                                    zodClientSchema: TClientNext;
+                                    zodValidationSchema: TValidationNext;
+                                };
+                                transform: (transforms: {
+                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                }) => {
+                                    config: {
+                                        sql: {
+                                            type: "int";
+                                            pk: true;
+                                        };
+                                        zodSqlSchema: import("zod").ZodNumber;
+                                        zodNewSchema: TNewNext;
+                                        initialValue: import("zod").TypeOf<TNewNext>;
+                                        zodClientSchema: TClientNext;
+                                        zodValidationSchema: TValidationNext;
+                                    } & {
+                                        transforms: {
+                                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
+                                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                        };
+                                    };
+                                };
                             };
                             transform: (transforms: {
                                 toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -2261,7 +3325,7 @@ declare const schemas: {
                                     zodNewSchema: TNewNext;
                                     initialValue: import("zod").TypeOf<TNewNext>;
                                     zodClientSchema: TClientNext;
-                                    zodValidationSchema: TValidationNext;
+                                    zodValidationSchema: TClientNext;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
@@ -2271,8 +3335,8 @@ declare const schemas: {
                             };
                         };
                         transform: (transforms: {
-                            toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                            toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                            toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                            toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                         }) => {
                             config: {
                                 sql: {
@@ -2282,34 +3346,13 @@ declare const schemas: {
                                 zodSqlSchema: import("zod").ZodNumber;
                                 zodNewSchema: TNewNext;
                                 initialValue: import("zod").TypeOf<TNewNext>;
-                                zodClientSchema: TClientNext;
-                                zodValidationSchema: TClientNext;
+                                zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
+                                zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
                             } & {
                                 transforms: {
-                                    toClient: (dbValue: number) => import("zod").TypeOf<TClientNext>;
-                                    toDb: (clientValue: import("zod").TypeOf<TClientNext>) => number;
+                                    toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
+                                    toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                                 };
-                            };
-                        };
-                    };
-                    transform: (transforms: {
-                        toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                        toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
-                    }) => {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: import("zod").ZodNumber;
-                            zodNewSchema: TNewNext;
-                            initialValue: import("zod").TypeOf<TNewNext>;
-                            zodClientSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                            zodValidationSchema: import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>;
-                                toDb: (clientValue: import("zod").TypeOf<import("zod").TypeOf<TNewNext> extends number ? TNewNext : import("zod").ZodUnion<[import("zod").ZodNumber, TNewNext]>>) => number;
                             };
                         };
                     };

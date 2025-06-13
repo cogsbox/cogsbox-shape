@@ -377,7 +377,24 @@ export function createSchema(schema) {
                 defaultValues[key] = childSchemaResult.defaultValues;
             }
         }
-        // Case 2: Handle regular builder fields
+        else if (field &&
+            typeof field === "object" &&
+            field.type === "reference") {
+            // Use the Zod schema from the field property
+            sqlFields[key] = field.field;
+            clientFields[key] = field.field;
+            validationFields[key] = field.field;
+            // Infer default based on the Zod type
+            if (field.field instanceof z.ZodNumber) {
+                defaultValues[key] = 0;
+            }
+            else if (field.field instanceof z.ZodString) {
+                defaultValues[key] = "";
+            }
+            else {
+                defaultValues[key] = inferDefaultFromZod(field.field);
+            }
+        }
         else if (field && typeof field === "object" && "config" in field) {
             sqlFields[key] = field.config.zodSqlSchema;
             clientFields[key] = field.config.zodClientSchema;

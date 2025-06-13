@@ -5,6 +5,7 @@ export const userSchema = {
     id: shape.sql({ type: "int", pk: true }),
     firstname: shape
         .sql({ type: "varchar", length: 255 })
+        .initialState(() => "test")
         .validation(({ sql }) => sql.min(1)),
     surname: shape
         .sql({ type: "varchar", length: 255 })
@@ -23,7 +24,7 @@ export const petSchema = {
     _tableName: "pets",
     id: shape
         .sql({ type: "int", pk: true })
-        .initialState(z.string(), () => "uuidexample")
+        .initialState(() => "uuidexample")
         .client(({ sql, initialState }) => z.union([sql, initialState]))
         .validation(z.string())
         .transform({

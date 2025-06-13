@@ -225,28 +225,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodNumber;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    nullable?: boolean;
-                    pk?: true;
-                    field?: string;
-                    default?: number;
-                    type: "int";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        nullable?: boolean;
+                        pk?: true;
+                        field?: string;
+                        default?: number;
+                        type: "int";
+                    };
+                    zodSqlSchema: z.ZodNumber;
+                    zodNewSchema: z.ZodNumber;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodNumber;
+                    zodValidationSchema: z.ZodNumber;
                 };
-                zodSqlSchema: z.ZodNumber;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodNumber;
+                    initialState: z.ZodNumber;
+                    client: z.ZodNumber;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: number;
+                            type: "int";
+                        };
+                        zodSqlSchema: z.ZodNumber;
+                        zodNewSchema: z.ZodNumber;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodNumber;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => number;
+                        toDb: (clientValue: number) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: number;
+                                type: "int";
+                            };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: z.ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodNumber;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodNumber;
+                    initialState: z.ZodNumber;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: number;
+                            type: "int";
+                        };
+                        zodSqlSchema: z.ZodNumber;
+                        zodNewSchema: z.ZodNumber;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodNumber;
+                        initialState: z.ZodNumber;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: number;
+                                type: "int";
+                            };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: z.ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    nullable?: boolean;
+                                    pk?: true;
+                                    field?: string;
+                                    default?: number;
+                                    type: "int";
+                                };
+                                zodSqlSchema: z.ZodNumber;
+                                zodNewSchema: z.ZodNumber;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: number;
+                                type: "int";
+                            };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: z.ZodNumber;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: number) => number;
+                    toDb: (clientValue: number) => number;
+                }) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: number;
+                            type: "int";
+                        };
+                        zodSqlSchema: z.ZodNumber;
+                        zodNewSchema: z.ZodNumber;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodNumber;
+                        zodValidationSchema: z.ZodNumber;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodNumber;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodNumber, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         nullable?: boolean;
@@ -259,12 +412,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodNumber;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodNumber, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             nullable?: boolean;
@@ -278,37 +432,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: number;
+                                type: "int";
+                            };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodNumber;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        nullable?: boolean;
-                        pk?: true;
-                        field?: string;
-                        default?: number;
-                        type: "int";
-                    };
-                    zodSqlSchema: z.ZodNumber;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodNumber;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             nullable?: boolean;
@@ -321,7 +474,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodNumber;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: number;
+                                type: "int";
+                            };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                        }) => {
+                            config: {
+                                sql: {
+                                    nullable?: boolean;
+                                    pk?: true;
+                                    field?: string;
+                                    default?: number;
+                                    type: "int";
+                                };
+                                zodSqlSchema: z.ZodNumber;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: number) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: number) => z.TypeOf<TClientNext>;
@@ -339,7 +536,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: number) => z.TypeOf<TClientNext>;
@@ -349,8 +546,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: number) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                    toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
                 }) => {
                     config: {
                         sql: {
@@ -363,37 +560,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: number) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => number;
+                            toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
-            }) => {
-                config: {
-                    sql: {
-                        nullable?: boolean;
-                        pk?: true;
-                        field?: string;
-                        default?: number;
-                        type: "int";
-                    };
-                    zodSqlSchema: z.ZodNumber;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodNumber, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: number) => z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodNumber, TNewNext>>) => number;
                     };
                 };
             };
@@ -577,29 +750,189 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodString;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: string;
-                    length?: number;
-                    field?: string;
-                    type: "varchar";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: string;
+                        length?: number;
+                        field?: string;
+                        type: "varchar";
+                    };
+                    zodSqlSchema: z.ZodString;
+                    zodNewSchema: z.ZodString;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodString;
+                    zodValidationSchema: z.ZodString;
                 };
-                zodSqlSchema: z.ZodString;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                    client: z.ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "varchar";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "varchar";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "varchar";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: z.ZodString;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "varchar";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    length?: number;
+                                    field?: string;
+                                    type: "varchar";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: z.ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "varchar";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "varchar";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: z.ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodString;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodString, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -613,12 +946,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodString, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -633,38 +967,37 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "varchar";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodString;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        length?: number;
-                        field?: string;
-                        type: "varchar";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodString;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -678,7 +1011,53 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "varchar";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    length?: number;
+                                    field?: string;
+                                    type: "varchar";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -697,7 +1076,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -707,8 +1086,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                 }) => {
                     config: {
                         sql: {
@@ -722,38 +1101,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        length?: number;
-                        field?: string;
-                        type: "varchar";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                     };
                 };
             };
@@ -937,29 +1291,189 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodString;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: string;
-                    length?: number;
-                    field?: string;
-                    type: "char";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: string;
+                        length?: number;
+                        field?: string;
+                        type: "char";
+                    };
+                    zodSqlSchema: z.ZodString;
+                    zodNewSchema: z.ZodString;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodString;
+                    zodValidationSchema: z.ZodString;
                 };
-                zodSqlSchema: z.ZodString;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                    client: z.ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "char";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "char";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "char";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: z.ZodString;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "char";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    length?: number;
+                                    field?: string;
+                                    type: "char";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: z.ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "char";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            length?: number;
+                            field?: string;
+                            type: "char";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: z.ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodString;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodString, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -973,12 +1487,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodString, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -993,38 +1508,37 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "char";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodString;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        length?: number;
-                        field?: string;
-                        type: "char";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodString;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -1038,7 +1552,53 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                length?: number;
+                                field?: string;
+                                type: "char";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    length?: number;
+                                    field?: string;
+                                    type: "char";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1057,7 +1617,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1067,8 +1627,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                 }) => {
                     config: {
                         sql: {
@@ -1082,38 +1642,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        length?: number;
-                        field?: string;
-                        type: "char";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                     };
                 };
             };
@@ -1289,28 +1824,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodString;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: string;
-                    field?: string;
-                    type: "text";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: string;
+                        field?: string;
+                        type: "text";
+                    };
+                    zodSqlSchema: z.ZodString;
+                    zodNewSchema: z.ZodString;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodString;
+                    zodValidationSchema: z.ZodString;
                 };
-                zodSqlSchema: z.ZodString;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                    client: z.ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "text";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "text";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "text";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: z.ZodString;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "text";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    field?: string;
+                                    type: "text";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: z.ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "text";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "text";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: z.ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodString;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodString, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -1323,12 +2011,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodString, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -1342,37 +2031,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "text";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodString;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        field?: string;
-                        type: "text";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodString;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -1385,7 +2073,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "text";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    field?: string;
+                                    type: "text";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1403,7 +2135,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1413,8 +2145,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                 }) => {
                     config: {
                         sql: {
@@ -1427,37 +2159,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        field?: string;
-                        type: "text";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                     };
                 };
             };
@@ -1633,28 +2341,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodString;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: string;
-                    field?: string;
-                    type: "longtext";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: string;
+                        field?: string;
+                        type: "longtext";
+                    };
+                    zodSqlSchema: z.ZodString;
+                    zodNewSchema: z.ZodString;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodString;
+                    zodValidationSchema: z.ZodString;
                 };
-                zodSqlSchema: z.ZodString;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                    client: z.ZodString;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "longtext";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => string;
+                        toDb: (clientValue: string) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "longtext";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodString;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => string;
+                                toDb: (clientValue: string) => string;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: z.ZodString;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "longtext";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: z.ZodString;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "longtext";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    field?: string;
+                                    type: "longtext";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: z.ZodString;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "longtext";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: string) => string;
+                    toDb: (clientValue: string) => string;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: string;
+                            field?: string;
+                            type: "longtext";
+                        };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodString;
+                        zodValidationSchema: z.ZodString;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => string;
+                            toDb: (clientValue: string) => string;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodString;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodString, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -1667,12 +2528,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodString;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodString, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -1686,37 +2548,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "longtext";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodString;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        field?: string;
-                        type: "longtext";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodString;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -1729,7 +2590,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodString;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: string;
+                                field?: string;
+                                type: "longtext";
+                            };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: string;
+                                    field?: string;
+                                    type: "longtext";
+                                };
+                                zodSqlSchema: z.ZodString;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1747,7 +2652,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: string) => z.TypeOf<TClientNext>;
@@ -1757,8 +2662,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                    toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                 }) => {
                     config: {
                         sql: {
@@ -1771,37 +2676,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: string) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => string;
+                            toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: string;
-                        field?: string;
-                        type: "longtext";
-                    };
-                    zodSqlSchema: z.ZodString;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodString, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: string) => z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodString, TNewNext>>) => string;
                     };
                 };
             };
@@ -1977,28 +2858,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodBoolean;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    nullable?: boolean;
-                    pk?: true;
-                    field?: string;
-                    default?: boolean;
-                    type: "boolean";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        nullable?: boolean;
+                        pk?: true;
+                        field?: string;
+                        default?: boolean;
+                        type: "boolean";
+                    };
+                    zodSqlSchema: z.ZodBoolean;
+                    zodNewSchema: z.ZodBoolean;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodBoolean;
+                    zodValidationSchema: z.ZodBoolean;
                 };
-                zodSqlSchema: z.ZodBoolean;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodBoolean;
+                    initialState: z.ZodBoolean;
+                    client: z.ZodBoolean;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: boolean;
+                            type: "boolean";
+                        };
+                        zodSqlSchema: z.ZodBoolean;
+                        zodNewSchema: z.ZodBoolean;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodBoolean;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: boolean) => boolean;
+                        toDb: (clientValue: boolean) => boolean;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: boolean;
+                                type: "boolean";
+                            };
+                            zodSqlSchema: z.ZodBoolean;
+                            zodNewSchema: z.ZodBoolean;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodBoolean;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: boolean) => boolean;
+                                toDb: (clientValue: boolean) => boolean;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodBoolean;
+                    initialState: z.ZodBoolean;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: boolean;
+                            type: "boolean";
+                        };
+                        zodSqlSchema: z.ZodBoolean;
+                        zodNewSchema: z.ZodBoolean;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodBoolean;
+                        initialState: z.ZodBoolean;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: boolean;
+                                type: "boolean";
+                            };
+                            zodSqlSchema: z.ZodBoolean;
+                            zodNewSchema: z.ZodBoolean;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                        }) => {
+                            config: {
+                                sql: {
+                                    nullable?: boolean;
+                                    pk?: true;
+                                    field?: string;
+                                    default?: boolean;
+                                    type: "boolean";
+                                };
+                                zodSqlSchema: z.ZodBoolean;
+                                zodNewSchema: z.ZodBoolean;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: boolean;
+                                type: "boolean";
+                            };
+                            zodSqlSchema: z.ZodBoolean;
+                            zodNewSchema: z.ZodBoolean;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: boolean) => boolean;
+                    toDb: (clientValue: boolean) => boolean;
+                }) => {
+                    config: {
+                        sql: {
+                            nullable?: boolean;
+                            pk?: true;
+                            field?: string;
+                            default?: boolean;
+                            type: "boolean";
+                        };
+                        zodSqlSchema: z.ZodBoolean;
+                        zodNewSchema: z.ZodBoolean;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodBoolean;
+                        zodValidationSchema: z.ZodBoolean;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: boolean) => boolean;
+                            toDb: (clientValue: boolean) => boolean;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodBoolean;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodBoolean, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         nullable?: boolean;
@@ -2011,12 +3045,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodBoolean;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodBoolean, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             nullable?: boolean;
@@ -2030,37 +3065,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
+                    }) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: boolean;
+                                type: "boolean";
+                            };
+                            zodSqlSchema: z.ZodBoolean;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodBoolean;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        nullable?: boolean;
-                        pk?: true;
-                        field?: string;
-                        default?: boolean;
-                        type: "boolean";
-                    };
-                    zodSqlSchema: z.ZodBoolean;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodBoolean;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             nullable?: boolean;
@@ -2073,7 +3107,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodBoolean;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                nullable?: boolean;
+                                pk?: true;
+                                field?: string;
+                                default?: boolean;
+                                type: "boolean";
+                            };
+                            zodSqlSchema: z.ZodBoolean;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                        }) => {
+                            config: {
+                                sql: {
+                                    nullable?: boolean;
+                                    pk?: true;
+                                    field?: string;
+                                    default?: boolean;
+                                    type: "boolean";
+                                };
+                                zodSqlSchema: z.ZodBoolean;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
@@ -2091,7 +3169,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
@@ -2101,8 +3179,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                    toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
                 }) => {
                     config: {
                         sql: {
@@ -2115,37 +3193,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodBoolean;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: boolean) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => boolean;
+                            toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
-            }) => {
-                config: {
-                    sql: {
-                        nullable?: boolean;
-                        pk?: true;
-                        field?: string;
-                        default?: boolean;
-                        type: "boolean";
-                    };
-                    zodSqlSchema: z.ZodBoolean;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodBoolean, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: boolean) => z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodBoolean, TNewNext>>) => boolean;
                     };
                 };
             };
@@ -2321,28 +3375,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodDate;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: Date;
-                    field?: string;
-                    type: "date";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: Date;
+                        field?: string;
+                        type: "date";
+                    };
+                    zodSqlSchema: z.ZodDate;
+                    zodNewSchema: z.ZodDate;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodDate;
+                    zodValidationSchema: z.ZodDate;
                 };
-                zodSqlSchema: z.ZodDate;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: z.ZodDate;
+                    client: z.ZodDate;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "date";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodDate;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => Date;
+                        toDb: (clientValue: Date) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "date";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodDate;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => Date;
+                                toDb: (clientValue: Date) => Date;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: z.ZodDate;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "date";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodDate;
+                        initialState: z.ZodDate;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "date";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: Date;
+                                    field?: string;
+                                    type: "date";
+                                };
+                                zodSqlSchema: z.ZodDate;
+                                zodNewSchema: z.ZodDate;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "date";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: Date) => Date;
+                    toDb: (clientValue: Date) => Date;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "date";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodDate;
+                        zodValidationSchema: z.ZodDate;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: Date) => Date;
+                            toDb: (clientValue: Date) => Date;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodDate;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodDate, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -2355,12 +3562,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodDate, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -2374,37 +3582,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "date";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodDate;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: Date;
-                        field?: string;
-                        type: "date";
-                    };
-                    zodSqlSchema: z.ZodDate;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodDate;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -2417,7 +3624,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodDate;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "date";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: Date;
+                                    field?: string;
+                                    type: "date";
+                                };
+                                zodSqlSchema: z.ZodDate;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
@@ -2435,7 +3686,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
@@ -2445,8 +3696,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                    toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                 }) => {
                     config: {
                         sql: {
@@ -2459,37 +3710,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                            toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: Date;
-                        field?: string;
-                        type: "date";
-                    };
-                    zodSqlSchema: z.ZodDate;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                     };
                 };
             };
@@ -2665,28 +3892,181 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: z.ZodDate;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: {
-                    pk?: true;
-                    nullable?: boolean;
-                    default?: Date;
-                    field?: string;
-                    type: "datetime";
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: {
+                        pk?: true;
+                        nullable?: boolean;
+                        default?: Date;
+                        field?: string;
+                        type: "datetime";
+                    };
+                    zodSqlSchema: z.ZodDate;
+                    zodNewSchema: z.ZodDate;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: z.ZodDate;
+                    zodValidationSchema: z.ZodDate;
                 };
-                zodSqlSchema: z.ZodDate;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: z.ZodDate;
+                    client: z.ZodDate;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "datetime";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodDate;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => Date;
+                        toDb: (clientValue: Date) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "datetime";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: z.ZodDate;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => Date;
+                                toDb: (clientValue: Date) => Date;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: z.ZodDate;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "datetime";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodDate;
+                        initialState: z.ZodDate;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "datetime";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: Date;
+                                    field?: string;
+                                    type: "datetime";
+                                };
+                                zodSqlSchema: z.ZodDate;
+                                zodNewSchema: z.ZodDate;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "datetime";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: z.ZodDate;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: Date) => Date;
+                    toDb: (clientValue: Date) => Date;
+                }) => {
+                    config: {
+                        sql: {
+                            pk?: true;
+                            nullable?: boolean;
+                            default?: Date;
+                            field?: string;
+                            type: "datetime";
+                        };
+                        zodSqlSchema: z.ZodDate;
+                        zodNewSchema: z.ZodDate;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: z.ZodDate;
+                        zodValidationSchema: z.ZodDate;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: Date) => Date;
+                            toDb: (clientValue: Date) => Date;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: z.ZodDate;
-                initialState: TNewNext;
-                client: InferSmartClientType<z.ZodDate, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: {
                         pk?: true;
@@ -2699,12 +4079,13 @@ export declare const shape: {
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: z.ZodDate;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<z.ZodDate, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -2718,37 +4099,36 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                    }) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "datetime";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: z.ZodDate;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: Date;
-                        field?: string;
-                        type: "datetime";
-                    };
-                    zodSqlSchema: z.ZodDate;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: z.ZodDate;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: {
                             pk?: true;
@@ -2761,7 +4141,51 @@ export declare const shape: {
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: z.ZodDate;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: {
+                                pk?: true;
+                                nullable?: boolean;
+                                default?: Date;
+                                field?: string;
+                                type: "datetime";
+                            };
+                            zodSqlSchema: z.ZodDate;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                        }) => {
+                            config: {
+                                sql: {
+                                    pk?: true;
+                                    nullable?: boolean;
+                                    default?: Date;
+                                    field?: string;
+                                    type: "datetime";
+                                };
+                                zodSqlSchema: z.ZodDate;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
@@ -2779,7 +4203,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
@@ -2789,8 +4213,8 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                    toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                 }) => {
                     config: {
                         sql: {
@@ -2803,37 +4227,13 @@ export declare const shape: {
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: Date) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => Date;
+                            toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
-            }) => {
-                config: {
-                    sql: {
-                        pk?: true;
-                        nullable?: boolean;
-                        default?: Date;
-                        field?: string;
-                        type: "datetime";
-                    };
-                    zodSqlSchema: z.ZodDate;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<z.ZodDate, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: Date) => z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<z.ZodDate, TNewNext>>) => Date;
                     };
                 };
             };
@@ -2961,34 +4361,146 @@ export declare const shape: {
                 };
             };
         };
-        initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
-            sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-        }) => TNewNext), defaultValue: () => TDefaultNext) => {
-            config: {
-                sql: T;
-                zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                zodNewSchema: TNewNext;
-                initialValue: z.TypeOf<TNewNext>;
-                zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
-                zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
+        initialState: {
+            <TDefaultNext>(defaultValue: () => TDefaultNext): {
+                config: {
+                    sql: T;
+                    zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    initialValue: TDefaultNext;
+                    zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    zodValidationSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                };
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    initialState: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    client: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                }) => TValidationNext)) => {
+                    config: {
+                        sql: T;
+                        zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        zodValidationSchema: TValidationNext;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                        toDb: (clientValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    }) => {
+                        config: {
+                            sql: T;
+                            zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                                toDb: (clientValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                            };
+                        };
+                    };
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    initialState: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                }) => TClientNext)) => {
+                    config: {
+                        sql: T;
+                        zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: TClientNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        initialState: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: T;
+                            zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                        }) => {
+                            config: {
+                                sql: T;
+                                zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                                zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                                initialValue: TDefaultNext;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                                };
+                            };
+                        };
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                        toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    }) => {
+                        config: {
+                            sql: T;
+                            zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            initialValue: TDefaultNext;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TClientNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                                toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                            };
+                        };
+                    };
+                };
+                transform: (transforms: {
+                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    toDb: (clientValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                }) => {
+                    config: {
+                        sql: T;
+                        zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        initialValue: TDefaultNext;
+                        zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        zodValidationSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                            toDb: (clientValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                        };
+                    };
+                };
             };
-            validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+            <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: TNewNext | ((tools: {
                 sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                initialState: TNewNext;
-                client: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
-            }) => TValidationNext)) => {
+            }) => TNewNext), defaultValue: () => TDefaultNext): {
                 config: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: TNewNext;
                     initialValue: z.TypeOf<TNewNext>;
                     zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
-                    zodValidationSchema: TValidationNext;
+                    zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                 };
-                transform: (transforms: {
-                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
-                    toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
-                }) => {
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                    initialState: TNewNext;
+                    client: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
+                }) => TValidationNext)) => {
                     config: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
@@ -2996,38 +4508,69 @@ export declare const shape: {
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                         zodValidationSchema: TValidationNext;
-                    } & {
-                        transforms: {
-                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
-                            toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    };
+                    transform: (transforms: {
+                        toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
+                        toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    }) => {
+                        config: {
+                            sql: T;
+                            zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
+                            zodValidationSchema: TValidationNext;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
+                                toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                            };
                         };
                     };
                 };
-            };
-            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                initialState: TNewNext;
-            }) => TClientNext)) => {
-                config: {
-                    sql: T;
-                    zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: TClientNext;
-                    zodValidationSchema: TClientNext;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
                     sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     initialState: TNewNext;
-                    client: TClientNext;
-                }) => TValidationNext)) => {
+                }) => TClientNext)) => {
                     config: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
                         zodClientSchema: TClientNext;
-                        zodValidationSchema: TValidationNext;
+                        zodValidationSchema: TClientNext;
+                    };
+                    validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                        sql: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                        initialState: TNewNext;
+                        client: TClientNext;
+                    }) => TValidationNext)) => {
+                        config: {
+                            sql: T;
+                            zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                            zodNewSchema: TNewNext;
+                            initialValue: z.TypeOf<TNewNext>;
+                            zodClientSchema: TClientNext;
+                            zodValidationSchema: TValidationNext;
+                        };
+                        transform: (transforms: {
+                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                            toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                        }) => {
+                            config: {
+                                sql: T;
+                                zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
+                                zodNewSchema: TNewNext;
+                                initialValue: z.TypeOf<TNewNext>;
+                                zodClientSchema: TClientNext;
+                                zodValidationSchema: TValidationNext;
+                            } & {
+                                transforms: {
+                                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
+                                    toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                                };
+                            };
+                        };
                     };
                     transform: (transforms: {
                         toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
@@ -3039,7 +4582,7 @@ export declare const shape: {
                             zodNewSchema: TNewNext;
                             initialValue: z.TypeOf<TNewNext>;
                             zodClientSchema: TClientNext;
-                            zodValidationSchema: TValidationNext;
+                            zodValidationSchema: TClientNext;
                         } & {
                             transforms: {
                                 toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
@@ -3049,39 +4592,21 @@ export declare const shape: {
                     };
                 };
                 transform: (transforms: {
-                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
-                    toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                    toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
+                    toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                 }) => {
                     config: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: TNewNext;
                         initialValue: z.TypeOf<TNewNext>;
-                        zodClientSchema: TClientNext;
-                        zodValidationSchema: TClientNext;
+                        zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
+                        zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
                     } & {
                         transforms: {
-                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<TClientNext>;
-                            toDb: (clientValue: z.TypeOf<TClientNext>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
+                            toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
+                            toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                         };
-                    };
-                };
-            };
-            transform: (transforms: {
-                toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
-                toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
-            }) => {
-                config: {
-                    sql: T;
-                    zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                    zodNewSchema: TNewNext;
-                    initialValue: z.TypeOf<TNewNext>;
-                    zodClientSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
-                    zodValidationSchema: InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>;
-                } & {
-                    transforms: {
-                        toClient: (dbValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>) => z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>;
-                        toDb: (clientValue: z.TypeOf<InferSmartClientType<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never, TNewNext>>) => z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                     };
                 };
             };
@@ -3093,9 +4618,14 @@ interface IBuilderMethods<T extends SQLType, TSql extends z.ZodTypeAny, TNew ext
      * Defines the schema and default value for creating a new item.
      * Moves the builder to the 'new' stage.
      */
-    initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: ((tools: {
-        sql: TSql;
-    }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext) => Builder<"new", T, TSql, TNewNext, z.infer<TNewNext>, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>;
+    initialState: {
+        <TDefaultNext>(defaultValue: () => TDefaultNext): Prettify<Builder<"new", T, TSql, TSql, // Keep SQL schema
+        TDefaultNext, TSql, // Client stays as SQL
+        TSql>>;
+        <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: ((tools: {
+            sql: TSql;
+        }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext): Prettify<Builder<"new", T, TSql, TNewNext, z.infer<TNewNext>, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>>;
+    };
     /**
      * Defines the schema for data sent to the client.
      * Moves the builder to the 'client' stage.
@@ -3103,7 +4633,7 @@ interface IBuilderMethods<T extends SQLType, TSql extends z.ZodTypeAny, TNew ext
     client: <TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
         initialState: TNew;
-    }) => TClientNext) | TClientNext) => Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>;
+    }) => TClientNext) | TClientNext) => Prettify<Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>>;
     /**
      * Defines a validation schema for updates or inputs.
      * Moves the builder to the 'validation' stage.
@@ -3112,7 +4642,7 @@ interface IBuilderMethods<T extends SQLType, TSql extends z.ZodTypeAny, TNew ext
         sql: TSql;
         initialState: TNew;
         client: TClient;
-    }) => TValidationNext) | TValidationNext) => Builder<"validation", T, TSql, TNew, TInitialValue, TClient, TValidationNext>;
+    }) => TValidationNext) | TValidationNext) => Prettify<Builder<"validation", T, TSql, TNew, TInitialValue, TClient, TValidationNext>>;
     /**
      * Finalizes the builder by providing data transformation functions.
      * This is the terminal step.
@@ -3263,10 +4793,10 @@ type SchemaDefinition = {
     _tableName: string;
     [key: string]: any;
 };
-type InferSqlSchema<T> = {
+type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema"> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
-            zodSqlSchema: infer S extends z.ZodTypeAny;
+            [P in Key]: infer S extends z.ZodTypeAny;
         };
     } ? S : T[K] extends {
         type: "reference";
@@ -3274,37 +4804,14 @@ type InferSqlSchema<T> = {
     } ? F : T[K] extends () => {
         type: "hasMany" | "manyToMany";
         schema: infer S extends SchemaDefinition;
-    } ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>> : T[K] extends () => {
+    } ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>> : T[K] extends () => {
         type: "hasOne" | "belongsTo";
         schema: infer S extends SchemaDefinition;
-    } ? z.ZodObject<Prettify<InferSqlSchema<S>>> : never;
+    } ? z.ZodObject<Prettify<InferSchemaByKey<S, Key>>> : never;
 };
-type InferClientSchema<T> = {
-    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-        config: {
-            zodClientSchema: infer C extends z.ZodTypeAny;
-        };
-    } ? C : T[K] extends () => {
-        type: "hasMany" | "manyToMany";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodArray<z.ZodObject<Prettify<InferClientSchema<S>>>> : T[K] extends () => {
-        type: "hasOne" | "belongsTo";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodObject<Prettify<InferClientSchema<S>>> : never;
-};
-type InferValidationSchema<T> = {
-    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-        config: {
-            zodValidationSchema: infer V extends z.ZodTypeAny;
-        };
-    } ? V : T[K] extends () => {
-        type: "hasMany" | "manyToMany";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodArray<z.ZodObject<Prettify<InferValidationSchema<S>>>> : T[K] extends () => {
-        type: "hasOne" | "belongsTo";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodObject<Prettify<InferValidationSchema<S>>> : never;
-};
+type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
+type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
+type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
 type InferDefaultValues2<T> = {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {

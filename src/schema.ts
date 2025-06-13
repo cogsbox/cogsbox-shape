@@ -207,18 +207,36 @@ interface IBuilderMethods<
    * Defines the schema and default value for creating a new item.
    * Moves the builder to the 'new' stage.
    */
-  initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
-    schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-    defaultValue: () => TDefaultNext
-  ) => Builder<
-    "new",
-    T,
-    TSql,
-    TNewNext,
-    z.infer<TNewNext>,
-    InferSmartClientType<TSql, TNewNext>,
-    InferSmartClientType<TSql, TNewNext>
-  >;
+  initialState: {
+    // Overload 1: Just default value (keeps SQL schema)
+    <TDefaultNext>(defaultValue: () => TDefaultNext): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        TSql, // Keep SQL schema
+        TDefaultNext,
+        TSql, // Client stays as SQL
+        TSql // Validation stays as SQL
+      >
+    >;
+
+    // Overload 2: Schema and default value
+    <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+      defaultValue: () => TDefaultNext
+    ): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        TNewNext,
+        z.infer<TNewNext>,
+        InferSmartClientType<TSql, TNewNext>,
+        InferSmartClientType<TSql, TNewNext>
+      >
+    >;
+  };
 
   /**
    * Defines the schema for data sent to the client.
@@ -228,14 +246,8 @@ interface IBuilderMethods<
     schema:
       | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
       | TClientNext
-  ) => Builder<
-    "client",
-    T,
-    TSql,
-    TNew,
-    TInitialValue,
-    TClientNext,
-    TClientNext
+  ) => Prettify<
+    Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>
   >;
 
   /**
@@ -250,14 +262,16 @@ interface IBuilderMethods<
           client: TClient;
         }) => TValidationNext)
       | TValidationNext
-  ) => Builder<
-    "validation",
-    T,
-    TSql,
-    TNew,
-    TInitialValue,
-    TClient,
-    TValidationNext
+  ) => Prettify<
+    Builder<
+      "validation",
+      T,
+      TSql,
+      TNew,
+      TInitialValue,
+      TClient,
+      TValidationNext
+    >
   >;
 
   /**
@@ -786,61 +800,32 @@ function isRelation(value: any): value is Relation<any> {
   );
 }
 type SchemaDefinition = { _tableName: string; [key: string]: any };
-type InferSqlSchema<T> = {
+type InferSchemaByKey<
+  T,
+  Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
+> = {
   [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-    config: { zodSqlSchema: infer S extends z.ZodTypeAny };
+    config: { [P in Key]: infer S extends z.ZodTypeAny };
   }
     ? S
     : T[K] extends { type: "reference"; field: infer F extends z.ZodTypeAny }
-      ? F // Handle reference fields
+      ? F
       : T[K] extends () => {
             type: "hasMany" | "manyToMany";
             schema: infer S extends SchemaDefinition;
           }
-        ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>>
+        ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>>
         : T[K] extends () => {
               type: "hasOne" | "belongsTo";
               schema: infer S extends SchemaDefinition;
             }
-          ? z.ZodObject<Prettify<InferSqlSchema<S>>>
+          ? z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>
           : never;
 };
 
-type InferClientSchema<T> = {
-  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-    config: { zodClientSchema: infer C extends z.ZodTypeAny };
-  }
-    ? C
-    : T[K] extends () => {
-          type: "hasMany" | "manyToMany";
-          schema: infer S extends SchemaDefinition;
-        }
-      ? z.ZodArray<z.ZodObject<Prettify<InferClientSchema<S>>>>
-      : T[K] extends () => {
-            type: "hasOne" | "belongsTo";
-            schema: infer S extends SchemaDefinition;
-          }
-        ? z.ZodObject<Prettify<InferClientSchema<S>>>
-        : never;
-};
-
-type InferValidationSchema<T> = {
-  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-    config: { zodValidationSchema: infer V extends z.ZodTypeAny };
-  }
-    ? V
-    : T[K] extends () => {
-          type: "hasMany" | "manyToMany";
-          schema: infer S extends SchemaDefinition;
-        }
-      ? z.ZodArray<z.ZodObject<Prettify<InferValidationSchema<S>>>>
-      : T[K] extends () => {
-            type: "hasOne" | "belongsTo";
-            schema: infer S extends SchemaDefinition;
-          }
-        ? z.ZodObject<Prettify<InferValidationSchema<S>>>
-        : never;
-};
+type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
+type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
+type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
 
 type InferDefaultValues2<T> = {
   [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
@@ -903,9 +888,25 @@ export function createSchema<T extends { _tableName: string }>(
         validationFields[key] = childSchemaResult.validationSchema;
         defaultValues[key] = childSchemaResult.defaultValues;
       }
-    }
-    // Case 2: Handle regular builder fields
-    else if (field && typeof field === "object" && "config" in field) {
+    } else if (
+      field &&
+      typeof field === "object" &&
+      field.type === "reference"
+    ) {
+      // Use the Zod schema from the field property
+      sqlFields[key] = field.field;
+      clientFields[key] = field.field;
+      validationFields[key] = field.field;
+
+      // Infer default based on the Zod type
+      if (field.field instanceof z.ZodNumber) {
+        defaultValues[key] = 0;
+      } else if (field.field instanceof z.ZodString) {
+        defaultValues[key] = "";
+      } else {
+        defaultValues[key] = inferDefaultFromZod(field.field);
+      }
+    } else if (field && typeof field === "object" && "config" in field) {
       sqlFields[key] = field.config.zodSqlSchema;
       clientFields[key] = field.config.zodClientSchema;
       validationFields[key] = field.config.zodValidationSchema;
