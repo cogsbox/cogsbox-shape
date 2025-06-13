@@ -28,6 +28,7 @@ export const userSchema = {
     defaultCount: 1,
   }),
 };
+type test = InferSchemaTypes<typeof userSchema>;
 
 export const petSchema = {
   _tableName: "pets",

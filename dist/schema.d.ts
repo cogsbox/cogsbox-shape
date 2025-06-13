@@ -3203,11 +3203,12 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
     toDb?: (clientValue: any) => any;
 };
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
-type ReferenceField<TField extends AnyFieldDefinition, TTo extends SchemaField = any> = TField & {
+type ReferenceField<TField extends AnyFieldDefinition> = {
+    field: TField;
     type: "reference";
     to: () => any;
 };
-type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField<AnyFieldDefinition, any>;
+type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField<AnyFieldDefinition>;
 export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>> = {
     _tableName: string;
     __schemaId?: string;
@@ -3267,7 +3268,10 @@ type InferSqlSchema<T> = {
         config: {
             zodSqlSchema: infer S extends z.ZodTypeAny;
         };
-    } ? S : T[K] extends () => {
+    } ? S : T[K] extends {
+        type: "reference";
+        field: infer F extends z.ZodTypeAny;
+    } ? F : T[K] extends () => {
         type: "hasMany" | "manyToMany";
         schema: infer S extends SchemaDefinition;
     } ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>> : T[K] extends () => {

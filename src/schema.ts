@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { v4 as uuidv4 } from "uuid";
-import zodToJsonSchema, { type JsonSchema7Type } from "zod-to-json-schema";
 
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
@@ -576,16 +574,14 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 };
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
 
-type ReferenceField<
-  TField extends AnyFieldDefinition,
-  TTo extends SchemaField = any, // Default to any
-> = TField & {
+type ReferenceField<TField extends AnyFieldDefinition> = {
+  field: TField;
   type: "reference";
   to: () => any; // Change this to any to break the circular type inference
 };
 type SchemaField<T extends SQLType = SQLType> =
   | BaseSchemaField<T>
-  | ReferenceField<AnyFieldDefinition, any>; // Use the generic ReferenceField in the union
+  | ReferenceField<AnyFieldDefinition>; // Use the generic ReferenceField in the union
 
 // Update Schema type to include references
 export type Schema<
@@ -795,17 +791,19 @@ type InferSqlSchema<T> = {
     config: { zodSqlSchema: infer S extends z.ZodTypeAny };
   }
     ? S
-    : T[K] extends () => {
-          type: "hasMany" | "manyToMany";
-          schema: infer S extends SchemaDefinition;
-        }
-      ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>>
+    : T[K] extends { type: "reference"; field: infer F extends z.ZodTypeAny }
+      ? F // Handle reference fields
       : T[K] extends () => {
-            type: "hasOne" | "belongsTo";
+            type: "hasMany" | "manyToMany";
             schema: infer S extends SchemaDefinition;
           }
-        ? z.ZodObject<Prettify<InferSqlSchema<S>>>
-        : never;
+        ? z.ZodArray<z.ZodObject<Prettify<InferSqlSchema<S>>>>
+        : T[K] extends () => {
+              type: "hasOne" | "belongsTo";
+              schema: infer S extends SchemaDefinition;
+            }
+          ? z.ZodObject<Prettify<InferSqlSchema<S>>>
+          : never;
 };
 
 type InferClientSchema<T> = {
