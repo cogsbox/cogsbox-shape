@@ -589,9 +589,8 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
 
 type ReferenceField<TField extends AnyFieldDefinition> = {
-  field: TField;
   type: "reference";
-  to: () => any; // Change this to any to break the circular type inference
+  to: () => TField;
 };
 type SchemaField<T extends SQLType = SQLType> =
   | BaseSchemaField<T>
@@ -703,14 +702,10 @@ function inferDefaultFromZod(
   return undefined;
 }
 
-export function reference<
-  TField extends object,
-  Zod extends z.ZodTypeAny,
->(config: { to: TField; field: Zod }) {
+export function reference<TField extends object>(config: TField) {
   return {
-    field: config.field,
     type: "reference" as const,
-    to: typeof config.to === "function" ? config.to : () => config.to,
+    to: config,
   };
 }
 export function createMixedValidationSchema<T extends Schema<any>>(
@@ -808,8 +803,11 @@ type InferSchemaByKey<
     config: { [P in Key]: infer S extends z.ZodTypeAny };
   }
     ? S
-    : T[K] extends { type: "reference"; field: infer F extends z.ZodTypeAny }
-      ? F
+    : T[K] extends {
+          type: "reference";
+          to: () => { config: { [P in Key]: infer S extends z.ZodTypeAny } };
+        }
+      ? S // Extract the zod schema from the referenced field's config
       : T[K] extends () => {
             type: "hasMany" | "manyToMany";
             schema: infer S extends SchemaDefinition;
@@ -893,19 +891,11 @@ export function createSchema<T extends { _tableName: string }>(
       typeof field === "object" &&
       field.type === "reference"
     ) {
-      // Use the Zod schema from the field property
-      sqlFields[key] = field.field;
-      clientFields[key] = field.field;
-      validationFields[key] = field.field;
-
-      // Infer default based on the Zod type
-      if (field.field instanceof z.ZodNumber) {
-        defaultValues[key] = 0;
-      } else if (field.field instanceof z.ZodString) {
-        defaultValues[key] = "";
-      } else {
-        defaultValues[key] = inferDefaultFromZod(field.field);
-      }
+      const referencedField = field.to();
+      sqlFields[key] = referencedField.config.zodSqlSchema;
+      clientFields[key] = referencedField.config.zodClientSchema;
+      validationFields[key] = referencedField.config.zodValidationSchema;
+      defaultValues[key] = referencedField.config.initialValue;
     } else if (field && typeof field === "object" && "config" in field) {
       sqlFields[key] = field.config.zodSqlSchema;
       clientFields[key] = field.config.zodClientSchema;

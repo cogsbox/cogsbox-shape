@@ -267,9 +267,8 @@ function inferDefaultFromZod(zodType, sqlConfig) {
 }
 export function reference(config) {
     return {
-        field: config.field,
         type: "reference",
-        to: typeof config.to === "function" ? config.to : () => config.to,
+        to: config,
     };
 }
 export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
@@ -380,20 +379,11 @@ export function createSchema(schema) {
         else if (field &&
             typeof field === "object" &&
             field.type === "reference") {
-            // Use the Zod schema from the field property
-            sqlFields[key] = field.field;
-            clientFields[key] = field.field;
-            validationFields[key] = field.field;
-            // Infer default based on the Zod type
-            if (field.field instanceof z.ZodNumber) {
-                defaultValues[key] = 0;
-            }
-            else if (field.field instanceof z.ZodString) {
-                defaultValues[key] = "";
-            }
-            else {
-                defaultValues[key] = inferDefaultFromZod(field.field);
-            }
+            const referencedField = field.to();
+            sqlFields[key] = referencedField.config.zodSqlSchema;
+            clientFields[key] = referencedField.config.zodClientSchema;
+            validationFields[key] = referencedField.config.zodValidationSchema;
+            defaultValues[key] = referencedField.config.initialValue;
         }
         else if (field && typeof field === "object" && "config" in field) {
             sqlFields[key] = field.config.zodSqlSchema;

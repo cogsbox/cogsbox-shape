@@ -4734,9 +4734,8 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 };
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
 type ReferenceField<TField extends AnyFieldDefinition> = {
-    field: TField;
     type: "reference";
-    to: () => any;
+    to: () => TField;
 };
 type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField<AnyFieldDefinition>;
 export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>> = {
@@ -4780,13 +4779,9 @@ export type InferDBSchema<T> = {
         } ? DbType : never;
     }> : never;
 };
-export declare function reference<TField extends object, Zod extends z.ZodTypeAny>(config: {
-    to: TField;
-    field: Zod;
-}): {
-    field: Zod;
+export declare function reference<TField extends object>(config: TField): {
     type: "reference";
-    to: () => TField;
+    to: TField;
 };
 export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T, clientSchema?: z.ZodObject<any>, dbSchema?: z.ZodObject<any>): z.ZodObject<any>;
 type SchemaDefinition = {
@@ -4800,8 +4795,12 @@ type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodVa
         };
     } ? S : T[K] extends {
         type: "reference";
-        field: infer F extends z.ZodTypeAny;
-    } ? F : T[K] extends () => {
+        to: () => {
+            config: {
+                [P in Key]: infer S extends z.ZodTypeAny;
+            };
+        };
+    } ? S : T[K] extends () => {
         type: "hasMany" | "manyToMany";
         schema: infer S extends SchemaDefinition;
     } ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>> : T[K] extends () => {

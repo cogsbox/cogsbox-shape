@@ -1013,9 +1013,8 @@ declare const schemas: {
                     };
                 };
             } | {
-                field: import("zod").ZodNumber;
                 type: "reference";
-                to: () => () => {
+                to: () => {
                     config: {
                         sql: {
                             type: "int";
@@ -1959,9 +1958,8 @@ declare const schemas: {
                     };
                 };
                 userId: {
-                    field: import("zod").ZodNumber;
                     type: "reference";
-                    to: () => () => {
+                    to: () => {
                         config: {
                             sql: {
                                 type: "int";
@@ -2911,9 +2909,8 @@ declare const schemas: {
             };
         };
         userId: {
-            field: import("zod").ZodNumber;
             type: "reference";
-            to: () => () => {
+            to: () => {
                 config: {
                     sql: {
                         type: "int";

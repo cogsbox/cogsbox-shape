@@ -8,6 +8,41 @@ import {
   type InferSchemaTypes,
 } from "../schema.js";
 
+type test = InferSchemaTypes<typeof userSchema>;
+
+export const petSchema = {
+  _tableName: "pets",
+  id: shape
+    .sql({ type: "int", pk: true })
+    .initialState(() => "uuidexample")
+    .client(({ sql, initialState }) => z.union([sql, initialState]))
+    .validation(z.string())
+    .transform({
+      toClient: (dbValue) => dbValue,
+      toDb: (clientValue) => Number(clientValue),
+    }),
+
+  name: shape.sql({ type: "varchar", length: 255 }),
+  userId: reference(() => userSchema.id),
+  fluffynessScale: shape
+    .sql({ type: "text" })
+    .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
+    .transform({
+      toClient: (value) => value.split(",").filter(Boolean) as any,
+      toDb: (value) => value.join(","),
+    }),
+
+  favourite: shape
+    .sql({ type: "int" })
+    .client(({ sql }) => z.boolean())
+    .transform({
+      toClient: (dbValue) => dbValue === 1,
+      toDb: (clientValue) => (clientValue ? 1 : 0),
+    }),
+};
+
+// export const { dbSchema, clientSchema, initialValues, serialized } =
+//   createSchema(userSchema);
 export const userSchema = {
   _tableName: "users",
   id: shape.sql({ type: "int", pk: true }),
@@ -28,42 +63,6 @@ export const userSchema = {
     defaultCount: 1,
   }),
 };
-type test = InferSchemaTypes<typeof userSchema>;
-
-export const petSchema = {
-  _tableName: "pets",
-  id: shape
-    .sql({ type: "int", pk: true })
-    .initialState(() => "uuidexample")
-    .client(({ sql, initialState }) => z.union([sql, initialState]))
-    .validation(z.string())
-    .transform({
-      toClient: (dbValue) => dbValue,
-      toDb: (clientValue) => Number(clientValue),
-    }),
-
-  name: shape.sql({ type: "varchar", length: 255 }),
-  userId: reference({ to: () => userSchema.id, field: z.number() }),
-  fluffynessScale: shape
-    .sql({ type: "text" })
-    .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
-    .transform({
-      toClient: (value) => value.split(",").filter(Boolean) as any,
-      toDb: (value) => value.join(","),
-    }),
-
-  favourite: shape
-    .sql({ type: "int" })
-    .client(({ sql }) => z.boolean())
-    .transform({
-      toClient: (dbValue) => dbValue === 1,
-      toDb: (clientValue) => (clientValue ? 1 : 0),
-    }),
-};
-
-// export const { dbSchema, clientSchema, initialValues, serialized } =
-//   createSchema(userSchema);
-
 const testPets = {
   _tableName: "users",
 
