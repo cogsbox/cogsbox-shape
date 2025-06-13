@@ -406,7 +406,7 @@ function createBuilder<
         : config.sqlZod; // Keep SQL type if just setting default
 
       const finalDefaultValue = hasTypeParam
-        ? defaultValue!()
+        ? defaultValue!
         : (schemaOrDefault as () => TDefaultNext);
 
       const newCompletedStages = new Set(completedStages);
