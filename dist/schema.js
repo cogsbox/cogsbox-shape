@@ -118,7 +118,7 @@ function createBuilder(config) {
                 : config.sqlZod; // Keep SQL type if just setting default
             const finalDefaultValue = hasTypeParam
                 ? defaultValue()
-                : schemaOrDefault();
+                : schemaOrDefault;
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
             const newClientZod = hasTypeParam

@@ -407,7 +407,7 @@ function createBuilder<
 
       const finalDefaultValue = hasTypeParam
         ? defaultValue!()
-        : (schemaOrDefault as () => TDefaultNext)();
+        : (schemaOrDefault as () => TDefaultNext);
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("new");
