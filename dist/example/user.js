@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { belongsTo, createSchema, hasMany, reference, shape, } from "../schema.js";
+import { createSchema, hasMany, reference, shape, } from "../schema.js";
 export const userSchema = {
     _tableName: "users",
     id: shape.sql({ type: "int", pk: true }),
