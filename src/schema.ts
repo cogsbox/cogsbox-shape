@@ -576,16 +576,13 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 };
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
 
-// 1. Modify ReferenceField to be generic `TField` and intersect it with the `to` and `type` properties.
-//    This ensures all properties of TField (including `field?: string`) are carried over.
 type ReferenceField<
   TField extends AnyFieldDefinition,
-  TTo extends SchemaField,
+  TTo extends SchemaField = any, // Default to any
 > = TField & {
-  type: "reference"; // Override the 'type' literal to "reference"
-  to: () => TTo; // Add the 'to' property
+  type: "reference";
+  to: () => any; // Change this to any to break the circular type inference
 };
-
 type SchemaField<T extends SQLType = SQLType> =
   | BaseSchemaField<T>
   | ReferenceField<AnyFieldDefinition, any>; // Use the generic ReferenceField in the union
@@ -814,16 +811,13 @@ type InferSerializedSchema<T> = {
 };
 
 export function reference<
-  TTargetField extends SchemaField,
   TField extends object,
->(config: {
-  to: () => TTargetField;
-  field: TField;
-}): TField & { type: "reference"; to: () => TTargetField } {
+  Zod extends z.ZodTypeAny,
+>(config: { to: TField; field: Zod }) {
   return {
-    ...config.field,
+    field: config.field,
     type: "reference" as const,
-    to: config.to,
+    to: typeof config.to === "function" ? config.to : () => config.to,
   };
 }
 export function createMixedValidationSchema<T extends Schema<any>>(
@@ -1064,3 +1058,33 @@ export type InferSchemaTypes<
   /** The TypeScript type for the default values object. */
   defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
+
+type SyncSchemaEntry<T extends { _tableName: string }> = {
+  schema: T;
+  validation?: (
+    schema: ReturnType<typeof createSchema<T>>["validationSchema"]
+  ) => z.ZodSchema;
+  client?: (
+    schema: ReturnType<typeof createSchema<T>>["clientSchema"]
+  ) => z.ZodSchema;
+};
+
+type SyncSchemaMap<T extends Record<string, { _tableName: string }>> = {
+  [K in keyof T]: SyncSchemaEntry<T[K]>;
+};
+
+export function createSyncSchema<
+  T extends Record<string, { _tableName: string }>,
+>(config: {
+  [K in keyof T]: {
+    schema: T[K];
+    validation?: (
+      schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]
+    ) => z.ZodSchema;
+    client?: (
+      schema: ReturnType<typeof createSchema<T[K]>>["clientSchema"]
+    ) => z.ZodSchema;
+  };
+}): SyncSchemaMap<T> {
+  return config;
+}

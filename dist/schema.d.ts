@@ -3204,9 +3204,9 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
     toDb?: (clientValue: any) => any;
 };
 type AnyFieldDefinition = ReturnType<typeof shape.sql>;
-type ReferenceField<TField extends AnyFieldDefinition, TTo extends SchemaField> = TField & {
+type ReferenceField<TField extends AnyFieldDefinition, TTo extends SchemaField = any> = TField & {
     type: "reference";
-    to: () => TTo;
+    to: () => any;
 };
 type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T> | ReferenceField<AnyFieldDefinition, any>;
 export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>> = {
@@ -3277,12 +3277,13 @@ export type SerializableSchema = {
         schema: SerializableSchema;
     });
 };
-export declare function reference<TTargetField extends SchemaField, TField extends object>(config: {
-    to: () => TTargetField;
-    field: TField;
-}): TField & {
+export declare function reference<TField extends object, Zod extends z.ZodTypeAny>(config: {
+    to: TField;
+    field: Zod;
+}): {
+    field: Zod;
     type: "reference";
-    to: () => TTargetField;
+    to: () => TField;
 };
 export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T, clientSchema?: z.ZodObject<any>, dbSchema?: z.ZodObject<any>): z.ZodObject<any>;
 type SchemaDefinition = {
@@ -3366,4 +3367,25 @@ export type InferSchemaTypes<T extends {
     /** The TypeScript type for the default values object. */
     defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
+type SyncSchemaEntry<T extends {
+    _tableName: string;
+}> = {
+    schema: T;
+    validation?: (schema: ReturnType<typeof createSchema<T>>["validationSchema"]) => z.ZodSchema;
+    client?: (schema: ReturnType<typeof createSchema<T>>["clientSchema"]) => z.ZodSchema;
+};
+type SyncSchemaMap<T extends Record<string, {
+    _tableName: string;
+}>> = {
+    [K in keyof T]: SyncSchemaEntry<T[K]>;
+};
+export declare function createSyncSchema<T extends Record<string, {
+    _tableName: string;
+}>>(config: {
+    [K in keyof T]: {
+        schema: T[K];
+        validation?: (schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]) => z.ZodSchema;
+        client?: (schema: ReturnType<typeof createSchema<T[K]>>["clientSchema"]) => z.ZodSchema;
+    };
+}): SyncSchemaMap<T>;
 export {};

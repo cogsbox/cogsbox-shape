@@ -269,9 +269,9 @@ function inferDefaultFromZod(zodType, sqlConfig) {
 }
 export function reference(config) {
     return {
-        ...config.field,
+        field: config.field,
         type: "reference",
-        to: config.to,
+        to: typeof config.to === "function" ? config.to : () => config.to,
     };
 }
 export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
@@ -393,4 +393,7 @@ export function createSchema(schema) {
         validationSchema: z.object(validationFields),
         defaultValues: defaultValues,
     };
+}
+export function createSyncSchema(config) {
+    return config;
 }

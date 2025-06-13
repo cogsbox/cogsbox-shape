@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { belongsTo, createSchema, hasMany, shape } from "../schema.js";
+import { belongsTo, createSchema, hasMany, reference, shape, } from "../schema.js";
 export const userSchema = {
     _tableName: "users",
     id: shape.sql({ type: "int", pk: true }),
@@ -31,7 +31,7 @@ export const petSchema = {
         toDb: (clientValue) => Number(clientValue),
     }),
     name: shape.sql({ type: "varchar", length: 255 }),
-    userId: shape.sql({ type: "int" }).client(z.string()),
+    userId: reference({ to: () => userSchema.id, field: z.number() }),
     fluffynessScale: shape
         .sql({ type: "text" })
         .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
