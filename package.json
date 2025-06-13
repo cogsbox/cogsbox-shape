@@ -1,6 +1,6 @@
 {
     "name": "cogsbox-shape",
-    "version": "0.5.30",
+    "version": "0.5.31",
     "description": "A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
