@@ -235,29 +235,29 @@ export function manyToMany(config) {
     });
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
-    if (sqlConfig?.pk) {
-        return uuidv4();
+    // Check SQL type first for better defaults
+    if (sqlConfig && !sqlConfig.nullable) {
+        switch (sqlConfig.type) {
+            case "varchar":
+            case "text":
+            case "char":
+            case "longtext":
+                return "";
+            case "int":
+                return 0;
+            case "boolean":
+                return false;
+            case "date":
+            case "datetime":
+                return new Date();
+        }
     }
-    if (zodType instanceof z.ZodOptional) {
-        return undefined;
-    }
-    if (zodType instanceof z.ZodNullable) {
+    if (sqlConfig?.nullable) {
         return null;
     }
-    if (zodType instanceof z.ZodArray) {
-        return [];
-    }
-    if (zodType instanceof z.ZodObject) {
-        return {};
-    }
-    if (zodType instanceof z.ZodString) {
-        return "";
-    }
-    if (zodType instanceof z.ZodNumber) {
-        return 0;
-    }
-    if (zodType instanceof z.ZodBoolean) {
-        return false;
+    // Fall back to existing zod-based inference
+    if (zodType instanceof z.ZodOptional) {
+        return undefined;
     }
     // Check for explicit default last
     if (zodType instanceof z.ZodDefault && zodType._def?.defaultValue) {

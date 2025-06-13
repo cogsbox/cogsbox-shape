@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { type JsonSchema7Type } from "zod-to-json-schema";
 type CurrentTimestampConfig = {
     default: "CURRENT_TIMESTAMP";
     defaultValue: Date;
@@ -67,7 +66,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodNumber;
             zodNewSchema: z.ZodNumber;
-            initialValue: undefined;
+            initialValue: number;
             zodClientSchema: z.ZodNumber;
             zodValidationSchema: z.ZodNumber;
         };
@@ -86,7 +85,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodNumber;
                 zodValidationSchema: TValidationNext;
             };
@@ -104,7 +103,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodNumber;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -129,7 +128,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -148,7 +147,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -166,7 +165,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -191,7 +190,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -216,7 +215,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodNumber;
                 zodValidationSchema: z.ZodNumber;
             } & {
@@ -412,7 +411,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -432,7 +431,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: TValidationNext;
             };
@@ -451,7 +450,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -477,7 +476,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -497,7 +496,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -516,7 +515,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -542,7 +541,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -568,7 +567,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -772,7 +771,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -792,7 +791,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: TValidationNext;
             };
@@ -811,7 +810,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -837,7 +836,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -857,7 +856,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -876,7 +875,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -902,7 +901,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -928,7 +927,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -1131,7 +1130,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -1150,7 +1149,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: TValidationNext;
             };
@@ -1168,7 +1167,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -1193,7 +1192,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -1212,7 +1211,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1230,7 +1229,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1255,7 +1254,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -1280,7 +1279,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -1475,7 +1474,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -1494,7 +1493,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: TValidationNext;
             };
@@ -1512,7 +1511,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -1537,7 +1536,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -1556,7 +1555,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1574,7 +1573,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1599,7 +1598,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -1624,7 +1623,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -1819,7 +1818,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodBoolean;
             zodNewSchema: z.ZodBoolean;
-            initialValue: undefined;
+            initialValue: boolean;
             zodClientSchema: z.ZodBoolean;
             zodValidationSchema: z.ZodBoolean;
         };
@@ -1838,7 +1837,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodBoolean;
                 zodNewSchema: z.ZodBoolean;
-                initialValue: undefined;
+                initialValue: boolean;
                 zodClientSchema: z.ZodBoolean;
                 zodValidationSchema: TValidationNext;
             };
@@ -1856,7 +1855,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: z.ZodBoolean;
-                    initialValue: undefined;
+                    initialValue: boolean;
                     zodClientSchema: z.ZodBoolean;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -1881,7 +1880,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodBoolean;
                 zodNewSchema: z.ZodBoolean;
-                initialValue: undefined;
+                initialValue: boolean;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -1900,7 +1899,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: z.ZodBoolean;
-                    initialValue: undefined;
+                    initialValue: boolean;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1918,7 +1917,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodBoolean;
                         zodNewSchema: z.ZodBoolean;
-                        initialValue: undefined;
+                        initialValue: boolean;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1943,7 +1942,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodBoolean;
                     zodNewSchema: z.ZodBoolean;
-                    initialValue: undefined;
+                    initialValue: boolean;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -1968,7 +1967,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodBoolean;
                 zodNewSchema: z.ZodBoolean;
-                initialValue: undefined;
+                initialValue: boolean;
                 zodClientSchema: z.ZodBoolean;
                 zodValidationSchema: z.ZodBoolean;
             } & {
@@ -2163,7 +2162,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodDate;
             zodNewSchema: z.ZodDate;
-            initialValue: undefined;
+            initialValue: Date;
             zodClientSchema: z.ZodDate;
             zodValidationSchema: z.ZodDate;
         };
@@ -2182,7 +2181,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: z.ZodDate;
                 zodValidationSchema: TValidationNext;
             };
@@ -2200,7 +2199,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: z.ZodDate;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -2225,7 +2224,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -2244,7 +2243,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2262,7 +2261,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: z.ZodDate;
-                        initialValue: undefined;
+                        initialValue: Date;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2287,7 +2286,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -2312,7 +2311,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: z.ZodDate;
                 zodValidationSchema: z.ZodDate;
             } & {
@@ -2507,7 +2506,7 @@ export declare const shape: {
             };
             zodSqlSchema: z.ZodDate;
             zodNewSchema: z.ZodDate;
-            initialValue: undefined;
+            initialValue: Date;
             zodClientSchema: z.ZodDate;
             zodValidationSchema: z.ZodDate;
         };
@@ -2526,7 +2525,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: z.ZodDate;
                 zodValidationSchema: TValidationNext;
             };
@@ -2544,7 +2543,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: z.ZodDate;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -2569,7 +2568,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -2588,7 +2587,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2606,7 +2605,7 @@ export declare const shape: {
                         };
                         zodSqlSchema: z.ZodDate;
                         zodNewSchema: z.ZodDate;
-                        initialValue: undefined;
+                        initialValue: Date;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2631,7 +2630,7 @@ export declare const shape: {
                     };
                     zodSqlSchema: z.ZodDate;
                     zodNewSchema: z.ZodDate;
-                    initialValue: undefined;
+                    initialValue: Date;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -2656,7 +2655,7 @@ export declare const shape: {
                 };
                 zodSqlSchema: z.ZodDate;
                 zodNewSchema: z.ZodDate;
-                initialValue: undefined;
+                initialValue: Date;
                 zodClientSchema: z.ZodDate;
                 zodValidationSchema: z.ZodDate;
             } & {
@@ -2845,7 +2844,7 @@ export declare const shape: {
             sql: T;
             zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
             zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-            initialValue: undefined;
+            initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
             zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
             zodValidationSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
         };
@@ -2858,7 +2857,7 @@ export declare const shape: {
                 sql: T;
                 zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                initialValue: undefined;
+                initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                 zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodValidationSchema: TValidationNext;
             };
@@ -2870,7 +2869,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                    initialValue: undefined;
+                    initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                     zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -2889,7 +2888,7 @@ export declare const shape: {
                 sql: T;
                 zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                initialValue: undefined;
+                initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -2902,7 +2901,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                    initialValue: undefined;
+                    initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2914,7 +2913,7 @@ export declare const shape: {
                         sql: T;
                         zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                         zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                        initialValue: undefined;
+                        initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2933,7 +2932,7 @@ export declare const shape: {
                     sql: T;
                     zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                     zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                    initialValue: undefined;
+                    initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -2952,7 +2951,7 @@ export declare const shape: {
                 sql: T;
                 zodSqlSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodNewSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
-                initialValue: undefined;
+                initialValue: z.TypeOf<SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never>;
                 zodClientSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
                 zodValidationSchema: SQLToZodType<T, false> extends z.ZodTypeAny ? SQLToZodType<T, false> : never;
             } & {
@@ -3249,33 +3248,6 @@ export type InferDBSchema<T> = {
             zodDbSchema: infer DbType extends z.ZodTypeAny;
         } ? DbType : never;
     }> : never;
-};
-export type SerializableField = {
-    sql: SQLType;
-    jsonSchema: JsonSchema7Type;
-    defaultValue?: any;
-    transforms?: {
-        toClient: string;
-        toDb: string;
-    };
-};
-export type SerializableRelation = {
-    type: "relation";
-    relationType: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
-    fromKey: string;
-    toKey: SerializableField;
-    defaultCount?: number;
-};
-export type SerializableSchema = {
-    _tableName: string;
-    __schemaId: string;
-    _syncKey?: {
-        toString: string;
-    };
-} & {
-    [key: string]: SerializableField | (SerializableRelation & {
-        schema: SerializableSchema;
-    });
 };
 export declare function reference<TField extends object, Zod extends z.ZodTypeAny>(config: {
     to: TField;

@@ -9,7 +9,7 @@ export declare const userSchema: {
             };
             zodSqlSchema: z.ZodNumber;
             zodNewSchema: z.ZodNumber;
-            initialValue: undefined;
+            initialValue: number;
             zodClientSchema: z.ZodNumber;
             zodValidationSchema: z.ZodNumber;
         };
@@ -25,7 +25,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodNumber;
                 zodValidationSchema: TValidationNext;
             };
@@ -40,7 +40,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodNumber;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -62,7 +62,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -78,7 +78,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -93,7 +93,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -115,7 +115,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -137,7 +137,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodNumber;
                 zodValidationSchema: z.ZodNumber;
             } & {
@@ -305,7 +305,7 @@ export declare const userSchema: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -320,7 +320,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -339,7 +339,7 @@ export declare const userSchema: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -354,7 +354,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -373,7 +373,7 @@ export declare const userSchema: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -388,7 +388,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -427,7 +427,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             };
@@ -443,7 +443,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 };
@@ -458,7 +458,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: z.ZodString;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -480,7 +480,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -496,7 +496,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -511,7 +511,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: z.ZodString;
-                            initialValue: undefined;
+                            initialValue: string;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -533,7 +533,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -555,7 +555,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: z.ZodString;
                 } & {
@@ -725,7 +725,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodNumber;
                     zodValidationSchema: z.ZodNumber;
                 };
@@ -741,7 +741,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: z.ZodNumber;
                         zodValidationSchema: TValidationNext;
                     };
@@ -756,7 +756,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: z.ZodNumber;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -778,7 +778,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     };
@@ -794,7 +794,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         };
@@ -809,7 +809,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodNumber;
                                 zodNewSchema: z.ZodNumber;
-                                initialValue: undefined;
+                                initialValue: number;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TValidationNext;
                             } & {
@@ -831,7 +831,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TClientNext;
                         } & {
@@ -853,7 +853,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: z.ZodNumber;
                         zodValidationSchema: z.ZodNumber;
                     } & {
@@ -1020,7 +1020,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                 zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
             } & {
@@ -1036,7 +1036,7 @@ export declare const userSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodBoolean;
                 zodValidationSchema: z.ZodBoolean;
             } & {
@@ -1074,7 +1074,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: z.ZodString;
                 };
@@ -1090,7 +1090,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: z.ZodString;
                         zodValidationSchema: TValidationNext;
                     };
@@ -1105,7 +1105,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: z.ZodString;
-                            initialValue: undefined;
+                            initialValue: string;
                             zodClientSchema: z.ZodString;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -1127,7 +1127,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     };
@@ -1143,7 +1143,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: z.ZodString;
-                            initialValue: undefined;
+                            initialValue: string;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         };
@@ -1158,7 +1158,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodString;
                                 zodNewSchema: z.ZodString;
-                                initialValue: undefined;
+                                initialValue: string;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TValidationNext;
                             } & {
@@ -1180,7 +1180,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodString;
                             zodNewSchema: z.ZodString;
-                            initialValue: undefined;
+                            initialValue: string;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TClientNext;
                         } & {
@@ -1202,7 +1202,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: z.ZodString;
                         zodValidationSchema: z.ZodString;
                     } & {
@@ -1373,7 +1373,7 @@ export declare const userSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: z.ZodNumber;
                         zodValidationSchema: z.ZodNumber;
                     };
@@ -1389,7 +1389,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: z.ZodNumber;
                             zodValidationSchema: TValidationNext;
                         };
@@ -1404,7 +1404,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodNumber;
                                 zodNewSchema: z.ZodNumber;
-                                initialValue: undefined;
+                                initialValue: number;
                                 zodClientSchema: z.ZodNumber;
                                 zodValidationSchema: TValidationNext;
                             } & {
@@ -1426,7 +1426,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TClientNext;
                         };
@@ -1442,7 +1442,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodNumber;
                                 zodNewSchema: z.ZodNumber;
-                                initialValue: undefined;
+                                initialValue: number;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TValidationNext;
                             };
@@ -1457,7 +1457,7 @@ export declare const userSchema: {
                                     };
                                     zodSqlSchema: z.ZodNumber;
                                     zodNewSchema: z.ZodNumber;
-                                    initialValue: undefined;
+                                    initialValue: number;
                                     zodClientSchema: TClientNext;
                                     zodValidationSchema: TValidationNext;
                                 } & {
@@ -1479,7 +1479,7 @@ export declare const userSchema: {
                                 };
                                 zodSqlSchema: z.ZodNumber;
                                 zodNewSchema: z.ZodNumber;
-                                initialValue: undefined;
+                                initialValue: number;
                                 zodClientSchema: TClientNext;
                                 zodValidationSchema: TClientNext;
                             } & {
@@ -1501,7 +1501,7 @@ export declare const userSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: z.ZodNumber;
                             zodValidationSchema: z.ZodNumber;
                         } & {
@@ -1669,7 +1669,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                     zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                 } & {
@@ -1686,7 +1686,7 @@ export declare const userSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodBoolean;
                     zodValidationSchema: z.ZodBoolean;
                 } & {
@@ -1728,7 +1728,7 @@ export declare const petSchema: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodString;
             zodValidationSchema: z.ZodString;
         };
@@ -1744,7 +1744,7 @@ export declare const petSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: TValidationNext;
             };
@@ -1759,7 +1759,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: z.ZodString;
                     zodValidationSchema: TValidationNext;
                 } & {
@@ -1781,7 +1781,7 @@ export declare const petSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: TClientNext;
                 zodValidationSchema: TClientNext;
             };
@@ -1797,7 +1797,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TValidationNext;
                 };
@@ -1812,7 +1812,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodString;
                         zodNewSchema: z.ZodString;
-                        initialValue: undefined;
+                        initialValue: string;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -1834,7 +1834,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodString;
                     zodNewSchema: z.ZodString;
-                    initialValue: undefined;
+                    initialValue: string;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 } & {
@@ -1856,7 +1856,7 @@ export declare const petSchema: {
                 };
                 zodSqlSchema: z.ZodString;
                 zodNewSchema: z.ZodString;
-                initialValue: undefined;
+                initialValue: string;
                 zodClientSchema: z.ZodString;
                 zodValidationSchema: z.ZodString;
             } & {
@@ -2027,7 +2027,7 @@ export declare const petSchema: {
                 };
                 zodSqlSchema: z.ZodNumber;
                 zodNewSchema: z.ZodNumber;
-                initialValue: undefined;
+                initialValue: number;
                 zodClientSchema: z.ZodNumber;
                 zodValidationSchema: z.ZodNumber;
             };
@@ -2043,7 +2043,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodNumber;
                     zodValidationSchema: TValidationNext;
                 };
@@ -2058,7 +2058,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: z.ZodNumber;
                         zodValidationSchema: TValidationNext;
                     } & {
@@ -2080,7 +2080,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: TClientNext;
                     zodValidationSchema: TClientNext;
                 };
@@ -2096,7 +2096,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TValidationNext;
                     };
@@ -2111,7 +2111,7 @@ export declare const petSchema: {
                             };
                             zodSqlSchema: z.ZodNumber;
                             zodNewSchema: z.ZodNumber;
-                            initialValue: undefined;
+                            initialValue: number;
                             zodClientSchema: TClientNext;
                             zodValidationSchema: TValidationNext;
                         } & {
@@ -2133,7 +2133,7 @@ export declare const petSchema: {
                         };
                         zodSqlSchema: z.ZodNumber;
                         zodNewSchema: z.ZodNumber;
-                        initialValue: undefined;
+                        initialValue: number;
                         zodClientSchema: TClientNext;
                         zodValidationSchema: TClientNext;
                     } & {
@@ -2155,7 +2155,7 @@ export declare const petSchema: {
                     };
                     zodSqlSchema: z.ZodNumber;
                     zodNewSchema: z.ZodNumber;
-                    initialValue: undefined;
+                    initialValue: number;
                     zodClientSchema: z.ZodNumber;
                     zodValidationSchema: z.ZodNumber;
                 } & {
@@ -2323,7 +2323,7 @@ export declare const petSchema: {
             };
             zodSqlSchema: z.ZodString;
             zodNewSchema: z.ZodString;
-            initialValue: undefined;
+            initialValue: string;
             zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
             zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
         } & {
@@ -2340,7 +2340,7 @@ export declare const petSchema: {
             };
             zodSqlSchema: z.ZodNumber;
             zodNewSchema: z.ZodNumber;
-            initialValue: undefined;
+            initialValue: number;
             zodClientSchema: z.ZodBoolean;
             zodValidationSchema: z.ZodBoolean;
         } & {

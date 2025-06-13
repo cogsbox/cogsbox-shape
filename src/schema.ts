@@ -183,9 +183,9 @@ export const shape = {
       SQLToZodType<T, false> extends z.ZodTypeAny
         ? SQLToZodType<T, false>
         : never;
-
+    type DT = z.infer<TSql>;
     // Initialize with sql type for all schemas
-    return createBuilder<"sql", T, TSql, TSql, undefined, TSql, TSql>({
+    return createBuilder<"sql", T, TSql, TSql, DT, TSql, TSql>({
       stage: "sql",
       sqlConfig: sqlConfig,
       sqlZod: sqlZodType,
@@ -658,31 +658,32 @@ function inferDefaultFromZod(
   zodType: z.ZodType<any>,
   sqlConfig?: SQLType
 ): any {
-  if (sqlConfig?.pk) {
-    return uuidv4();
+  // Check SQL type first for better defaults
+  if (sqlConfig && !sqlConfig.nullable) {
+    switch (sqlConfig.type) {
+      case "varchar":
+      case "text":
+      case "char":
+      case "longtext":
+        return "";
+      case "int":
+        return 0;
+      case "boolean":
+        return false;
+      case "date":
+      case "datetime":
+        return new Date();
+    }
   }
+
+  if (sqlConfig?.nullable) {
+    return null;
+  }
+
+  // Fall back to existing zod-based inference
   if (zodType instanceof z.ZodOptional) {
     return undefined;
   }
-  if (zodType instanceof z.ZodNullable) {
-    return null;
-  }
-  if (zodType instanceof z.ZodArray) {
-    return [];
-  }
-  if (zodType instanceof z.ZodObject) {
-    return {};
-  }
-  if (zodType instanceof z.ZodString) {
-    return "";
-  }
-  if (zodType instanceof z.ZodNumber) {
-    return 0;
-  }
-  if (zodType instanceof z.ZodBoolean) {
-    return false;
-  }
-
   // Check for explicit default last
   if (zodType instanceof z.ZodDefault && zodType._def?.defaultValue) {
     return typeof zodType._def.defaultValue === "function"
@@ -691,124 +692,6 @@ function inferDefaultFromZod(
   }
   return undefined;
 }
-type DeepWriteable<T> = T extends Date // Ensure Date remains untouched
-  ? T
-  : T extends object
-    ? { -readonly [K in keyof T]: DeepWriteable<T[K]> }
-    : T;
-
-// Type to infer the serialized schema structure
-export type SerializableField = {
-  sql: SQLType;
-  jsonSchema: JsonSchema7Type;
-  defaultValue?: any;
-  transforms?: {
-    toClient: string;
-    toDb: string;
-  };
-};
-
-// Relations for serializable schema
-export type SerializableRelation = {
-  type: "relation";
-  relationType: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
-  fromKey: string;
-  toKey: SerializableField;
-  defaultCount?: number;
-};
-
-// Recursive type for serializable schema
-export type SerializableSchema = {
-  _tableName: string;
-  __schemaId: string;
-  _syncKey?: {
-    toString: string; // Store function body as string
-  };
-} & {
-  [key: string]:
-    | SerializableField
-    | (SerializableRelation & { schema: SerializableSchema });
-};
-type InferSerializedSchema<T> = {
-  [K in keyof T as K extends "_tableName" | "__schemaId"
-    ? never
-    : K]: T[K] extends {
-    sql: infer S;
-    zodClientSchema: any;
-    defaultValue?: infer D;
-  }
-    ? {
-        sql: S;
-        jsonSchema: JsonSchema7Type;
-        defaultValue: D;
-        transforms?: {
-          toClient: string;
-          toDb: string;
-        };
-      }
-    : T[K] extends () => {
-          type: "hasMany";
-          schema: infer S;
-          fromKey: infer FK;
-          toKey: infer TK;
-        }
-      ? {
-          type: "relation";
-          relationType: "hasMany";
-          fromKey: FK;
-          toKey: TK extends {
-            sql: infer TKSQL;
-            zodClientSchema: any;
-            defaultValue?: infer TKD;
-          }
-            ? {
-                sql: TKSQL;
-                jsonSchema: JsonSchema7Type;
-                defaultValue: TKD;
-                transforms?: {
-                  toClient: string;
-                  toDb: string;
-                };
-              }
-            : never;
-          schema: Prettify<InferSerializedSchema<S>> & {
-            _tableName: string;
-            __schemaId: string;
-          };
-          defaultCount?: number;
-        }
-      : T[K] extends () => {
-            type: infer R;
-            schema: infer S;
-            fromKey: infer FK;
-            toKey: infer TK;
-          }
-        ? {
-            type: "relation";
-            relationType: R;
-            fromKey: FK;
-            toKey: TK extends {
-              sql: infer TKSQL;
-              zodClientSchema: any;
-              defaultValue?: infer TKD;
-            }
-              ? {
-                  sql: TKSQL;
-                  jsonSchema: JsonSchema7Type;
-                  defaultValue: TKD;
-                  transforms?: {
-                    toClient: string;
-                    toDb: string;
-                  };
-                }
-              : never;
-            schema: Prettify<InferSerializedSchema<S>> & {
-              _tableName: string;
-              __schemaId: string;
-            };
-          }
-        : never;
-};
 
 export function reference<
   TField extends object,
