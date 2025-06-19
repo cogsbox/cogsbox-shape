@@ -957,6 +957,7 @@ type SerializableSchemaMetadata = {
 /**
  * (This is the smart function from the last answer that resolves `toKey` functions)
  */
+
 function serializeSchemaMetadata(
   schema: Schema<any>
 ): SerializableSchemaMetadata {
