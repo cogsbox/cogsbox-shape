@@ -399,6 +399,36 @@ export function createSchema(schema) {
         defaultValues: defaultValues,
     };
 }
+// The function that does the work, with the corrected generic constraint.
 export function createSyncSchema(config) {
-    return config;
+    const processedOutput = {};
+    // Loop through each entry in your config (e.g., 'chatMessages')
+    for (const key in config) {
+        const entry = config[key];
+        // 1. Call createSchema ONCE to generate all the base Zod schemas and defaults.
+        const { sqlSchema, clientSchema, validationSchema, defaultValues } = createSchema(entry.schema);
+        // 2. Determine the FINAL validation schema.
+        const finalValidationSchema = entry.validation
+            ? entry.validation(validationSchema)
+            : validationSchema;
+        // 3. Determine the FINAL client schema.
+        const finalClientSchema = entry.client
+            ? entry.client(clientSchema)
+            : clientSchema;
+        // 4. ASSIGN everything to the output object.
+        processedOutput[key] = {
+            // Keep the generated schemas for reference or other uses
+            schemas: {
+                sql: sqlSchema,
+                client: clientSchema,
+                validation: validationSchema,
+                defaults: defaultValues,
+            },
+            // Create the final validator FUNCTIONS that the DO can call directly.
+            validate: (data) => finalValidationSchema.safeParse(data),
+            validateClient: (data) => finalClientSchema.safeParse(data),
+        };
+    }
+    // Return the new object containing the schemas AND the validator functions.
+    return processedOutput;
 }

@@ -4849,17 +4849,21 @@ export type InferSchemaTypes<T extends {
     /** The TypeScript type for the default values object. */
     defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
-type SyncSchemaEntry<T extends {
+export type ProcessedSyncSchemaEntry<T extends {
     _tableName: string;
 }> = {
-    schema: T;
-    validation?: (schema: ReturnType<typeof createSchema<T>>["validationSchema"]) => z.ZodSchema;
-    client?: (schema: ReturnType<typeof createSchema<T>>["clientSchema"]) => z.ZodSchema;
+    schemas: ReturnType<typeof createSchema<T>>;
+    validate: (data: unknown) => z.SafeParseReturnType<T extends {
+        validation: (s: any) => infer V extends z.ZodSchema;
+    } ? z.infer<V> : InferSchemaTypes<T>["validation"], InferSchemaTypes<T>["validation"]>;
+    validateClient: (data: unknown) => z.SafeParseReturnType<T extends {
+        client: (s: any) => infer V extends z.ZodSchema;
+    } ? z.infer<V> : InferSchemaTypes<T>["client"], InferSchemaTypes<T>["client"]>;
 };
-type SyncSchemaMap<T extends Record<string, {
+export type ProcessedSyncSchemaMap<T extends Record<string, {
     _tableName: string;
 }>> = {
-    [K in keyof T]: SyncSchemaEntry<T[K]>;
+    [K in keyof T]: ProcessedSyncSchemaEntry<T[K]>;
 };
 export declare function createSyncSchema<T extends Record<string, {
     _tableName: string;
@@ -4869,5 +4873,5 @@ export declare function createSyncSchema<T extends Record<string, {
         validation?: (schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]) => z.ZodSchema;
         client?: (schema: ReturnType<typeof createSchema<T[K]>>["clientSchema"]) => z.ZodSchema;
     };
-}): SyncSchemaMap<T>;
+}): ProcessedSyncSchemaMap<T>;
 export {};

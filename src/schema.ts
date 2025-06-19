@@ -915,6 +915,7 @@ export function createSchema<T extends { _tableName: string }>(
     defaultValues: defaultValues as Prettify<InferDefaultValues2<T>>,
   };
 }
+
 export type InferSchemaTypes<
   T extends { _tableName: string } & { [key: string]: any },
 > = Prettify<{
@@ -931,25 +932,39 @@ export type InferSchemaTypes<
   defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
 
-type SyncSchemaEntry<T extends { _tableName: string }> = {
-  schema: T;
-  validation?: (
-    schema: ReturnType<typeof createSchema<T>>["validationSchema"]
-  ) => z.ZodSchema;
-  client?: (
-    schema: ReturnType<typeof createSchema<T>>["clientSchema"]
-  ) => z.ZodSchema;
+export type ProcessedSyncSchemaEntry<T extends { _tableName: string }> = {
+  schemas: ReturnType<typeof createSchema<T>>;
+  validate: (
+    data: unknown
+  ) => z.SafeParseReturnType<
+    T extends { validation: (s: any) => infer V extends z.ZodSchema }
+      ? z.infer<V>
+      : InferSchemaTypes<T>["validation"],
+    InferSchemaTypes<T>["validation"]
+  >;
+  validateClient: (
+    data: unknown
+  ) => z.SafeParseReturnType<
+    T extends { client: (s: any) => infer V extends z.ZodSchema }
+      ? z.infer<V>
+      : InferSchemaTypes<T>["client"],
+    InferSchemaTypes<T>["client"]
+  >;
+};
+// --- THIS IS THE CORRECTION ---
+// The generic constraint is simpler, just like you said.
+export type ProcessedSyncSchemaMap<
+  T extends Record<string, { _tableName: string }>, // T is the map of schemas
+> = {
+  [K in keyof T]: ProcessedSyncSchemaEntry<T[K]>; // T[K] is a single schema
 };
 
-type SyncSchemaMap<T extends Record<string, { _tableName: string }>> = {
-  [K in keyof T]: SyncSchemaEntry<T[K]>;
-};
-
+// The function that does the work, with the corrected generic constraint.
 export function createSyncSchema<
-  T extends Record<string, { _tableName: string }>,
+  T extends Record<string, { _tableName: string }>, // T is the map of schemas
 >(config: {
   [K in keyof T]: {
-    schema: T[K];
+    schema: T[K]; // Use T[K] directly
     validation?: (
       schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]
     ) => z.ZodSchema;
@@ -957,6 +972,42 @@ export function createSyncSchema<
       schema: ReturnType<typeof createSchema<T[K]>>["clientSchema"]
     ) => z.ZodSchema;
   };
-}): SyncSchemaMap<T> {
-  return config;
+}): ProcessedSyncSchemaMap<T> {
+  const processedOutput = {};
+
+  // Loop through each entry in your config (e.g., 'chatMessages')
+  for (const key in config) {
+    const entry = config[key] as any;
+
+    // 1. Call createSchema ONCE to generate all the base Zod schemas and defaults.
+    const { sqlSchema, clientSchema, validationSchema, defaultValues } =
+      createSchema(entry.schema);
+
+    // 2. Determine the FINAL validation schema.
+    const finalValidationSchema = entry.validation
+      ? entry.validation(validationSchema as any)
+      : validationSchema;
+
+    // 3. Determine the FINAL client schema.
+    const finalClientSchema = entry.client
+      ? entry.client(clientSchema as any)
+      : clientSchema;
+
+    // 4. ASSIGN everything to the output object.
+    (processedOutput as any)[key] = {
+      // Keep the generated schemas for reference or other uses
+      schemas: {
+        sql: sqlSchema,
+        client: clientSchema,
+        validation: validationSchema,
+        defaults: defaultValues,
+      },
+      // Create the final validator FUNCTIONS that the DO can call directly.
+      validate: (data: unknown) => finalValidationSchema.safeParse(data),
+      validateClient: (data: unknown) => finalClientSchema.safeParse(data),
+    };
+  }
+
+  // Return the new object containing the schemas AND the validator functions.
+  return processedOutput as ProcessedSyncSchemaMap<T>;
 }
