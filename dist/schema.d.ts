@@ -4751,7 +4751,7 @@ export type ShapeSchema = {
 type Relation<U extends Schema<any>> = {
     type: RelationType;
     fromKey: string;
-    toKey: SchemaField;
+    toKey: () => SchemaField;
     schema: U;
     defaultCount?: number;
 };
@@ -4849,17 +4849,36 @@ export type InferSchemaTypes<T extends {
     /** The TypeScript type for the default values object. */
     defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
+type SerializableFieldMetadata = {
+    type: "field";
+    sql: SQLType;
+};
+type SerializableRelationMetadata = {
+    type: "relation";
+    relationType: RelationType;
+    fromKey: string;
+    toKey: string;
+    schema: SerializableSchemaMetadata;
+};
+type SerializableSchemaMetadata = {
+    _tableName: string;
+    primaryKey: string | null;
+    fields: Record<string, SerializableFieldMetadata>;
+    relations: Record<string, SerializableRelationMetadata>;
+};
 export type ProcessedSyncSchemaEntry<T extends {
     _tableName: string;
 }> = {
     rawSchema: T;
     schemas: ReturnType<typeof createSchema<T>>;
-    validate: (data: unknown) => z.SafeParseReturnType<T extends {
-        validation: (s: any) => infer V extends z.ZodSchema;
-    } ? z.infer<V> : InferSchemaTypes<T>["validation"], InferSchemaTypes<T>["validation"]>;
-    validateClient: (data: unknown) => z.SafeParseReturnType<T extends {
-        client: (s: any) => infer V extends z.ZodSchema;
-    } ? z.infer<V> : InferSchemaTypes<T>["client"], InferSchemaTypes<T>["client"]>;
+    validate: (data: unknown) => z.SafeParseReturnType<any, any>;
+    validateClient: (data: unknown) => z.SafeParseReturnType<any, any>;
+    serializable: {
+        key: string;
+        validationJsonSchema: object;
+        clientJsonSchema: object;
+        metadata: SerializableSchemaMetadata;
+    };
 };
 export type ProcessedSyncSchemaMap<T extends Record<string, {
     _tableName: string;

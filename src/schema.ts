@@ -1,4 +1,5 @@
 import { z } from "zod";
+import zodToJsonSchema from "zod-to-json-schema";
 
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
@@ -617,7 +618,7 @@ export type ShapeSchema = {
 type Relation<U extends Schema<any>> = {
   type: RelationType;
   fromKey: string;
-  toKey: SchemaField;
+  toKey: () => SchemaField;
   schema: U;
   defaultCount?: number;
 };
@@ -931,41 +932,117 @@ export type InferSchemaTypes<
   /** The TypeScript type for the default values object. */
   defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
+type SerializableFieldMetadata = {
+  type: "field";
+  sql: SQLType;
+};
 
+type SerializableRelationMetadata = {
+  type: "relation";
+  relationType: RelationType;
+  fromKey: string;
+  toKey: string; // The final output will be a string
+  schema: SerializableSchemaMetadata;
+};
+
+type SerializableSchemaMetadata = {
+  _tableName: string;
+  primaryKey: string | null;
+  fields: Record<string, SerializableFieldMetadata>;
+  relations: Record<string, SerializableRelationMetadata>;
+};
+
+// --- 2. The Smart Introspection Logic (Also good, keep it) ---
+
+/**
+ * (This is the smart function from the last answer that resolves `toKey` functions)
+ */
+function serializeSchemaMetadata(
+  schema: Schema<any>
+): SerializableSchemaMetadata {
+  const fields: Record<string, SerializableFieldMetadata> = {};
+  const relations: Record<string, SerializableRelationMetadata> = {};
+  let primaryKey: string | null = null;
+
+  for (const key in schema) {
+    if (key === "_tableName" || key.startsWith("__")) continue;
+    const definition = (schema as any)[key];
+    if (isFunction(definition)) {
+      const relation = definition();
+      if (!isRelation(relation)) continue;
+      let toKeyName: string | null = null;
+      try {
+        const targetFieldBuilder = relation.toKey();
+        for (const targetKey in relation.schema) {
+          if ((relation.schema as any)[targetKey] === targetFieldBuilder) {
+            toKeyName = targetKey;
+            break;
+          }
+        }
+        if (!toKeyName)
+          throw new Error(
+            `Could not find field name for relation target in schema '${relation.schema._tableName}'.`
+          );
+      } catch (e) {
+        console.error(
+          `[cogsbox-shape] Error resolving 'toKey' for relation '${key}' in schema '${schema._tableName}'.`
+        );
+        throw e;
+      }
+      relations[key] = {
+        type: "relation",
+        relationType: relation.type,
+        fromKey: relation.fromKey,
+        toKey: toKeyName,
+        schema: serializeSchemaMetadata(relation.schema),
+      };
+    } else if (definition && definition.config && definition.config.sql) {
+      fields[key] = { type: "field", sql: definition.config.sql };
+      if (definition.config.sql.pk === true) {
+        if (primaryKey)
+          console.warn(
+            `[cogsbox-shape] Multiple primary keys in schema '${schema._tableName}'. Using last one found: '${key}'.`
+          );
+        primaryKey = key;
+      }
+    }
+  }
+  return { _tableName: schema._tableName, primaryKey, fields, relations };
+}
+
+// --- 3. The New, ENHANCED `ProcessedSyncSchemaEntry` Type ---
+
+// This is the shape of what createSyncSchema will return FOR EACH key.
 export type ProcessedSyncSchemaEntry<T extends { _tableName: string }> = {
+  // --- For runtime use on the server ---
   rawSchema: T;
   schemas: ReturnType<typeof createSchema<T>>;
-  validate: (
-    data: unknown
-  ) => z.SafeParseReturnType<
-    T extends { validation: (s: any) => infer V extends z.ZodSchema }
-      ? z.infer<V>
-      : InferSchemaTypes<T>["validation"],
-    InferSchemaTypes<T>["validation"]
-  >;
-  validateClient: (
-    data: unknown
-  ) => z.SafeParseReturnType<
-    T extends { client: (s: any) => infer V extends z.ZodSchema }
-      ? z.infer<V>
-      : InferSchemaTypes<T>["client"],
-    InferSchemaTypes<T>["client"]
-  >;
-};
-// --- THIS IS THE CORRECTION ---
-// The generic constraint is simpler, just like you said.
-export type ProcessedSyncSchemaMap<
-  T extends Record<string, { _tableName: string }>, // T is the map of schemas
-> = {
-  [K in keyof T]: ProcessedSyncSchemaEntry<T[K]>; // T[K] is a single schema
+  validate: (data: unknown) => z.SafeParseReturnType<any, any>;
+  validateClient: (data: unknown) => z.SafeParseReturnType<any, any>;
+
+  // --- For deployment to the Durable Object ---
+  serializable: {
+    key: string;
+    validationJsonSchema: object;
+    clientJsonSchema: object;
+    metadata: SerializableSchemaMetadata;
+  };
 };
 
-// The function that does the work, with the corrected generic constraint.
+// Update the map type to use the new entry type
+export type ProcessedSyncSchemaMap<
+  T extends Record<string, { _tableName: string }>,
+> = {
+  [K in keyof T]: ProcessedSyncSchemaEntry<T[K]>;
+};
+
+// --- 4. The Final, Corrected `createSyncSchema` Function ---
+
 export function createSyncSchema<
-  T extends Record<string, { _tableName: string }>, // T is the map of schemas
+  T extends Record<string, { _tableName: string }>,
 >(config: {
   [K in keyof T]: {
-    schema: T[K]; // Use T[K] directly
+    schema: T[K];
     validation?: (
       schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]
     ) => z.ZodSchema;
@@ -974,42 +1051,54 @@ export function createSyncSchema<
     ) => z.ZodSchema;
   };
 }): ProcessedSyncSchemaMap<T> {
-  const processedOutput = {};
+  const processedOutput = {} as ProcessedSyncSchemaMap<T>;
 
-  // Loop through each entry in your config (e.g., 'chatMessages')
   for (const key in config) {
-    const entry = config[key] as any;
+    const entry = (config as any)[key];
 
-    // 1. Call createSchema ONCE to generate all the base Zod schemas and defaults.
+    // Part 1: Generate Zod Schemas and Live Validators (same as before)
     const { sqlSchema, clientSchema, validationSchema, defaultValues } =
       createSchema(entry.schema);
-
-    // 2. Determine the FINAL validation schema.
     const finalValidationSchema = entry.validation
-      ? entry.validation(validationSchema as any)
+      ? entry.validation(validationSchema)
       : validationSchema;
-
-    // 3. Determine the FINAL client schema.
     const finalClientSchema = entry.client
-      ? entry.client(clientSchema as any)
+      ? entry.client(clientSchema)
       : clientSchema;
 
-    // 4. ASSIGN everything to the output object.
+    // Part 2: Generate the Serializable Payload (NEW, integrated logic)
+    const validationJsonSchema = zodToJsonSchema(finalValidationSchema, {
+      target: "jsonSchema7",
+      $refStrategy: "none",
+    });
+    const clientJsonSchema = zodToJsonSchema(finalClientSchema, {
+      target: "jsonSchema7",
+      $refStrategy: "none",
+    });
+    const metadata = serializeSchemaMetadata(entry.schema);
+
+    // Part 3: Combine EVERYTHING into the final output object for this key
     (processedOutput as any)[key] = {
+      // For runtime server use
       rawSchema: entry.schema,
-      // Keep the generated schemas for reference or other uses
       schemas: {
         sql: sqlSchema,
         client: clientSchema,
         validation: validationSchema,
         defaults: defaultValues,
       },
-      // Create the final validator FUNCTIONS that the DO can call directly.
       validate: (data: unknown) => finalValidationSchema.safeParse(data),
       validateClient: (data: unknown) => finalClientSchema.safeParse(data),
+
+      // For deployment to DO
+      serializable: {
+        key,
+        validationJsonSchema,
+        clientJsonSchema,
+        metadata,
+      },
     };
   }
 
-  // Return the new object containing the schemas AND the validator functions.
-  return processedOutput as ProcessedSyncSchemaMap<T>;
+  return processedOutput;
 }
