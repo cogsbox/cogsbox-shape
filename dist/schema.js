@@ -417,6 +417,7 @@ export function createSyncSchema(config) {
             : clientSchema;
         // 4. ASSIGN everything to the output object.
         processedOutput[key] = {
+            rawSchema: entry.schema,
             // Keep the generated schemas for reference or other uses
             schemas: {
                 sql: sqlSchema,

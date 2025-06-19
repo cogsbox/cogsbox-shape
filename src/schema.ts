@@ -933,6 +933,7 @@ export type InferSchemaTypes<
 }>;
 
 export type ProcessedSyncSchemaEntry<T extends { _tableName: string }> = {
+  rawSchema: T;
   schemas: ReturnType<typeof createSchema<T>>;
   validate: (
     data: unknown
@@ -995,6 +996,7 @@ export function createSyncSchema<
 
     // 4. ASSIGN everything to the output object.
     (processedOutput as any)[key] = {
+      rawSchema: entry.schema,
       // Keep the generated schemas for reference or other uses
       schemas: {
         sql: sqlSchema,

@@ -4852,6 +4852,7 @@ export type InferSchemaTypes<T extends {
 export type ProcessedSyncSchemaEntry<T extends {
     _tableName: string;
 }> = {
+    rawSchema: T;
     schemas: ReturnType<typeof createSchema<T>>;
     validate: (data: unknown) => z.SafeParseReturnType<T extends {
         validation: (s: any) => infer V extends z.ZodSchema;
