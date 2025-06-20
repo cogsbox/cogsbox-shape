@@ -345,6 +345,8 @@ function isRelation(value) {
 }
 // In your cogsbox-shape file...
 // Replace the entire existing createSchema function with this SINGLE, CORRECT version.
+// In your cogsbox-shape file...
+// Replace the entire existing createSchema function with this SINGLE, CORRECT version.
 export function createSchema(schema) {
     const sqlFields = {};
     const clientFields = {};
@@ -353,30 +355,35 @@ export function createSchema(schema) {
     for (const key in schema) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
-        const definition = schema[key];
-        // --- THIS IS THE CORRECT, SIMPLE LOGIC ---
-        // Case 1: Is it a relation object?
-        // A relation object will have a `type` like "hasMany" and a `schema` property.
+        let definition = schema[key];
+        if (typeof definition === "function") {
+            const potentialRelation = definition();
+            if (potentialRelation &&
+                ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(potentialRelation.type)) {
+                definition = potentialRelation;
+            }
+        }
         if (definition &&
             (definition.type === "hasMany" ||
                 definition.type === "hasOne" ||
                 definition.type === "belongsTo" ||
                 definition.type === "manyToMany")) {
-            const relation = definition; // It's already the object we need.
+            const relation = definition; // It's now the object we need.
+            // Recursively create the schema for the related table
             const childSchemaResult = createSchema(relation.schema());
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
+                sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
+                clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
                 validationFields[key] = z
                     .array(childSchemaResult.validationSchema)
                     .optional();
-                clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
-                sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
                 defaultValues[key] = Array.from({ length: relation.defaultCount || 0 }, () => childSchemaResult.defaultValues);
             }
             else {
                 // hasOne or belongsTo
-                validationFields[key] = childSchemaResult.validationSchema.optional();
-                clientFields[key] = childSchemaResult.clientSchema.optional();
                 sqlFields[key] = childSchemaResult.sqlSchema.optional();
+                clientFields[key] = childSchemaResult.clientSchema.optional();
+                validationFields[key] = childSchemaResult.validationSchema.optional();
                 defaultValues[key] = childSchemaResult.defaultValues;
             }
         }
@@ -396,7 +403,6 @@ export function createSchema(schema) {
             defaultValues[key] = referencedField.config.initialValue;
         }
     }
-    // Return the final, correctly typed Zod objects
     return {
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),
