@@ -417,25 +417,36 @@ function serializeSchemaMetadata(schema) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
         const definition = schema[key];
-        if (isFunction(definition)) {
-            const relation = definition();
-            if (!isRelation(relation))
-                continue;
+        // Case 1: Is it a relation object? Check the `type` property.
+        if (definition &&
+            (definition.type === "hasMany" ||
+                definition.type === "hasOne" ||
+                definition.type === "belongsTo" ||
+                definition.type === "manyToMany")) {
+            const relation = definition;
             let toKeyName = null;
             try {
                 let targetFieldDefinition = relation.toKey();
                 if (targetFieldDefinition &&
                     targetFieldDefinition.type === "reference") {
-                    targetFieldDefinition = targetFieldDefinition.to();
+                    targetFieldDefinition = targetFieldDefinition.to;
                 }
-                for (const targetKey in relation.schema) {
-                    if (relation.schema[targetKey] === targetFieldDefinition) {
+                const targetSchemaObject = relation.schema();
+                for (const targetKey in targetSchemaObject) {
+                    if (targetSchemaObject[targetKey] === targetFieldDefinition) {
                         toKeyName = targetKey;
                         break;
                     }
                 }
                 if (!toKeyName)
-                    throw new Error(`Could not find field name for relation target in schema '${relation.schema._tableName}'.`);
+                    throw new Error(`Could not find field name for relation target.`);
+                relations[key] = {
+                    type: "relation",
+                    relationType: relation.type,
+                    fromKey: relation.fromKey,
+                    toKey: toKeyName,
+                    schema: serializeSchemaMetadata(targetSchemaObject),
+                };
             }
             catch (e) {
                 console.error(`[cogsbox-shape] Error resolving 'toKey' for relation '${key}' in schema '${schema._tableName}'.`);
