@@ -533,7 +533,6 @@ export function hasMany<T extends Schema<any>>(config: {
     defaultCount: config.defaultCount,
   });
 }
-
 export function hasOne<T extends Schema<any>>(config: {
   fromKey: string;
   toKey: () => T[keyof T];
