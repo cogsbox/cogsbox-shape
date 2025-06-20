@@ -8,14 +8,12 @@ export function currentTimeStamp() {
         defaultValue: new Date(),
     };
 }
-// Internal type creation helper
+// Now define the shape object with the explicit type annotation
 export const shape = {
-    // Integer fields
     int: (config = {}) => shape.sql({
         type: "int",
         ...config,
     }),
-    // String fields with variants
     varchar: (config = {}) => shape.sql({
         type: "varchar",
         ...config,
@@ -32,12 +30,10 @@ export const shape = {
         type: "longtext",
         ...config,
     }),
-    // Boolean fields
     boolean: (config = {}) => shape.sql({
         type: "boolean",
         ...config,
     }),
-    // Date fields
     date: (config = {}) => shape.sql({
         type: "date",
         ...config,
@@ -74,7 +70,6 @@ export const shape = {
             }
             return baseType;
         })();
-        // Initialize with sql type for all schemas
         return createBuilder({
             stage: "sql",
             sqlConfig: sqlConfig,
@@ -85,10 +80,74 @@ export const shape = {
             validationZod: sqlZodType,
         });
     },
+    hasMany: (config) => {
+        const relationConfig = {
+            type: "hasMany",
+            ...config,
+        };
+        const relationZodType = z.array(z.any()).optional();
+        return createBuilder({
+            stage: "relation",
+            sqlConfig: relationConfig,
+            sqlZod: relationZodType,
+            newZod: relationZodType,
+            initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
+            clientZod: relationZodType,
+            validationZod: relationZodType,
+        });
+    },
+    hasOne: (config) => {
+        const relationConfig = {
+            type: "hasOne",
+            ...config,
+        };
+        const relationZodType = z.any().optional();
+        return createBuilder({
+            stage: "relation",
+            sqlConfig: relationConfig,
+            sqlZod: relationZodType,
+            newZod: relationZodType,
+            initialValue: {},
+            clientZod: relationZodType,
+            validationZod: relationZodType,
+        });
+    },
+    belongsTo: (config) => {
+        const relationConfig = {
+            type: "belongsTo",
+            ...config,
+        };
+        const relationZodType = z.any().optional();
+        return createBuilder({
+            stage: "relation",
+            sqlConfig: relationConfig,
+            sqlZod: relationZodType,
+            newZod: relationZodType,
+            initialValue: {},
+            clientZod: relationZodType,
+            validationZod: relationZodType,
+        });
+    },
+    manyToMany: (config) => {
+        const relationConfig = {
+            type: "manyToMany",
+            ...config,
+        };
+        const relationZodType = z.array(z.any()).optional();
+        return createBuilder({
+            stage: "relation",
+            sqlConfig: relationConfig,
+            sqlZod: relationZodType,
+            newZod: relationZodType,
+            initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
+            clientZod: relationZodType,
+            validationZod: relationZodType,
+        });
+    },
 };
+// === UPDATED: createBuilder to Handle Relations ===
 function createBuilder(config) {
-    // Initialize completed stages tracker
-    const completedStages = config.completedStages || new Set(["sql"]);
+    const completedStages = config.completedStages || new Set([config.stage]);
     const builderObject = {
         config: {
             sql: config.sqlConfig,
@@ -100,7 +159,6 @@ function createBuilder(config) {
             zodValidationSchema: config.validationZod,
         },
         initialState: (schemaOrDefault, defaultValue) => {
-            // Runtime validation
             if (completedStages.has("new")) {
                 throw new Error("initialState() can only be called once in the chain");
             }
@@ -110,13 +168,12 @@ function createBuilder(config) {
             if (completedStages.has("validation")) {
                 throw new Error("initialState() must be called before validation()");
             }
-            // Handle overload - if no second param, first param is the default
             const hasTypeParam = defaultValue !== undefined;
             const newSchema = hasTypeParam
                 ? isFunction(schemaOrDefault)
                     ? schemaOrDefault({ sql: config.sqlZod })
                     : schemaOrDefault
-                : config.sqlZod; // Keep SQL type if just setting default
+                : config.sqlZod;
             const finalDefaultValue = hasTypeParam
                 ? defaultValue
                 : schemaOrDefault;
@@ -138,7 +195,6 @@ function createBuilder(config) {
             });
         },
         client: (assert) => {
-            // Runtime validation
             if (completedStages.has("client")) {
                 throw new Error("client() can only be called once in the chain");
             }
@@ -154,13 +210,11 @@ function createBuilder(config) {
                 ...config,
                 stage: "client",
                 clientZod: clientSchema,
-                // Always set validation to match client when client is set
                 validationZod: clientSchema,
                 completedStages: newCompletedStages,
             });
         },
         validation: (assert) => {
-            // Runtime validation
             if (completedStages.has("validation")) {
                 throw new Error("validation() can only be called once in the chain");
             }
@@ -181,7 +235,6 @@ function createBuilder(config) {
             });
         },
         transform: (transforms) => {
-            // Runtime validation
             if (!completedStages.has("validation") &&
                 !completedStages.has("client")) {
                 throw new Error("transform() requires at least client() or validation() to be called first");
@@ -234,25 +287,40 @@ export function manyToMany(config) {
     });
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
-    // Check SQL type first for better defaults
-    if (sqlConfig && !sqlConfig.nullable) {
-        switch (sqlConfig.type) {
-            case "varchar":
-            case "text":
-            case "char":
-            case "longtext":
-                return "";
-            case "int":
-                return 0;
-            case "boolean":
-                return false;
-            case "date":
-            case "datetime":
-                return new Date();
+    // Handle relation configs
+    if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
+        // Check if it's a relation config by looking for relation types
+        if (typeof sqlConfig.type === "string" &&
+            ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
+            const relationConfig = sqlConfig;
+            if (relationConfig.type === "hasMany" ||
+                relationConfig.type === "manyToMany") {
+                return Array.from({ length: relationConfig.defaultCount || 0 }, () => ({}));
+            }
+            // For hasOne and belongsTo
+            return {};
         }
-    }
-    if (sqlConfig?.nullable) {
-        return null;
+        // Handle SQL configs (existing logic)
+        const sqlTypeConfig = sqlConfig;
+        if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
+            switch (sqlTypeConfig.type) {
+                case "varchar":
+                case "text":
+                case "char":
+                case "longtext":
+                    return "";
+                case "int":
+                    return 0;
+                case "boolean":
+                    return false;
+                case "date":
+                case "datetime":
+                    return new Date();
+            }
+        }
+        if (sqlTypeConfig.nullable) {
+            return null;
+        }
     }
     // Fall back to existing zod-based inference
     if (zodType instanceof z.ZodOptional) {

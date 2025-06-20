@@ -95,17 +95,235 @@ type SQLToZodType<
               : z.ZodDate
             : never;
 
-// Internal type creation helper
+interface IBuilderMethods<
+  T extends SQLType | RelationConfig<any>,
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+  TInitialValue,
+  TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
+> {
+  initialState: {
+    <TDefaultNext>(
+      defaultValue: () => TDefaultNext
+    ): Prettify<Builder<"new", T, TSql, TSql, TDefaultNext, TSql, TSql>>;
+    <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+      defaultValue: () => TDefaultNext
+    ): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        TNewNext,
+        z.infer<TNewNext>,
+        InferSmartClientType<TSql, TNewNext>,
+        InferSmartClientType<TSql, TNewNext>
+      >
+    >;
+  };
 
-export const shape = {
-  // Integer fields
+  client: <TClientNext extends z.ZodTypeAny>(
+    schema:
+      | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
+      | TClientNext
+  ) => Prettify<
+    Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>
+  >;
+
+  validation: <TValidationNext extends z.ZodTypeAny>(
+    schema:
+      | ((tools: {
+          sql: TSql;
+          initialState: TNew;
+          client: TClient;
+        }) => TValidationNext)
+      | TValidationNext
+  ) => Prettify<
+    Builder<
+      "validation",
+      T,
+      TSql,
+      TNew,
+      TInitialValue,
+      TClient,
+      TValidationNext
+    >
+  >;
+
+  transform: (transforms: {
+    toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
+    toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+  }) => {
+    config: Prettify<
+      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
+    > & {
+      transforms: typeof transforms;
+    };
+  };
+}
+
+type BaseRelationConfig<T extends Schema<any>> = {
+  fromKey: string;
+  toKey: () => any; // Will be resolved to specific field
+  schema: () => T;
+  defaultCount?: number;
+};
+
+// Extended relation types
+type RelationConfig<T extends Schema<any>> =
+  | (BaseRelationConfig<T> & { type: "hasMany" })
+  | (BaseRelationConfig<T> & { type: "hasOne" })
+  | (BaseRelationConfig<T> & { type: "belongsTo" })
+  | (BaseRelationConfig<T> & { type: "manyToMany" });
+
+// Unified builder stage - now includes relations
+type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
+
+// Updated stage methods to include relation
+type StageMethods = {
+  sql: "initialState" | "client" | "validation" | "transform";
+  relation: "initialState" | "client" | "validation" | "transform"; // Relations can be chained like fields
+  new: "client" | "validation" | "transform";
+  client: "validation" | "transform";
+  validation: "transform";
+  done: never;
+};
+
+type InferSmartClientType<
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+> = z.infer<TNew> extends z.infer<TSql> ? TNew : z.ZodUnion<[TSql, TNew]>;
+
+// === UPDATED: Builder Config to Handle Relations ===
+type BuilderConfig<
+  T extends SQLType | RelationConfig<any>,
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+  TInitialValue,
+  TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
+> = {
+  sql: T;
+  zodSqlSchema: TSql;
+  zodNewSchema: TNew;
+  initialValue: TInitialValue;
+  zodClientSchema: TClient;
+  zodValidationSchema: TValidation;
+};
+export type Builder<
+  TStage extends Stage,
+  T extends SQLType | RelationConfig<any>,
+  TSql extends z.ZodTypeAny,
+  TNew extends z.ZodTypeAny,
+  TInitialValue,
+  TClient extends z.ZodTypeAny,
+  TValidation extends z.ZodTypeAny,
+> = Prettify<
+  {
+    config: Prettify<
+      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
+    >;
+  } & Pick<
+    IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
+    StageMethods[TStage]
+  >
+>;
+// First, define the interface for the shape object
+interface ShapeAPI {
+  int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
+  varchar: (
+    config?: Omit<StringConfig, "type">
+  ) => ReturnType<typeof createBuilder>;
+  char: (
+    config?: Omit<StringConfig, "type">
+  ) => ReturnType<typeof createBuilder>;
+  text: (
+    config?: Omit<StringConfig, "type" | "length">
+  ) => ReturnType<typeof createBuilder>;
+  longtext: (
+    config?: Omit<StringConfig, "type" | "length">
+  ) => ReturnType<typeof createBuilder>;
+  boolean: (config?: BooleanConfig) => ReturnType<typeof createBuilder>;
+  date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
+  datetime: (
+    config?: Omit<DateConfig, "type">
+  ) => ReturnType<typeof createBuilder>;
+  sql: <T extends SQLType>(
+    sqlConfig: T
+  ) => Builder<
+    "sql",
+    T,
+    SQLToZodType<T, false>,
+    SQLToZodType<T, false>,
+    z.infer<SQLToZodType<T, false>>,
+    SQLToZodType<T, false>,
+    SQLToZodType<T, false>
+  >;
+  hasMany: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+    defaultCount?: number;
+  }) => Builder<
+    "relation",
+    RelationConfig<T>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    any[],
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>
+  >;
+  hasOne: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+  }) => Builder<
+    "relation",
+    RelationConfig<T>,
+    z.ZodOptional<z.ZodAny>,
+    z.ZodOptional<z.ZodAny>,
+    any,
+    z.ZodOptional<z.ZodAny>,
+    z.ZodOptional<z.ZodAny>
+  >;
+  belongsTo: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+  }) => Builder<
+    "relation",
+    RelationConfig<T>,
+    z.ZodOptional<z.ZodAny>,
+    z.ZodOptional<z.ZodAny>,
+    any,
+    z.ZodOptional<z.ZodAny>,
+    z.ZodOptional<z.ZodAny>
+  >;
+  manyToMany: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+    defaultCount?: number;
+  }) => Builder<
+    "relation",
+    RelationConfig<T>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    any[],
+    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    z.ZodOptional<z.ZodArray<z.ZodAny>>
+  >;
+}
+
+// Now define the shape object with the explicit type annotation
+export const shape: ShapeAPI = {
   int: (config: IntConfig = {}) =>
     shape.sql({
       type: "int",
       ...config,
     }),
 
-  // String fields with variants
   varchar: (config: Omit<StringConfig, "type"> = {}) =>
     shape.sql({
       type: "varchar",
@@ -130,14 +348,12 @@ export const shape = {
       ...config,
     }),
 
-  // Boolean fields
   boolean: (config: BooleanConfig = {}) =>
     shape.sql({
       type: "boolean",
       ...config,
     }),
 
-  // Date fields
   date: (config: Omit<DateConfig, "type"> = {}) =>
     shape.sql({
       type: "date",
@@ -183,7 +399,7 @@ export const shape = {
         ? SQLToZodType<T, false>
         : never;
     type DT = z.infer<TSql>;
-    // Initialize with sql type for all schemas
+
     return createBuilder<"sql", T, TSql, TSql, DT, TSql, TSql>({
       stage: "sql",
       sqlConfig: sqlConfig,
@@ -194,162 +410,144 @@ export const shape = {
       validationZod: sqlZodType,
     });
   },
-};
 
-interface IBuilderMethods<
-  T extends SQLType,
-  TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
-  TInitialValue,
-  TClient extends z.ZodTypeAny,
-  TValidation extends z.ZodTypeAny,
-> {
-  /**
-   * Defines the schema and default value for creating a new item.
-   * Moves the builder to the 'new' stage.
-   */
-  initialState: {
-    // Overload 1: Just default value (keeps SQL schema)
-    <TDefaultNext>(defaultValue: () => TDefaultNext): Prettify<
-      Builder<
-        "new",
-        T,
-        TSql,
-        TSql, // Keep SQL schema
-        TDefaultNext,
-        TSql, // Client stays as SQL
-        TSql // Validation stays as SQL
-      >
-    >;
-
-    // Overload 2: Schema and default value
-    <TNewNext extends z.ZodTypeAny, TDefaultNext>(
-      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: () => TDefaultNext
-    ): Prettify<
-      Builder<
-        "new",
-        T,
-        TSql,
-        TNewNext,
-        z.infer<TNewNext>,
-        InferSmartClientType<TSql, TNewNext>,
-        InferSmartClientType<TSql, TNewNext>
-      >
-    >;
-  };
-
-  /**
-   * Defines the schema for data sent to the client.
-   * Moves the builder to the 'client' stage.
-   */
-  client: <TClientNext extends z.ZodTypeAny>(
-    schema:
-      | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
-      | TClientNext
-  ) => Prettify<
-    Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>
-  >;
-
-  /**
-   * Defines a validation schema for updates or inputs.
-   * Moves the builder to the 'validation' stage.
-   */
-  validation: <TValidationNext extends z.ZodTypeAny>(
-    schema:
-      | ((tools: {
-          sql: TSql;
-          initialState: TNew;
-          client: TClient;
-        }) => TValidationNext)
-      | TValidationNext
-  ) => Prettify<
-    Builder<
-      "validation",
-      T,
-      TSql,
-      TNew,
-      TInitialValue,
-      TClient,
-      TValidationNext
-    >
-  >;
-
-  /**
-   * Finalizes the builder by providing data transformation functions.
-   * This is the terminal step.
-   */
-  transform: (transforms: {
-    toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
-    toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
+  hasMany: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+    defaultCount?: number;
   }) => {
-    // The final, completed configuration object
-    config: Prettify<
-      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
-    > & {
-      transforms: typeof transforms;
+    const relationConfig: RelationConfig<T> = {
+      type: "hasMany",
+      ...config,
     };
-  };
-}
 
-// 3. Types to manage the state machine
-type Stage = "sql" | "new" | "client" | "validation" | "done";
+    const relationZodType = z.array(z.any()).optional();
 
-// This mapping defines which methods are available at each stage.
-// This is the key to removing the repetition!
-type StageMethods = {
-  sql: "initialState" | "client" | "validation" | "transform";
-  new: "client" | "validation" | "transform";
-  client: "validation" | "transform";
-  validation: "transform";
-  done: never;
+    return createBuilder<
+      "relation",
+      RelationConfig<T>,
+      typeof relationZodType,
+      typeof relationZodType,
+      any[],
+      typeof relationZodType,
+      typeof relationZodType
+    >({
+      stage: "relation",
+      sqlConfig: relationConfig,
+      sqlZod: relationZodType,
+      newZod: relationZodType,
+      initialValue: Array.from(
+        { length: config.defaultCount || 0 },
+        () => ({})
+      ),
+      clientZod: relationZodType,
+      validationZod: relationZodType,
+    });
+  },
+
+  hasOne: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+  }) => {
+    const relationConfig: RelationConfig<T> = {
+      type: "hasOne",
+      ...config,
+    };
+
+    const relationZodType = z.any().optional();
+
+    return createBuilder<
+      "relation",
+      RelationConfig<T>,
+      typeof relationZodType,
+      typeof relationZodType,
+      any,
+      typeof relationZodType,
+      typeof relationZodType
+    >({
+      stage: "relation",
+      sqlConfig: relationConfig,
+      sqlZod: relationZodType,
+      newZod: relationZodType,
+      initialValue: {},
+      clientZod: relationZodType,
+      validationZod: relationZodType,
+    });
+  },
+
+  belongsTo: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+  }) => {
+    const relationConfig: RelationConfig<T> = {
+      type: "belongsTo",
+      ...config,
+    };
+
+    const relationZodType = z.any().optional();
+
+    return createBuilder<
+      "relation",
+      RelationConfig<T>,
+      typeof relationZodType,
+      typeof relationZodType,
+      any,
+      typeof relationZodType,
+      typeof relationZodType
+    >({
+      stage: "relation",
+      sqlConfig: relationConfig,
+      sqlZod: relationZodType,
+      newZod: relationZodType,
+      initialValue: {},
+      clientZod: relationZodType,
+      validationZod: relationZodType,
+    });
+  },
+
+  manyToMany: <T extends Schema<any>>(config: {
+    fromKey: string;
+    toKey: () => any;
+    schema: () => T;
+    defaultCount?: number;
+  }) => {
+    const relationConfig: RelationConfig<T> = {
+      type: "manyToMany",
+      ...config,
+    };
+
+    const relationZodType = z.array(z.any()).optional();
+
+    return createBuilder<
+      "relation",
+      RelationConfig<T>,
+      typeof relationZodType,
+      typeof relationZodType,
+      any[],
+      typeof relationZodType,
+      typeof relationZodType
+    >({
+      stage: "relation",
+      sqlConfig: relationConfig,
+      sqlZod: relationZodType,
+      newZod: relationZodType,
+      initialValue: Array.from(
+        { length: config.defaultCount || 0 },
+        () => ({})
+      ),
+      clientZod: relationZodType,
+      validationZod: relationZodType,
+    });
+  },
 };
-type InferSmartClientType<
-  TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
-> = z.infer<TNew> extends z.infer<TSql> ? TNew : z.ZodUnion<[TSql, TNew]>;
 
-// --- The Final, Refactored Builder Type ---
-type BuilderConfig<
-  T extends SQLType,
-  TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
-  TInitialValue,
-  TClient extends z.ZodTypeAny,
-  TValidation extends z.ZodTypeAny,
-> = {
-  sql: T;
-  zodSqlSchema: TSql;
-  zodNewSchema: TNew;
-  initialValue: TInitialValue;
-  zodClientSchema: TClient;
-  zodValidationSchema: TValidation;
-};
-
-export type Builder<
-  TStage extends Stage,
-  T extends SQLType,
-  TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
-  TInitialValue,
-  TClient extends z.ZodTypeAny,
-  TValidation extends z.ZodTypeAny,
-> = Prettify<
-  {
-    /** The configuration object, available at every stage. */
-    config: Prettify<
-      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
-    >;
-  } & Pick<
-    // We `Pick` the available methods from the full interface
-    IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
-    StageMethods[TStage] // Based on the current stage
-  >
->;
-
+// === UPDATED: createBuilder to Handle Relations ===
 function createBuilder<
-  TStage extends "sql" | "new" | "client" | "validation",
-  T extends SQLType,
+  TStage extends "sql" | "relation" | "new" | "client" | "validation",
+  T extends SQLType | RelationConfig<any>,
   TSql extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
   TInitialValue,
@@ -363,10 +561,10 @@ function createBuilder<
   initialValue: TInitialValue;
   clientZod: TClient;
   validationZod: TValidation;
-  completedStages?: Set<string>; // Track what's been done
+  completedStages?: Set<string>;
 }): Builder<TStage, T, TSql, TNew, TInitialValue, TClient, TValidation> {
-  // Initialize completed stages tracker
-  const completedStages = config.completedStages || new Set<string>(["sql"]);
+  const completedStages =
+    config.completedStages || new Set<string>([config.stage]);
 
   const builderObject = {
     config: {
@@ -387,7 +585,6 @@ function createBuilder<
         | (() => TDefaultNext),
       defaultValue?: () => TDefaultNext
     ) => {
-      // Runtime validation
       if (completedStages.has("new")) {
         throw new Error("initialState() can only be called once in the chain");
       }
@@ -398,13 +595,12 @@ function createBuilder<
         throw new Error("initialState() must be called before validation()");
       }
 
-      // Handle overload - if no second param, first param is the default
       const hasTypeParam = defaultValue !== undefined;
       const newSchema = hasTypeParam
         ? isFunction(schemaOrDefault)
           ? (schemaOrDefault as any)({ sql: config.sqlZod })
           : schemaOrDefault
-        : config.sqlZod; // Keep SQL type if just setting default
+        : config.sqlZod;
 
       const finalDefaultValue = hasTypeParam
         ? defaultValue!
@@ -428,12 +624,12 @@ function createBuilder<
         completedStages: newCompletedStages,
       });
     },
+
     client: <TClientNext extends z.ZodTypeAny>(
       assert:
         | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
         | TClientNext
     ) => {
-      // Runtime validation
       if (completedStages.has("client")) {
         throw new Error("client() can only be called once in the chain");
       }
@@ -452,7 +648,6 @@ function createBuilder<
         ...config,
         stage: "client",
         clientZod: clientSchema,
-        // Always set validation to match client when client is set
         validationZod: clientSchema,
         completedStages: newCompletedStages,
       });
@@ -467,7 +662,6 @@ function createBuilder<
           }) => TValidationNext)
         | TValidationNext
     ) => {
-      // Runtime validation
       if (completedStages.has("validation")) {
         throw new Error("validation() can only be called once in the chain");
       }
@@ -495,7 +689,6 @@ function createBuilder<
       toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
       toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
     }) => {
-      // Runtime validation
       if (
         !completedStages.has("validation") &&
         !completedStages.has("client")
@@ -519,6 +712,7 @@ function createBuilder<
 
   return builderObject as any;
 }
+
 export function hasMany<T extends Schema<any>>(config: {
   fromKey: string;
   toKey: () => T[keyof T];
@@ -662,43 +856,68 @@ export type InferDBSchema<T> = {
             }>
           : never;
 };
-
 function inferDefaultFromZod(
   zodType: z.ZodType<any>,
-  sqlConfig?: SQLType
+  sqlConfig?: SQLType | RelationConfig<any>
 ): any {
-  // Check SQL type first for better defaults
-  if (sqlConfig && !sqlConfig.nullable) {
-    switch (sqlConfig.type) {
-      case "varchar":
-      case "text":
-      case "char":
-      case "longtext":
-        return "";
-      case "int":
-        return 0;
-      case "boolean":
-        return false;
-      case "date":
-      case "datetime":
-        return new Date();
-    }
-  }
+  // Handle relation configs
+  if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
+    // Check if it's a relation config by looking for relation types
+    if (
+      typeof sqlConfig.type === "string" &&
+      ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)
+    ) {
+      const relationConfig = sqlConfig as RelationConfig<any>;
 
-  if (sqlConfig?.nullable) {
-    return null;
+      if (
+        relationConfig.type === "hasMany" ||
+        relationConfig.type === "manyToMany"
+      ) {
+        return Array.from(
+          { length: relationConfig.defaultCount || 0 },
+          () => ({})
+        );
+      }
+      // For hasOne and belongsTo
+      return {};
+    }
+
+    // Handle SQL configs (existing logic)
+    const sqlTypeConfig = sqlConfig as SQLType;
+    if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
+      switch (sqlTypeConfig.type) {
+        case "varchar":
+        case "text":
+        case "char":
+        case "longtext":
+          return "";
+        case "int":
+          return 0;
+        case "boolean":
+          return false;
+        case "date":
+        case "datetime":
+          return new Date();
+      }
+    }
+
+    if (sqlTypeConfig.nullable) {
+      return null;
+    }
   }
 
   // Fall back to existing zod-based inference
   if (zodType instanceof z.ZodOptional) {
     return undefined;
   }
+
   // Check for explicit default last
   if (zodType instanceof z.ZodDefault && zodType._def?.defaultValue) {
     return typeof zodType._def.defaultValue === "function"
       ? zodType._def.defaultValue()
       : zodType._def.defaultValue;
   }
+
   return undefined;
 }
 
