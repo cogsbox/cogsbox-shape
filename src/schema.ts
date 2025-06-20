@@ -854,12 +854,12 @@ export function createSchema<T extends { _tableName: string }>(
   const defaultValues = {} as any;
 
   for (const key in schema) {
-    if (key === "_tableName" || key.startsWith("__")) continue;
+    if (key === "_tableName") continue;
 
-    const field = (schema as any)[key];
+    const field = schema[key] as any;
 
     // Case 1: Handle relation functions (hasMany, hasOne, etc.)
-    if (isFunction(field)) {
+    if (typeof field === "function") {
       const relation = field();
       if (!isRelation(relation)) {
         continue;
@@ -870,48 +870,50 @@ export function createSchema<T extends { _tableName: string }>(
 
       // For to-many relations, wrap schemas in z.array()
       if (relation.type === "hasMany" || relation.type === "manyToMany") {
-        const arraySchema = z.array(childSchemaResult.validationSchema);
-        // Relations are often not present on creation, so they should be optional.
-        validationFields[key] = arraySchema.optional();
-        clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
-        sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
+        sqlFields[key] = z.array(childSchemaResult.sqlSchema);
+        clientFields[key] = z.array(childSchemaResult.clientSchema);
+        validationFields[key] = z.array(childSchemaResult.validationSchema);
 
+        // Create an array of default values for the relation
         const count = relation.defaultCount || 0;
         defaultValues[key] = Array.from(
           { length: count },
           () => childSchemaResult.defaultValues
         );
       } else {
-        // hasOne or belongsTo
-        // Relations are often not present on creation, so they should be optional.
-        validationFields[key] = childSchemaResult.validationSchema.optional();
-        clientFields[key] = childSchemaResult.clientSchema.optional();
-        sqlFields[key] = childSchemaResult.sqlSchema.optional();
+        // For to-one relations, use schemas directly
+        sqlFields[key] = childSchemaResult.sqlSchema;
+        clientFields[key] = childSchemaResult.clientSchema;
+        validationFields[key] = childSchemaResult.validationSchema;
         defaultValues[key] = childSchemaResult.defaultValues;
       }
-    }
-    // Case 2: Handle reference() objects
-    else if (field && field.type === "reference") {
+    } else if (
+      field &&
+      typeof field === "object" &&
+      field.type === "reference"
+    ) {
       const referencedField = field.to();
-      validationFields[key] = referencedField.config.zodValidationSchema;
-      clientFields[key] = referencedField.config.zodClientSchema;
       sqlFields[key] = referencedField.config.zodSqlSchema;
+      clientFields[key] = referencedField.config.zodClientSchema;
+      validationFields[key] = referencedField.config.zodValidationSchema;
       defaultValues[key] = referencedField.config.initialValue;
-    }
-    // Case 3: Handle standard shape.sql() fields
-    else if (field && typeof field === "object" && "config" in field) {
-      validationFields[key] = field.config.zodValidationSchema;
-      clientFields[key] = field.config.zodClientSchema;
+    } else if (field && typeof field === "object" && "config" in field) {
       sqlFields[key] = field.config.zodSqlSchema;
+      clientFields[key] = field.config.zodClientSchema;
+      validationFields[key] = field.config.zodValidationSchema;
       defaultValues[key] = field.config.initialValue;
     }
   }
 
   return {
-    sqlSchema: z.object(sqlFields) as any,
-    clientSchema: z.object(clientFields) as any,
-    validationSchema: z.object(validationFields) as any,
-    defaultValues: defaultValues as any,
+    sqlSchema: z.object(sqlFields) as z.ZodObject<Prettify<InferSqlSchema<T>>>,
+    clientSchema: z.object(clientFields) as z.ZodObject<
+      Prettify<InferClientSchema<T>>
+    >,
+    validationSchema: z.object(validationFields) as z.ZodObject<
+      Prettify<InferValidationSchema<T>>
+    >,
+    defaultValues: defaultValues as Prettify<InferDefaultValues2<T>>,
   };
 }
 
@@ -955,7 +957,6 @@ type SerializableSchemaMetadata = {
 /**
  * (This is the smart function from the last answer that resolves `toKey` functions)
  */
-// In your cogsbox-shape file, replace the entire `serializeSchemaMetadata` function.
 
 function serializeSchemaMetadata(
   schema: Schema<any>
@@ -971,7 +972,6 @@ function serializeSchemaMetadata(
     if (isFunction(definition)) {
       const relation = definition();
       if (!isRelation(relation)) continue;
-
       let toKeyName: string | null = null;
       try {
         let targetFieldDefinition = relation.toKey();
@@ -997,8 +997,6 @@ function serializeSchemaMetadata(
         );
         throw e;
       }
-
-      // This is the critical part: ADD the processed relation to the relations object.
       relations[key] = {
         type: "relation",
         relationType: relation.type,
