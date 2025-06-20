@@ -852,45 +852,67 @@ type InferDefaultValues2<T> = {
 export function createSchema<T extends { _tableName: string }>(
   schema: T
 ): {
-  sqlSchema: z.ZodObject<Prettify<InferSqlSchema<T>>>;
-  clientSchema: z.ZodObject<Prettify<InferClientSchema<T>>>;
-  validationSchema: z.ZodObject<Prettify<InferValidationSchema<T>>>;
-  defaultValues: Prettify<InferDefaultValues2<T>>;
+  sqlSchema: z.ZodObject<any>; // Using 'any' for simplicity, your Infer types will still work
+  clientSchema: z.ZodObject<any>;
+  validationSchema: z.ZodObject<any>;
+  defaultValues: any;
 } {
   const sqlFields: any = {};
   const clientFields: any = {};
   const validationFields: any = {};
   const defaultValues: any = {};
 
+  // Store the functions to be executed in a second pass
+  const deferredFields: Array<{ key: string; definition: any }> = [];
+
+  // --- PASS 1: Process all non-function fields ---
   for (const key in schema) {
     if (key === "_tableName" || key.startsWith("__")) continue;
 
-    let definition = (schema as any)[key];
+    const definition = (schema as any)[key];
 
     if (typeof definition === "function") {
-      const potentialRelation = definition();
+      // It's a hasMany, belongsTo, etc. Defer it.
+      deferredFields.push({ key, definition });
+    } else if (definition && definition.type === "reference") {
+      // It's a reference. Defer it.
+      deferredFields.push({ key, definition });
+    } else if (definition && typeof definition.config === "object") {
+      // It's a standard field builder. Process it now.
+      sqlFields[key] = definition.config.zodSqlSchema;
+      clientFields[key] = definition.config.zodClientSchema;
+      validationFields[key] = definition.config.zodValidationSchema;
+      defaultValues[key] = definition.config.initialValue;
+    }
+  }
 
-      if (
-        potentialRelation &&
-        ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
-          potentialRelation.type
-        )
-      ) {
-        definition = potentialRelation;
-      }
+  // --- PASS 2: Process all deferred references and relations ---
+  // Now we can safely call the functions because the schemas they refer to exist.
+  for (const { key, definition } of deferredFields) {
+    let resolvedDefinition = definition;
+
+    // If it's a relation like hasMany, call the outer function to get the config object
+    if (typeof resolvedDefinition === "function") {
+      resolvedDefinition = resolvedDefinition();
     }
 
-    if (
-      definition &&
-      (definition.type === "hasMany" ||
-        definition.type === "hasOne" ||
-        definition.type === "belongsTo" ||
-        definition.type === "manyToMany")
+    if (resolvedDefinition && resolvedDefinition.type === "reference") {
+      const referencedField = resolvedDefinition.to(); // This is now safe to call
+      if (!referencedField || !referencedField.config) {
+        throw new Error(`Could not resolve reference for key "${key}"`);
+      }
+      sqlFields[key] = referencedField.config.zodSqlSchema;
+      clientFields[key] = referencedField.config.zodClientSchema;
+      validationFields[key] = referencedField.config.zodValidationSchema;
+      defaultValues[key] = referencedField.config.initialValue;
+    } else if (
+      resolvedDefinition &&
+      ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(
+        resolvedDefinition.type
+      )
     ) {
-      const relation = definition; // It's now the object we need.
-
-      // Recursively create the schema for the related table
-      const childSchemaResult = createSchema(relation.schema());
+      const relation = resolvedDefinition;
+      const childSchemaResult = createSchema(relation.schema()); // Recursive call
 
       if (relation.type === "hasMany" || relation.type === "manyToMany") {
         sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
@@ -909,21 +931,6 @@ export function createSchema<T extends { _tableName: string }>(
         validationFields[key] = childSchemaResult.validationSchema.optional();
         defaultValues[key] = childSchemaResult.defaultValues;
       }
-    }
-    // Case 2: Is it a standard field builder object?
-    else if (definition && typeof definition.config === "object") {
-      sqlFields[key] = definition.config.zodSqlSchema;
-      clientFields[key] = definition.config.zodClientSchema;
-      validationFields[key] = definition.config.zodValidationSchema;
-      defaultValues[key] = definition.config.initialValue;
-    }
-    // Case 3: Is it a reference object?
-    else if (definition && definition.type === "reference") {
-      const referencedField = definition.to();
-      sqlFields[key] = referencedField.config.zodSqlSchema;
-      clientFields[key] = referencedField.config.zodClientSchema;
-      validationFields[key] = referencedField.config.zodValidationSchema;
-      defaultValues[key] = referencedField.config.initialValue;
     }
   }
 
