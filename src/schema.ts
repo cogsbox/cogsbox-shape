@@ -791,7 +791,7 @@ function isRelation(value: any): value is Relation<any> {
     typeof value === "object" &&
     "type" in value &&
     "fromKey" in value &&
-    "toKey" in value &&
+    typeof value.toKey === "function" && // More specific check
     "schema" in value
   );
 }
@@ -968,14 +968,21 @@ function serializeSchemaMetadata(
   for (const key in schema) {
     if (key === "_tableName" || key.startsWith("__")) continue;
     const definition = (schema as any)[key];
+
     if (isFunction(definition)) {
       const relation = definition();
       if (!isRelation(relation)) continue;
       let toKeyName: string | null = null;
       try {
-        const targetFieldBuilder = relation.toKey();
+        let targetFieldDefinition = relation.toKey();
+        if (
+          targetFieldDefinition &&
+          targetFieldDefinition.type === "reference"
+        ) {
+          targetFieldDefinition = targetFieldDefinition.to();
+        }
         for (const targetKey in relation.schema) {
-          if ((relation.schema as any)[targetKey] === targetFieldBuilder) {
+          if ((relation.schema as any)[targetKey] === targetFieldDefinition) {
             toKeyName = targetKey;
             break;
           }
@@ -1002,9 +1009,25 @@ function serializeSchemaMetadata(
       if (definition.config.sql.pk === true) {
         if (primaryKey)
           console.warn(
-            `[cogsbox-shape] Multiple primary keys in schema '${schema._tableName}'. Using last one found: '${key}'.`
+            `[cogsbox-shape] Multiple primary keys found. Using last one: '${key}'.`
           );
         primaryKey = key;
+      }
+    } else if (definition && definition.type === "reference") {
+      const targetFieldBuilder = definition.to();
+      if (
+        targetFieldBuilder &&
+        targetFieldBuilder.config &&
+        targetFieldBuilder.config.sql
+      ) {
+        fields[key] = { type: "field", sql: targetFieldBuilder.config.sql };
+        if (targetFieldBuilder.config.sql.pk) {
+          if (primaryKey)
+            console.warn(
+              `[cogsbox-shape] Multiple primary keys found. Using last one: '${key}'.`
+            );
+          primaryKey = key;
+        }
       }
     }
   }
