@@ -852,10 +852,10 @@ type InferDefaultValues2<T> = {
 export function createSchema<T extends { _tableName: string }>(
   schema: T
 ): {
-  sqlSchema: z.ZodObject<any>; // Using 'any' for simplicity, your Infer types will still work
-  clientSchema: z.ZodObject<any>;
-  validationSchema: z.ZodObject<any>;
-  defaultValues: any;
+  sqlSchema: z.ZodObject<Prettify<InferSqlSchema<T>>>;
+  clientSchema: z.ZodObject<Prettify<InferClientSchema<T>>>;
+  validationSchema: z.ZodObject<Prettify<InferValidationSchema<T>>>;
+  defaultValues: Prettify<InferDefaultValues2<T>>;
 } {
   const sqlFields: any = {};
   const clientFields: any = {};

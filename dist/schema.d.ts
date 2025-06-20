@@ -4784,13 +4784,54 @@ export declare function reference<TField extends object>(config: TField): {
     to: TField;
 };
 export declare function createMixedValidationSchema<T extends Schema<any>>(schema: T, clientSchema?: z.ZodObject<any>, dbSchema?: z.ZodObject<any>): z.ZodObject<any>;
+type SchemaDefinition = {
+    _tableName: string;
+    [key: string]: any;
+};
+type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema"> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            [P in Key]: infer S extends z.ZodTypeAny;
+        };
+    } ? S : T[K] extends {
+        type: "reference";
+        to: () => {
+            config: {
+                [P in Key]: infer S extends z.ZodTypeAny;
+            };
+        };
+    } ? S : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? z.ZodObject<Prettify<InferSchemaByKey<S, Key>>> : never;
+};
+type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
+type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
+type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
+type InferDefaultValues2<T> = {
+    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        config: {
+            initialValue: infer D;
+        };
+    } ? D : T[K] extends () => {
+        type: "hasMany" | "manyToMany";
+        schema: infer S extends SchemaDefinition;
+        defaultCount?: number;
+    } ? Array<Prettify<InferDefaultValues2<S>>> : T[K] extends () => {
+        type: "hasOne" | "belongsTo";
+        schema: infer S extends SchemaDefinition;
+    } ? Prettify<InferDefaultValues2<S>> : never;
+};
 export declare function createSchema<T extends {
     _tableName: string;
 }>(schema: T): {
-    sqlSchema: z.ZodObject<any>;
-    clientSchema: z.ZodObject<any>;
-    validationSchema: z.ZodObject<any>;
-    defaultValues: any;
+    sqlSchema: z.ZodObject<Prettify<InferSqlSchema<T>>>;
+    clientSchema: z.ZodObject<Prettify<InferClientSchema<T>>>;
+    validationSchema: z.ZodObject<Prettify<InferValidationSchema<T>>>;
+    defaultValues: Prettify<InferDefaultValues2<T>>;
 };
 export type InferSchemaTypes<T extends {
     _tableName: string;
