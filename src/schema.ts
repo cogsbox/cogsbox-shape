@@ -870,7 +870,7 @@ export function createSchema<T extends { _tableName: string }>(
         continue;
       }
 
-      const childSchemaResult = createSchema(relation.schema);
+      const childSchemaResult = createSchema(relation.schema());
 
       if (relation.type === "hasMany" || relation.type === "manyToMany") {
         // CORRECTLY ADD THE RELATION TO THE LIST OF VALIDATION FIELDS

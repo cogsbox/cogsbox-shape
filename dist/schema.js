@@ -358,7 +358,7 @@ export function createSchema(schema) {
             if (!isRelation(relation)) {
                 continue;
             }
-            const childSchemaResult = createSchema(relation.schema);
+            const childSchemaResult = createSchema(relation.schema());
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
                 // CORRECTLY ADD THE RELATION TO THE LIST OF VALIDATION FIELDS
                 // Make it optional, as relations are often not included on create/update.
