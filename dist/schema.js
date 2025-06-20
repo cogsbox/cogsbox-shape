@@ -358,21 +358,19 @@ export function createSchema(schema) {
             if (!isRelation(relation)) {
                 continue;
             }
-            // Recursively process the nested schema
             const childSchemaResult = createSchema(relation.schema);
-            // For to-many relations, wrap schemas in z.array()
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
-                const arraySchema = z.array(childSchemaResult.validationSchema);
-                // Relations are often not present on creation, so they should be optional.
-                validationFields[key] = arraySchema.optional();
+                // CORRECTLY ADD THE RELATION TO THE LIST OF VALIDATION FIELDS
+                // Make it optional, as relations are often not included on create/update.
+                validationFields[key] = z
+                    .array(childSchemaResult.validationSchema)
+                    .optional();
                 clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
                 sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
-                const count = relation.defaultCount || 0;
-                defaultValues[key] = Array.from({ length: count }, () => childSchemaResult.defaultValues);
+                defaultValues[key] = Array.from({ length: relation.defaultCount || 0 }, () => childSchemaResult.defaultValues);
             }
             else {
                 // hasOne or belongsTo
-                // Relations are often not present on creation, so they should be optional.
                 validationFields[key] = childSchemaResult.validationSchema.optional();
                 clientFields[key] = childSchemaResult.clientSchema.optional();
                 sqlFields[key] = childSchemaResult.sqlSchema.optional();
@@ -382,19 +380,20 @@ export function createSchema(schema) {
         // Case 2: Handle reference() objects
         else if (field && field.type === "reference") {
             const referencedField = field.to();
-            validationFields[key] = referencedField.config.zodValidationSchema;
-            clientFields[key] = referencedField.config.zodClientSchema;
             sqlFields[key] = referencedField.config.zodSqlSchema;
+            clientFields[key] = referencedField.config.zodClientSchema;
+            validationFields[key] = referencedField.config.zodValidationSchema;
             defaultValues[key] = referencedField.config.initialValue;
         }
         // Case 3: Handle standard shape.sql() fields
         else if (field && typeof field === "object" && "config" in field) {
-            validationFields[key] = field.config.zodValidationSchema;
-            clientFields[key] = field.config.zodClientSchema;
             sqlFields[key] = field.config.zodSqlSchema;
+            clientFields[key] = field.config.zodClientSchema;
+            validationFields[key] = field.config.zodValidationSchema;
             defaultValues[key] = field.config.initialValue;
         }
     }
+    // Return the final, correctly typed Zod objects
     return {
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),

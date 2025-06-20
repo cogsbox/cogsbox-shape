@@ -4827,9 +4827,7 @@ type InferDefaultValues2<T> = {
 };
 export declare function createSchema<T extends {
     _tableName: string;
-}>(schema: T extends {
-    _tableName: string;
-} ? T : never): {
+}>(schema: T): {
     sqlSchema: z.ZodObject<Prettify<InferSqlSchema<T>>>;
     clientSchema: z.ZodObject<Prettify<InferClientSchema<T>>>;
     validationSchema: z.ZodObject<Prettify<InferValidationSchema<T>>>;
