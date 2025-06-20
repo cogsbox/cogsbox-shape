@@ -854,12 +854,12 @@ export function createSchema<T extends { _tableName: string }>(
   const defaultValues = {} as any;
 
   for (const key in schema) {
-    if (key === "_tableName") continue;
+    if (key === "_tableName" || key.startsWith("__")) continue;
 
-    const field = schema[key] as any;
+    const field = (schema as any)[key];
 
     // Case 1: Handle relation functions (hasMany, hasOne, etc.)
-    if (typeof field === "function") {
+    if (isFunction(field)) {
       const relation = field();
       if (!isRelation(relation)) {
         continue;
@@ -870,37 +870,39 @@ export function createSchema<T extends { _tableName: string }>(
 
       // For to-many relations, wrap schemas in z.array()
       if (relation.type === "hasMany" || relation.type === "manyToMany") {
-        sqlFields[key] = z.array(childSchemaResult.sqlSchema);
-        clientFields[key] = z.array(childSchemaResult.clientSchema);
-        validationFields[key] = z.array(childSchemaResult.validationSchema);
+        const arraySchema = z.array(childSchemaResult.validationSchema);
+        // Relations are often not present on creation, so they should be optional.
+        validationFields[key] = arraySchema.optional();
+        clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
+        sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
 
-        // Create an array of default values for the relation
         const count = relation.defaultCount || 0;
         defaultValues[key] = Array.from(
           { length: count },
           () => childSchemaResult.defaultValues
         );
       } else {
-        // For to-one relations, use schemas directly
-        sqlFields[key] = childSchemaResult.sqlSchema;
-        clientFields[key] = childSchemaResult.clientSchema;
-        validationFields[key] = childSchemaResult.validationSchema;
+        // hasOne or belongsTo
+        // Relations are often not present on creation, so they should be optional.
+        validationFields[key] = childSchemaResult.validationSchema.optional();
+        clientFields[key] = childSchemaResult.clientSchema.optional();
+        sqlFields[key] = childSchemaResult.sqlSchema.optional();
         defaultValues[key] = childSchemaResult.defaultValues;
       }
-    } else if (
-      field &&
-      typeof field === "object" &&
-      field.type === "reference"
-    ) {
+    }
+    // Case 2: Handle reference() objects
+    else if (field && field.type === "reference") {
       const referencedField = field.to();
-      sqlFields[key] = referencedField.config.zodSqlSchema;
-      clientFields[key] = referencedField.config.zodClientSchema;
       validationFields[key] = referencedField.config.zodValidationSchema;
+      clientFields[key] = referencedField.config.zodClientSchema;
+      sqlFields[key] = referencedField.config.zodSqlSchema;
       defaultValues[key] = referencedField.config.initialValue;
-    } else if (field && typeof field === "object" && "config" in field) {
-      sqlFields[key] = field.config.zodSqlSchema;
-      clientFields[key] = field.config.zodClientSchema;
+    }
+    // Case 3: Handle standard shape.sql() fields
+    else if (field && typeof field === "object" && "config" in field) {
       validationFields[key] = field.config.zodValidationSchema;
+      clientFields[key] = field.config.zodClientSchema;
+      sqlFields[key] = field.config.zodSqlSchema;
       defaultValues[key] = field.config.initialValue;
     }
   }
@@ -957,6 +959,7 @@ type SerializableSchemaMetadata = {
 /**
  * (This is the smart function from the last answer that resolves `toKey` functions)
  */
+// In your cogsbox-shape file, replace the entire `serializeSchemaMetadata` function.
 
 function serializeSchemaMetadata(
   schema: Schema<any>
@@ -972,6 +975,7 @@ function serializeSchemaMetadata(
     if (isFunction(definition)) {
       const relation = definition();
       if (!isRelation(relation)) continue;
+
       let toKeyName: string | null = null;
       try {
         let targetFieldDefinition = relation.toKey();
@@ -997,6 +1001,8 @@ function serializeSchemaMetadata(
         );
         throw e;
       }
+
+      // This is the critical part: ADD the processed relation to the relations object.
       relations[key] = {
         type: "relation",
         relationType: relation.type,
