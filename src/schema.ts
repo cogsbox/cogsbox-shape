@@ -844,6 +844,8 @@ type InferDefaultValues2<T> = {
         ? Prettify<InferDefaultValues2<S>>
         : never;
 };
+// In your cogsbox-shape file...
+// Replace the entire existing createSchema function with this SINGLE, CORRECT version.
 
 export function createSchema<T extends { _tableName: string }>(
   schema: T
@@ -861,16 +863,20 @@ export function createSchema<T extends { _tableName: string }>(
   for (const key in schema) {
     if (key === "_tableName" || key.startsWith("__")) continue;
 
-    const field = (schema as any)[key];
-    console.log("FIELD", field);
-    console.log("is fucntion", isFunction(field));
-    // Case 1: Handle relation functions (hasMany, hasOne, etc.)
-    if (isFunction(field)) {
-      const relation = field();
-      console.log("isRelation(relation)", isRelation(relation));
-      if (!isRelation(relation)) {
-        continue;
-      }
+    const definition = (schema as any)[key];
+
+    // --- THIS IS THE CORRECT, SIMPLE LOGIC ---
+
+    // Case 1: Is it a relation object?
+    // A relation object will have a `type` like "hasMany" and a `schema` property.
+    if (
+      definition &&
+      (definition.type === "hasMany" ||
+        definition.type === "hasOne" ||
+        definition.type === "belongsTo" ||
+        definition.type === "manyToMany")
+    ) {
+      const relation = definition; // It's already the object we need.
 
       const childSchemaResult = createSchema(relation.schema());
 
@@ -880,7 +886,6 @@ export function createSchema<T extends { _tableName: string }>(
           .optional();
         clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
         sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
-
         defaultValues[key] = Array.from(
           { length: relation.defaultCount || 0 },
           () => childSchemaResult.defaultValues
@@ -893,20 +898,20 @@ export function createSchema<T extends { _tableName: string }>(
         defaultValues[key] = childSchemaResult.defaultValues;
       }
     }
-    // Case 2: Handle reference() objects
-    else if (field && field.type === "reference") {
-      const referencedField = field.to();
+    // Case 2: Is it a standard field builder object?
+    else if (definition && typeof definition.config === "object") {
+      sqlFields[key] = definition.config.zodSqlSchema;
+      clientFields[key] = definition.config.zodClientSchema;
+      validationFields[key] = definition.config.zodValidationSchema;
+      defaultValues[key] = definition.config.initialValue;
+    }
+    // Case 3: Is it a reference object?
+    else if (definition && definition.type === "reference") {
+      const referencedField = definition.to();
       sqlFields[key] = referencedField.config.zodSqlSchema;
       clientFields[key] = referencedField.config.zodClientSchema;
       validationFields[key] = referencedField.config.zodValidationSchema;
       defaultValues[key] = referencedField.config.initialValue;
-    }
-    // Case 3: Handle standard shape.sql() fields
-    else if (field && typeof field === "object" && "config" in field) {
-      sqlFields[key] = field.config.zodSqlSchema;
-      clientFields[key] = field.config.zodClientSchema;
-      validationFields[key] = field.config.zodValidationSchema;
-      defaultValues[key] = field.config.initialValue;
     }
   }
 
