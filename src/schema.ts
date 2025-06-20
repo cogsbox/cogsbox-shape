@@ -791,7 +791,7 @@ function isRelation(value: any): value is Relation<any> {
     typeof value === "object" &&
     "type" in value &&
     "fromKey" in value &&
-    typeof value.toKey === "function" && // More specific check
+    "toKey" in value &&
     "schema" in value
   );
 }
@@ -862,10 +862,12 @@ export function createSchema<T extends { _tableName: string }>(
     if (key === "_tableName" || key.startsWith("__")) continue;
 
     const field = (schema as any)[key];
-
+    console.log("FIELD", field);
+    console.log("is fucntion", isFunction(field));
     // Case 1: Handle relation functions (hasMany, hasOne, etc.)
     if (isFunction(field)) {
       const relation = field();
+      console.log("isRelation(relation)", isRelation(relation));
       if (!isRelation(relation)) {
         continue;
       }
