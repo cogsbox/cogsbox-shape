@@ -28,9 +28,8 @@ export const petSchema = {
         toDb: (clientValue) => (clientValue ? 1 : 0),
     }),
 };
-// export const { dbSchema, clientSchema, initialValues, serialized } =
-//   createSchema(userSchema);
 export const userSchema = {
+    //The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.
     _tableName: "users",
     id: shape.sql({ type: "int", pk: true }),
     firstname: shape
@@ -43,12 +42,14 @@ export const userSchema = {
     email: shape
         .sql({ type: "varchar", length: 255 })
         .validation(({ sql }) => sql.email()),
-    pets: hasMany({
+    pets: shape
+        .hasMany({
         fromKey: "id",
         toKey: () => petSchema.userId,
         schema: () => petSchema,
         defaultCount: 1,
-    }),
+    })
+        .validation(({ sql }) => sql),
 };
 const testPets = {
     _tableName: "users",

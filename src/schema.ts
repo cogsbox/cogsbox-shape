@@ -219,15 +219,18 @@ export type Builder<
   TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
-> = Prettify<
-  {
-    config: Prettify<
-      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
-    >;
-  } & Pick<
-    IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
-    StageMethods[TStage]
-  >
+> = {
+  config: {
+    sql: T;
+    zodSqlSchema: TSql;
+    zodNewSchema: TNew;
+    initialValue: TInitialValue;
+    zodClientSchema: TClient;
+    zodValidationSchema: TValidation;
+  };
+} & Pick<
+  IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
+  StageMethods[TStage]
 >;
 // First, define the interface for the shape object
 interface ShapeAPI {
@@ -268,11 +271,11 @@ interface ShapeAPI {
   }) => Builder<
     "relation",
     RelationConfig<T>,
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
+    z.ZodArray<z.ZodAny>,
+    z.ZodArray<z.ZodAny>,
     any[],
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
-    z.ZodOptional<z.ZodArray<z.ZodAny>>
+    z.ZodArray<z.ZodAny>,
+    z.ZodArray<z.ZodAny>
   >;
   hasOne: <T extends Schema<any>>(config: {
     fromKey: string;
@@ -281,25 +284,13 @@ interface ShapeAPI {
   }) => Builder<
     "relation",
     RelationConfig<T>,
-    z.ZodOptional<z.ZodAny>,
-    z.ZodOptional<z.ZodAny>,
+    z.ZodAny,
+    z.ZodAny,
     any,
-    z.ZodOptional<z.ZodAny>,
-    z.ZodOptional<z.ZodAny>
+    z.ZodAny,
+    z.ZodAny
   >;
-  belongsTo: <T extends Schema<any>>(config: {
-    fromKey: string;
-    toKey: () => any;
-    schema: () => T;
-  }) => Builder<
-    "relation",
-    RelationConfig<T>,
-    z.ZodOptional<z.ZodAny>,
-    z.ZodOptional<z.ZodAny>,
-    any,
-    z.ZodOptional<z.ZodAny>,
-    z.ZodOptional<z.ZodAny>
-  >;
+
   manyToMany: <T extends Schema<any>>(config: {
     fromKey: string;
     toKey: () => any;
@@ -410,7 +401,6 @@ export const shape: ShapeAPI = {
       validationZod: sqlZodType,
     });
   },
-
   hasMany: <T extends Schema<any>>(config: {
     fromKey: string;
     toKey: () => any;
@@ -422,27 +412,26 @@ export const shape: ShapeAPI = {
       ...config,
     };
 
-    const relationZodType = z.array(z.any()).optional();
-
+    // Just pass the config object like reference does
     return createBuilder<
       "relation",
       RelationConfig<T>,
-      typeof relationZodType,
-      typeof relationZodType,
+      any, // Use any for now to avoid circular deps
+      any,
       any[],
-      typeof relationZodType,
-      typeof relationZodType
+      any,
+      any
     >({
       stage: "relation",
-      sqlConfig: relationConfig,
-      sqlZod: relationZodType,
-      newZod: relationZodType,
+      sqlConfig: relationConfig, // Pass the whole config object
+      sqlZod: z.array(z.any()), // Remove .optional()
+      newZod: z.array(z.any()),
       initialValue: Array.from(
         { length: config.defaultCount || 0 },
         () => ({})
       ),
-      clientZod: relationZodType,
-      validationZod: relationZodType,
+      clientZod: z.array(z.any()),
+      validationZod: z.array(z.any()),
     });
   },
 
@@ -456,38 +445,7 @@ export const shape: ShapeAPI = {
       ...config,
     };
 
-    const relationZodType = z.any().optional();
-
-    return createBuilder<
-      "relation",
-      RelationConfig<T>,
-      typeof relationZodType,
-      typeof relationZodType,
-      any,
-      typeof relationZodType,
-      typeof relationZodType
-    >({
-      stage: "relation",
-      sqlConfig: relationConfig,
-      sqlZod: relationZodType,
-      newZod: relationZodType,
-      initialValue: {},
-      clientZod: relationZodType,
-      validationZod: relationZodType,
-    });
-  },
-
-  belongsTo: <T extends Schema<any>>(config: {
-    fromKey: string;
-    toKey: () => any;
-    schema: () => T;
-  }) => {
-    const relationConfig: RelationConfig<T> = {
-      type: "belongsTo",
-      ...config,
-    };
-
-    const relationZodType = z.any().optional();
+    const relationZodType = z.any();
 
     return createBuilder<
       "relation",

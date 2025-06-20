@@ -112,9 +112,16 @@ type BuilderConfig<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTy
     zodClientSchema: TClient;
     zodValidationSchema: TValidation;
 };
-export type Builder<TStage extends Stage, T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> = Prettify<{
-    config: Prettify<BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>>;
-} & Pick<IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>, StageMethods[TStage]>>;
+export type Builder<TStage extends Stage, T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> = {
+    config: {
+        sql: T;
+        zodSqlSchema: TSql;
+        zodNewSchema: TNew;
+        initialValue: TInitialValue;
+        zodClientSchema: TClient;
+        zodValidationSchema: TValidation;
+    };
+} & Pick<IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>, StageMethods[TStage]>;
 interface ShapeAPI {
     int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
     varchar: (config?: Omit<StringConfig, "type">) => ReturnType<typeof createBuilder>;
@@ -130,17 +137,12 @@ interface ShapeAPI {
         toKey: () => any;
         schema: () => T;
         defaultCount?: number;
-    }) => Builder<"relation", RelationConfig<T>, z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>, any[], z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>>;
+    }) => Builder<"relation", RelationConfig<T>, z.ZodArray<z.ZodAny>, z.ZodArray<z.ZodAny>, any[], z.ZodArray<z.ZodAny>, z.ZodArray<z.ZodAny>>;
     hasOne: <T extends Schema<any>>(config: {
         fromKey: string;
         toKey: () => any;
         schema: () => T;
-    }) => Builder<"relation", RelationConfig<T>, z.ZodOptional<z.ZodAny>, z.ZodOptional<z.ZodAny>, any, z.ZodOptional<z.ZodAny>, z.ZodOptional<z.ZodAny>>;
-    belongsTo: <T extends Schema<any>>(config: {
-        fromKey: string;
-        toKey: () => any;
-        schema: () => T;
-    }) => Builder<"relation", RelationConfig<T>, z.ZodOptional<z.ZodAny>, z.ZodOptional<z.ZodAny>, any, z.ZodOptional<z.ZodAny>, z.ZodOptional<z.ZodAny>>;
+    }) => Builder<"relation", RelationConfig<T>, z.ZodAny, z.ZodAny, any, z.ZodAny, z.ZodAny>;
     manyToMany: <T extends Schema<any>>(config: {
         fromKey: string;
         toKey: () => any;

@@ -85,15 +85,15 @@ export const shape = {
             type: "hasMany",
             ...config,
         };
-        const relationZodType = z.array(z.any()).optional();
+        // Just pass the config object like reference does
         return createBuilder({
             stage: "relation",
-            sqlConfig: relationConfig,
-            sqlZod: relationZodType,
-            newZod: relationZodType,
+            sqlConfig: relationConfig, // Pass the whole config object
+            sqlZod: z.array(z.any()), // Remove .optional()
+            newZod: z.array(z.any()),
             initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-            clientZod: relationZodType,
-            validationZod: relationZodType,
+            clientZod: z.array(z.any()),
+            validationZod: z.array(z.any()),
         });
     },
     hasOne: (config) => {
@@ -101,23 +101,7 @@ export const shape = {
             type: "hasOne",
             ...config,
         };
-        const relationZodType = z.any().optional();
-        return createBuilder({
-            stage: "relation",
-            sqlConfig: relationConfig,
-            sqlZod: relationZodType,
-            newZod: relationZodType,
-            initialValue: {},
-            clientZod: relationZodType,
-            validationZod: relationZodType,
-        });
-    },
-    belongsTo: (config) => {
-        const relationConfig = {
-            type: "belongsTo",
-            ...config,
-        };
-        const relationZodType = z.any().optional();
+        const relationZodType = z.any();
         return createBuilder({
             stage: "relation",
             sqlConfig: relationConfig,
