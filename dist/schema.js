@@ -396,7 +396,7 @@ export function createSchema(schema) {
         else if (resolvedDefinition &&
             ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(resolvedDefinition.type)) {
             const relation = resolvedDefinition;
-            const childSchemaResult = createSchema(relation.schema()); // Recursive call
+            const childSchemaResult = createSchema(relation.schema);
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
                 sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
                 clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
@@ -443,12 +443,12 @@ function serializeSchemaMetadata(schema) {
             const relation = definition;
             let toKeyName = null;
             try {
-                let targetFieldDefinition = relation.toKey();
+                let targetFieldDefinition = relation.toKey;
                 if (targetFieldDefinition &&
                     targetFieldDefinition.type === "reference") {
                     targetFieldDefinition = targetFieldDefinition.to;
                 }
-                const targetSchemaObject = relation.schema();
+                const targetSchemaObject = relation.schema;
                 for (const targetKey in targetSchemaObject) {
                     if (targetSchemaObject[targetKey] === targetFieldDefinition) {
                         toKeyName = targetKey;

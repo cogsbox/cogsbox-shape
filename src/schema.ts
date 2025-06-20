@@ -912,7 +912,7 @@ export function createSchema<T extends { _tableName: string }>(
       )
     ) {
       const relation = resolvedDefinition;
-      const childSchemaResult = createSchema(relation.schema()); // Recursive call
+      const childSchemaResult = createSchema(relation.schema);
 
       if (relation.type === "hasMany" || relation.type === "manyToMany") {
         sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
@@ -1010,14 +1010,14 @@ function serializeSchemaMetadata(
       const relation = definition;
       let toKeyName: string | null = null;
       try {
-        let targetFieldDefinition = relation.toKey();
+        let targetFieldDefinition = relation.toKey;
         if (
           targetFieldDefinition &&
           targetFieldDefinition.type === "reference"
         ) {
           targetFieldDefinition = targetFieldDefinition.to;
         }
-        const targetSchemaObject = relation.schema();
+        const targetSchemaObject = relation.schema;
         for (const targetKey in targetSchemaObject) {
           if (
             (targetSchemaObject as any)[targetKey] === targetFieldDefinition
