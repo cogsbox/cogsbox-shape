@@ -5,7 +5,7 @@ type CurrentTimestampConfig = {
 };
 export declare const isFunction: (fn: unknown) => fn is Function;
 export declare function currentTimeStamp(): CurrentTimestampConfig;
-type SQLType = ({
+export type SQLType = ({
     type: "int";
     nullable?: boolean;
     default?: number;
@@ -205,7 +205,7 @@ export declare function manyToMany<T extends Schema<any>>(config: {
     schema: T;
     defaultCount: number | undefined;
 };
-type RelationType = "hasMany" | "belongsTo" | "hasOne" | "manyToMany";
+export type RelationType = "hasMany" | "hasOne" | "manyToMany";
 type BaseSchemaField<T extends SQLType = SQLType> = {
     type: "field";
     sql: T;
@@ -331,49 +331,4 @@ export type InferSchemaTypes<T extends {
     /** The TypeScript type for the default values object. */
     defaults: ReturnType<typeof createSchema<T>>["defaultValues"];
 }>;
-type SerializableFieldMetadata = {
-    type: "field";
-    sql: SQLType;
-};
-type SerializableRelationMetadata = {
-    type: "relation";
-    relationType: RelationType;
-    fromKey: string;
-    toKey: string;
-    schema: SerializableSchemaMetadata;
-};
-type SerializableSchemaMetadata = {
-    _tableName: string;
-    primaryKey: string | null;
-    fields: Record<string, SerializableFieldMetadata>;
-    relations: Record<string, SerializableRelationMetadata>;
-};
-export type ProcessedSyncSchemaEntry<T extends {
-    _tableName: string;
-}> = {
-    rawSchema: T;
-    schemas: ReturnType<typeof createSchema<T>>;
-    validate: (data: unknown) => z.SafeParseReturnType<any, any>;
-    validateClient: (data: unknown) => z.SafeParseReturnType<any, any>;
-    serializable: {
-        key: string;
-        validationJsonSchema: object;
-        clientJsonSchema: object;
-        metadata: SerializableSchemaMetadata;
-    };
-};
-export type ProcessedSyncSchemaMap<T extends Record<string, {
-    _tableName: string;
-}>> = {
-    [K in keyof T]: ProcessedSyncSchemaEntry<T[K]>;
-};
-export declare function createSyncSchema<T extends Record<string, {
-    _tableName: string;
-}>>(config: {
-    [K in keyof T]: {
-        schema: T[K];
-        validation?: (schema: ReturnType<typeof createSchema<T[K]>>["validationSchema"]) => z.ZodSchema;
-        client?: (schema: ReturnType<typeof createSchema<T[K]>>["clientSchema"]) => z.ZodSchema;
-    };
-}): ProcessedSyncSchemaMap<T>;
 export {};
