@@ -132,17 +132,17 @@ interface ShapeAPI {
     date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
     datetime: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
     sql: <T extends SQLType>(sqlConfig: T) => Builder<"sql", T, SQLToZodType<T, false>, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
-    hasMany: <T extends Schema<any>>(config: {
+    hasMany: <T extends Schema<any>, CreateSchema extends ReturnType<typeof createSchema<T>>>(config: {
         fromKey: string;
-        toKey: () => any;
+        toKey: () => T[keyof T];
         schema: () => T;
         defaultCount?: number;
-    }) => Builder<"relation", RelationConfig<T>, z.ZodArray<z.ZodAny>, z.ZodArray<z.ZodAny>, any[], z.ZodArray<z.ZodAny>, z.ZodArray<z.ZodAny>>;
-    hasOne: <T extends Schema<any>>(config: {
+    }) => Builder<"relation", RelationConfig<T>, z.ZodArray<CreateSchema["sqlSchema"]>, z.ZodArray<CreateSchema["clientSchema"]>, any[], z.ZodArray<CreateSchema["clientSchema"]>, z.ZodArray<CreateSchema["validationSchema"]>>;
+    hasOne: <T extends Schema<any>, CreateSchema extends ReturnType<typeof createSchema<T>>>(config: {
         fromKey: string;
-        toKey: () => any;
+        toKey: () => T[keyof T];
         schema: () => T;
-    }) => Builder<"relation", RelationConfig<T>, z.ZodAny, z.ZodAny, any, z.ZodAny, z.ZodAny>;
+    }) => Builder<"relation", RelationConfig<T>, z.ZodArray<CreateSchema["sqlSchema"]>, z.ZodArray<CreateSchema["clientSchema"]>, any[], z.ZodArray<CreateSchema["clientSchema"]>, z.ZodArray<CreateSchema["validationSchema"]>>;
     manyToMany: <T extends Schema<any>>(config: {
         fromKey: string;
         toKey: () => any;
@@ -272,25 +272,43 @@ type SchemaDefinition = {
     _tableName: string;
     [key: string]: any;
 };
-type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema"> = {
+type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
     [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
         config: {
-            [P in Key]: infer S extends z.ZodTypeAny;
-        };
-    } ? S : T[K] extends {
-        type: "reference";
-        to: () => {
-            config: {
-                [P in Key]: infer S extends z.ZodTypeAny;
+            sql: {
+                type: "hasMany" | "manyToMany";
+                schema: () => infer S;
             };
         };
-    } ? S : T[K] extends () => {
+    } ? z.ZodArray<S extends {
+        _tableName: string;
+    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : z.ZodObject<any>> : T[K] extends {
+        config: {
+            sql: {
+                type: "hasOne" | "belongsTo";
+                schema: () => infer S;
+            };
+        };
+    } ? S extends {
+        _tableName: string;
+    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : z.ZodObject<any> : T[K] extends () => {
         type: "hasMany" | "manyToMany";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>> : T[K] extends () => {
+        schema: infer S extends {
+            _tableName: string;
+        };
+    } ? z.ZodArray<z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>> : T[K] extends () => {
         type: "hasOne" | "belongsTo";
-        schema: infer S extends SchemaDefinition;
-    } ? z.ZodObject<Prettify<InferSchemaByKey<S, Key>>> : never;
+        schema: infer S extends {
+            _tableName: string;
+        };
+    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : T[K] extends {
+        type: "reference";
+        to: infer ToFn;
+    } ? ToFn extends () => any ? z.ZodAny : never : T[K] extends {
+        config: {
+            [P in Key]: infer ZodSchema extends z.ZodTypeAny;
+        };
+    } ? ZodSchema : never;
 };
 type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
 type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;

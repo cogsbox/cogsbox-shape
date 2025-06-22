@@ -85,16 +85,16 @@ export const shape = {
             type: "hasMany",
             ...config,
         };
-        // Just pass the config object like reference does
+        const placeholderSchema = z.array(z.any());
         return createBuilder({
             stage: "relation",
-            sqlConfig: relationConfig, // Pass the whole config object
-            sqlZod: z.array(z.any()), // Remove .optional()
-            newZod: z.array(z.any()),
+            sqlConfig: relationConfig,
+            sqlZod: placeholderSchema,
+            newZod: placeholderSchema,
             initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-            clientZod: z.array(z.any()),
-            validationZod: z.array(z.any()),
-        });
+            clientZod: placeholderSchema,
+            validationZod: placeholderSchema,
+        }); // Just cast to any here to satisfy the interface
     },
     hasOne: (config) => {
         const relationConfig = {
@@ -420,15 +420,24 @@ export function createSchema(schema) {
             deferredFields.push({ key, definition });
         }
         else if (definition && typeof definition.config === "object") {
-            // It's a standard field builder. Process it now.
-            sqlFields[key] = definition.config.zodSqlSchema;
-            clientFields[key] = definition.config.zodClientSchema;
-            validationFields[key] = definition.config.zodValidationSchema;
-            defaultValues[key] = definition.config.initialValue;
+            // Check if it's a relation builder
+            const sqlConfig = definition.config.sql;
+            if (sqlConfig &&
+                typeof sqlConfig === "object" &&
+                ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(sqlConfig.type)) {
+                // It's a relation builder - defer it
+                deferredFields.push({ key, definition: sqlConfig });
+            }
+            else {
+                // It's a standard field builder. Process it now.
+                sqlFields[key] = definition.config.zodSqlSchema;
+                clientFields[key] = definition.config.zodClientSchema;
+                validationFields[key] = definition.config.zodValidationSchema;
+                defaultValues[key] = definition.config.initialValue;
+            }
         }
     }
     // --- PASS 2: Process all deferred references and relations ---
-    // Now we can safely call the functions because the schemas they refer to exist.
     for (const { key, definition } of deferredFields) {
         let resolvedDefinition = definition;
         // If it's a relation like hasMany, call the outer function to get the config object

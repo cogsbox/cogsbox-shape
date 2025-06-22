@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodTypeAny } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 
 type CurrentTimestampConfig = {
@@ -263,32 +263,39 @@ interface ShapeAPI {
     SQLToZodType<T, false>,
     SQLToZodType<T, false>
   >;
-  hasMany: <T extends Schema<any>>(config: {
+  hasMany: <
+    T extends Schema<any>,
+    CreateSchema extends ReturnType<typeof createSchema<T>>,
+  >(config: {
     fromKey: string;
-    toKey: () => any;
+    toKey: () => T[keyof T];
     schema: () => T;
     defaultCount?: number;
   }) => Builder<
     "relation",
     RelationConfig<T>,
-    z.ZodArray<z.ZodAny>,
-    z.ZodArray<z.ZodAny>,
+    z.ZodArray<CreateSchema["sqlSchema"]>,
+    z.ZodArray<CreateSchema["clientSchema"]>,
     any[],
-    z.ZodArray<z.ZodAny>,
-    z.ZodArray<z.ZodAny>
+    z.ZodArray<CreateSchema["clientSchema"]>,
+    z.ZodArray<CreateSchema["validationSchema"]>
   >;
-  hasOne: <T extends Schema<any>>(config: {
+
+  hasOne: <
+    T extends Schema<any>,
+    CreateSchema extends ReturnType<typeof createSchema<T>>,
+  >(config: {
     fromKey: string;
-    toKey: () => any;
+    toKey: () => T[keyof T];
     schema: () => T;
   }) => Builder<
     "relation",
     RelationConfig<T>,
-    z.ZodAny,
-    z.ZodAny,
-    any,
-    z.ZodAny,
-    z.ZodAny
+    z.ZodArray<CreateSchema["sqlSchema"]>,
+    z.ZodArray<CreateSchema["clientSchema"]>,
+    any[],
+    z.ZodArray<CreateSchema["clientSchema"]>,
+    z.ZodArray<CreateSchema["validationSchema"]>
   >;
 
   manyToMany: <T extends Schema<any>>(config: {
@@ -412,27 +419,19 @@ export const shape: ShapeAPI = {
       ...config,
     };
 
-    // Just pass the config object like reference does
-    return createBuilder<
-      "relation",
-      RelationConfig<T>,
-      any, // Use any for now to avoid circular deps
-      any,
-      any[],
-      any,
-      any
-    >({
+    const placeholderSchema = z.array(z.any());
+    return createBuilder({
       stage: "relation",
-      sqlConfig: relationConfig, // Pass the whole config object
-      sqlZod: z.array(z.any()), // Remove .optional()
-      newZod: z.array(z.any()),
+      sqlConfig: relationConfig,
+      sqlZod: placeholderSchema,
+      newZod: placeholderSchema,
       initialValue: Array.from(
         { length: config.defaultCount || 0 },
         () => ({})
       ),
-      clientZod: z.array(z.any()),
-      validationZod: z.array(z.any()),
-    });
+      clientZod: placeholderSchema,
+      validationZod: placeholderSchema,
+    }) as any; // Just cast to any here to satisfy the interface
   },
 
   hasOne: <T extends Schema<any>>(config: {
@@ -463,7 +462,7 @@ export const shape: ShapeAPI = {
       initialValue: {},
       clientZod: relationZodType,
       validationZod: relationZodType,
-    });
+    }) as any;
   },
 
   manyToMany: <T extends Schema<any>>(config: {
@@ -972,31 +971,59 @@ function isRelation(value: any): value is Relation<any> {
   );
 }
 type SchemaDefinition = { _tableName: string; [key: string]: any };
+
 type InferSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
-> = {
-  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-    config: { [P in Key]: infer S extends z.ZodTypeAny };
-  }
-    ? S
-    : T[K] extends {
-          type: "reference";
-          to: () => { config: { [P in Key]: infer S extends z.ZodTypeAny } };
-        }
-      ? S // Extract the zod schema from the referenced field's config
-      : T[K] extends () => {
-            type: "hasMany" | "manyToMany";
-            schema: infer S extends SchemaDefinition;
-          }
-        ? z.ZodArray<z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>>
-        : T[K] extends () => {
-              type: "hasOne" | "belongsTo";
-              schema: infer S extends SchemaDefinition;
+  Depth extends any[] = [],
+> = Depth["length"] extends 10 // Prevent infinite recursion
+  ? any
+  : {
+      [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+        // Case 1: Builder for hasMany/manyToMany
+        config: {
+          sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
+        };
+      }
+        ? z.ZodArray<
+            S extends { _tableName: string }
+              ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
+              : z.ZodObject<any>
+          >
+        : // Case 2: Builder for hasOne/belongsTo
+          T[K] extends {
+              config: {
+                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
+              };
             }
-          ? z.ZodObject<Prettify<InferSchemaByKey<S, Key>>>
-          : never;
-};
+          ? S extends { _tableName: string }
+            ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
+            : z.ZodObject<any>
+          : // Case 3: Legacy standalone function
+            T[K] extends () => {
+                type: "hasMany" | "manyToMany";
+                schema: infer S extends { _tableName: string };
+              }
+            ? z.ZodArray<z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>>
+            : T[K] extends () => {
+                  type: "hasOne" | "belongsTo";
+                  schema: infer S extends { _tableName: string };
+                }
+              ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
+              : // Case 4: Reference - THE KEY FIX IS HERE
+                T[K] extends { type: "reference"; to: infer ToFn }
+                ? ToFn extends () => any
+                  ? z.ZodAny // Don't evaluate the function in the type system!
+                  : never
+                : // Case 5: Standard field builder
+                  T[K] extends {
+                      config: {
+                        [P in Key]: infer ZodSchema extends z.ZodTypeAny;
+                      };
+                    }
+                  ? ZodSchema
+                  : never;
+    };
 
 type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
 type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
@@ -1024,7 +1051,6 @@ type InferDefaultValues2<T> = {
 // Replace the entire existing createSchema function with this SINGLE, CORRECT version.
 // In your cogsbox-shape file...
 // Replace the entire existing createSchema function with this SINGLE, CORRECT version.
-
 export function createSchema<T extends { _tableName: string }>(
   schema: T
 ): {
@@ -1054,16 +1080,28 @@ export function createSchema<T extends { _tableName: string }>(
       // It's a reference. Defer it.
       deferredFields.push({ key, definition });
     } else if (definition && typeof definition.config === "object") {
-      // It's a standard field builder. Process it now.
-      sqlFields[key] = definition.config.zodSqlSchema;
-      clientFields[key] = definition.config.zodClientSchema;
-      validationFields[key] = definition.config.zodValidationSchema;
-      defaultValues[key] = definition.config.initialValue;
+      // Check if it's a relation builder
+      const sqlConfig = definition.config.sql;
+      if (
+        sqlConfig &&
+        typeof sqlConfig === "object" &&
+        ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(
+          sqlConfig.type
+        )
+      ) {
+        // It's a relation builder - defer it
+        deferredFields.push({ key, definition: sqlConfig });
+      } else {
+        // It's a standard field builder. Process it now.
+        sqlFields[key] = definition.config.zodSqlSchema;
+        clientFields[key] = definition.config.zodClientSchema;
+        validationFields[key] = definition.config.zodValidationSchema;
+        defaultValues[key] = definition.config.initialValue;
+      }
     }
   }
 
   // --- PASS 2: Process all deferred references and relations ---
-  // Now we can safely call the functions because the schemas they refer to exist.
   for (const { key, definition } of deferredFields) {
     let resolvedDefinition = definition;
 
@@ -1121,7 +1159,6 @@ export function createSchema<T extends { _tableName: string }>(
     defaultValues: defaultValues as Prettify<InferDefaultValues2<T>>,
   };
 }
-
 export type InferSchemaTypes<
   T extends { _tableName: string } & { [key: string]: any },
 > = Prettify<{

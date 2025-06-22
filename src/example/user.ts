@@ -96,7 +96,7 @@ const {
   clientSchema: clSchema,
   defaultValues,
   validationSchema,
-} = createSchema(testPets);
+} = createSchema(userSchema);
 
 type User = z.infer<typeof sqlSchema>;
 type UserDb = z.infer<typeof clSchema>;

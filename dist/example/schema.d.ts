@@ -398,15 +398,111 @@ declare const schemas: {
                 } & {
                     type: "manyToMany";
                 });
-                zodSqlSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
-                zodNewSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
+                zodSqlSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                    id: import("zod").ZodNumber;
+                    name: import("zod").ZodString;
+                    userId: import("zod").ZodAny;
+                    fluffynessScale: import("zod").ZodString;
+                    favourite: import("zod").ZodNumber;
+                }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }>, "many">;
+                zodNewSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                    id: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
+                    name: import("zod").ZodString;
+                    userId: import("zod").ZodAny;
+                    fluffynessScale: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    favourite: import("zod").ZodBoolean;
+                }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }>, "many">;
                 initialValue: any[];
-                zodClientSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
-                zodValidationSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
+                zodClientSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                    id: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
+                    name: import("zod").ZodString;
+                    userId: import("zod").ZodAny;
+                    fluffynessScale: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    favourite: import("zod").ZodBoolean;
+                }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }>, "many">;
+                zodValidationSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                    id: import("zod").ZodNumber;
+                    name: import("zod").ZodString;
+                    userId: import("zod").ZodAny;
+                    fluffynessScale: import("zod").ZodString;
+                    favourite: import("zod").ZodNumber;
+                }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }>, "many">;
             };
             transform: (transforms: {
-                toClient: (dbValue: any[]) => any[];
-                toDb: (clientValue: any[]) => any[];
+                toClient: (dbValue: {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }[]) => {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }[];
+                toDb: (clientValue: {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }[]) => {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }[];
             }) => {
                 config: {
                     sql: ({
@@ -698,15 +794,111 @@ declare const schemas: {
                     } & {
                         type: "manyToMany";
                     });
-                    zodSqlSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
-                    zodNewSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
+                    zodSqlSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                        id: import("zod").ZodNumber;
+                        name: import("zod").ZodString;
+                        userId: import("zod").ZodAny;
+                        fluffynessScale: import("zod").ZodString;
+                        favourite: import("zod").ZodNumber;
+                    }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }>, "many">;
+                    zodNewSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                        id: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
+                        name: import("zod").ZodString;
+                        userId: import("zod").ZodAny;
+                        fluffynessScale: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                        favourite: import("zod").ZodBoolean;
+                    }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }>, "many">;
                     initialValue: any[];
-                    zodClientSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
-                    zodValidationSchema: import("zod").ZodArray<import("zod").ZodAny, "many">;
+                    zodClientSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                        id: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
+                        name: import("zod").ZodString;
+                        userId: import("zod").ZodAny;
+                        fluffynessScale: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                        favourite: import("zod").ZodBoolean;
+                    }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }>, "many">;
+                    zodValidationSchema: import("zod").ZodArray<import("zod").ZodObject<{
+                        id: import("zod").ZodNumber;
+                        name: import("zod").ZodString;
+                        userId: import("zod").ZodAny;
+                        fluffynessScale: import("zod").ZodString;
+                        favourite: import("zod").ZodNumber;
+                    }, import("zod").UnknownKeysParam, import("zod").ZodTypeAny, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }, {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }>, "many">;
                 } & {
                     transforms: {
-                        toClient: (dbValue: any[]) => any[];
-                        toDb: (clientValue: any[]) => any[];
+                        toClient: (dbValue: {
+                            name: string;
+                            id: number;
+                            fluffynessScale: string;
+                            favourite: number;
+                            userId?: any;
+                        }[]) => {
+                            name: string;
+                            id: number;
+                            fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                            favourite: boolean;
+                            userId?: any;
+                        }[];
+                        toDb: (clientValue: {
+                            name: string;
+                            id: number;
+                            fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                            favourite: boolean;
+                            userId?: any;
+                        }[]) => {
+                            name: string;
+                            id: number;
+                            fluffynessScale: string;
+                            favourite: number;
+                            userId?: any;
+                        }[];
                     };
                 };
             };

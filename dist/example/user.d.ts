@@ -464,15 +464,111 @@ export declare const userSchema: {
             } & {
                 type: "manyToMany";
             });
-            zodSqlSchema: z.ZodArray<z.ZodAny, "many">;
-            zodNewSchema: z.ZodArray<z.ZodAny, "many">;
+            zodSqlSchema: z.ZodArray<z.ZodObject<{
+                id: z.ZodNumber;
+                name: z.ZodString;
+                userId: z.ZodAny;
+                fluffynessScale: z.ZodString;
+                favourite: z.ZodNumber;
+            }, z.UnknownKeysParam, z.ZodTypeAny, {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }, {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }>, "many">;
+            zodNewSchema: z.ZodArray<z.ZodObject<{
+                id: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                name: z.ZodString;
+                userId: z.ZodAny;
+                fluffynessScale: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                favourite: z.ZodBoolean;
+            }, z.UnknownKeysParam, z.ZodTypeAny, {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }, {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }>, "many">;
             initialValue: any[];
-            zodClientSchema: z.ZodArray<z.ZodAny, "many">;
-            zodValidationSchema: z.ZodArray<z.ZodAny, "many">;
+            zodClientSchema: z.ZodArray<z.ZodObject<{
+                id: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                name: z.ZodString;
+                userId: z.ZodAny;
+                fluffynessScale: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                favourite: z.ZodBoolean;
+            }, z.UnknownKeysParam, z.ZodTypeAny, {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }, {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }>, "many">;
+            zodValidationSchema: z.ZodArray<z.ZodObject<{
+                id: z.ZodNumber;
+                name: z.ZodString;
+                userId: z.ZodAny;
+                fluffynessScale: z.ZodString;
+                favourite: z.ZodNumber;
+            }, z.UnknownKeysParam, z.ZodTypeAny, {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }, {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }>, "many">;
         };
         transform: (transforms: {
-            toClient: (dbValue: any[]) => any[];
-            toDb: (clientValue: any[]) => any[];
+            toClient: (dbValue: {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }[]) => {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }[];
+            toDb: (clientValue: {
+                name: string;
+                id: number;
+                fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                favourite: boolean;
+                userId?: any;
+            }[]) => {
+                name: string;
+                id: number;
+                fluffynessScale: string;
+                favourite: number;
+                userId?: any;
+            }[];
         }) => {
             config: {
                 sql: ({
@@ -764,15 +860,111 @@ export declare const userSchema: {
                 } & {
                     type: "manyToMany";
                 });
-                zodSqlSchema: z.ZodArray<z.ZodAny, "many">;
-                zodNewSchema: z.ZodArray<z.ZodAny, "many">;
+                zodSqlSchema: z.ZodArray<z.ZodObject<{
+                    id: z.ZodNumber;
+                    name: z.ZodString;
+                    userId: z.ZodAny;
+                    fluffynessScale: z.ZodString;
+                    favourite: z.ZodNumber;
+                }, z.UnknownKeysParam, z.ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }>, "many">;
+                zodNewSchema: z.ZodArray<z.ZodObject<{
+                    id: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                    name: z.ZodString;
+                    userId: z.ZodAny;
+                    fluffynessScale: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    favourite: z.ZodBoolean;
+                }, z.UnknownKeysParam, z.ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }>, "many">;
                 initialValue: any[];
-                zodClientSchema: z.ZodArray<z.ZodAny, "many">;
-                zodValidationSchema: z.ZodArray<z.ZodAny, "many">;
+                zodClientSchema: z.ZodArray<z.ZodObject<{
+                    id: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                    name: z.ZodString;
+                    userId: z.ZodAny;
+                    fluffynessScale: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                    favourite: z.ZodBoolean;
+                }, z.UnknownKeysParam, z.ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                    favourite: boolean;
+                    userId?: any;
+                }>, "many">;
+                zodValidationSchema: z.ZodArray<z.ZodObject<{
+                    id: z.ZodNumber;
+                    name: z.ZodString;
+                    userId: z.ZodAny;
+                    fluffynessScale: z.ZodString;
+                    favourite: z.ZodNumber;
+                }, z.UnknownKeysParam, z.ZodTypeAny, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }, {
+                    name: string;
+                    id: number;
+                    fluffynessScale: string;
+                    favourite: number;
+                    userId?: any;
+                }>, "many">;
             } & {
                 transforms: {
-                    toClient: (dbValue: any[]) => any[];
-                    toDb: (clientValue: any[]) => any[];
+                    toClient: (dbValue: {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }[]) => {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }[];
+                    toDb: (clientValue: {
+                        name: string;
+                        id: number;
+                        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                        favourite: boolean;
+                        userId?: any;
+                    }[]) => {
+                        name: string;
+                        id: number;
+                        fluffynessScale: string;
+                        favourite: number;
+                        userId?: any;
+                    }[];
                 };
             };
         };

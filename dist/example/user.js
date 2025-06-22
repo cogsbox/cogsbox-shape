@@ -74,4 +74,4 @@ const testPets = {
         toDb: (str) => new Date(str),
     }),
 };
-const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema(testPets);
+const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema(userSchema);
