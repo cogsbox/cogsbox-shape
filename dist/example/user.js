@@ -49,7 +49,7 @@ export const userSchema = {
         schema: () => petSchema,
         defaultCount: 1,
     })
-        .validation(({ sql }) => sql),
+        .validation(({ sql }) => sql.min(1)),
 };
 const testPets = {
     _tableName: "users",

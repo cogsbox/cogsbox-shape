@@ -111,6 +111,8 @@ type BuilderConfig<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTy
     initialValue: TInitialValue;
     zodClientSchema: TClient;
     zodValidationSchema: TValidation;
+    clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+    validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
 };
 export type Builder<TStage extends Stage, T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> = {
     config: {
@@ -160,6 +162,8 @@ declare function createBuilder<TStage extends "sql" | "relation" | "new" | "clie
     clientZod: TClient;
     validationZod: TValidation;
     completedStages?: Set<string>;
+    clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+    validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
 }): Builder<TStage, T, TSql, TNew, TInitialValue, TClient, TValidation>;
 export declare function hasMany<T extends Schema<any>>(config: {
     fromKey: string;

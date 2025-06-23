@@ -129,7 +129,7 @@ export const shape = {
         });
     },
 };
-// === UPDATED: createBuilder to Handle Relations ===
+// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createBuilder
 function createBuilder(config) {
     const completedStages = config.completedStages || new Set([config.stage]);
     const builderObject = {
@@ -141,8 +141,12 @@ function createBuilder(config) {
                 inferDefaultFromZod(config.clientZod, config.sqlConfig),
             zodClientSchema: config.clientZod,
             zodValidationSchema: config.validationZod,
+            clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
+            validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
         },
-        initialState: (schemaOrDefault, defaultValue) => {
+        initialState: (
+        // ... this initialState function remains unchanged ...
+        schemaOrDefault, defaultValue) => {
             if (completedStages.has("new")) {
                 throw new Error("initialState() can only be called once in the chain");
             }
@@ -185,11 +189,32 @@ function createBuilder(config) {
             if (completedStages.has("validation")) {
                 throw new Error("client() must be called before validation()");
             }
+            const newCompletedStages = new Set(completedStages);
+            newCompletedStages.add("client");
+            // ---- THIS IS THE MAIN FIX ----
+            if (config.stage === "relation") {
+                return createBuilder({
+                    ...config,
+                    stage: "client",
+                    completedStages: newCompletedStages,
+                    // Store the transform function to be used later
+                    clientTransform: (baseSchema) => {
+                        if (isFunction(assert)) {
+                            // We use `as any` here to resolve the complex generic type error.
+                            // It's safe because we know the baseSchema will have the necessary Zod methods.
+                            return assert({
+                                sql: baseSchema,
+                                initialState: config.newZod,
+                            });
+                        }
+                        return assert;
+                    },
+                });
+            }
+            // This is the original logic for non-relation fields
             const clientSchema = isFunction(assert)
                 ? assert({ sql: config.sqlZod, initialState: config.newZod })
                 : assert;
-            const newCompletedStages = new Set(completedStages);
-            newCompletedStages.add("client");
             return createBuilder({
                 ...config,
                 stage: "client",
@@ -198,7 +223,9 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
-        validation: (assert) => {
+        validation: (
+        // ... this validation function remains unchanged ...
+        assert) => {
             if (completedStages.has("validation")) {
                 throw new Error("validation() can only be called once in the chain");
             }
@@ -480,14 +507,15 @@ export function createSchema(schema) {
             definition.config.sql &&
             typeof definition.config.sql === "object" &&
             ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(definition.config.sql.type)) {
-            // Handle builder-style relations (shape.hasMany().client())
-            const relationConfig = definition.config.sql;
+            // This is a builder-style relation like `shape.hasMany().client()`
+            const config = definition.config;
+            const relationConfig = config.sql;
             const childSchemaResult = createSchema(relationConfig.schema);
-            // Create base schemas
-            let baseSqlSchema, baseClientSchema, baseValidationSchema;
+            // Create the base schemas for the relation
+            let baseClientSchema;
+            let baseValidationSchema;
             if (relationConfig.type === "hasMany" ||
                 relationConfig.type === "manyToMany") {
-                baseSqlSchema = z.array(childSchemaResult.sqlSchema).optional();
                 baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
                 baseValidationSchema = z
                     .array(childSchemaResult.validationSchema)
@@ -495,16 +523,18 @@ export function createSchema(schema) {
                 defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
             }
             else {
-                baseSqlSchema = childSchemaResult.sqlSchema.optional();
                 baseClientSchema = childSchemaResult.clientSchema.optional();
                 baseValidationSchema = childSchemaResult.validationSchema.optional();
                 defaultValues[key] = childSchemaResult.defaultValues;
             }
-            // Apply the transforms from the builder config
-            sqlFields[key] = definition.config.zodSqlSchema || baseSqlSchema;
-            clientFields[key] = definition.config.zodClientSchema || baseClientSchema;
-            validationFields[key] =
-                definition.config.zodValidationSchema || baseValidationSchema;
+            sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional(); // SQL schema is never transformed by client
+            clientFields[key] = config.clientTransform
+                ? config.clientTransform(baseClientSchema) // Apply the stored function
+                : baseClientSchema; // Or use the default if no transform exists
+            // Validation falls back to the client schema (which may have been transformed)
+            validationFields[key] = config.validationTransform
+                ? config.validationTransform(baseValidationSchema)
+                : clientFields[key];
         }
     }
     return {

@@ -31,6 +31,8 @@ declare const schemas: {
                     initialValue: string;
                     zodClientSchema: import("zod").ZodString;
                     zodValidationSchema: import("zod").ZodString;
+                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                 } & {
                     transforms: {
                         toClient: (dbValue: string) => string;
@@ -65,6 +67,8 @@ declare const schemas: {
                     initialValue: string;
                     zodClientSchema: import("zod").ZodString;
                     zodValidationSchema: import("zod").ZodString;
+                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                 } & {
                     transforms: {
                         toClient: (dbValue: string) => string;
@@ -99,6 +103,8 @@ declare const schemas: {
                     initialValue: string;
                     zodClientSchema: import("zod").ZodString;
                     zodValidationSchema: import("zod").ZodString;
+                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                 } & {
                     transforms: {
                         toClient: (dbValue: string) => string;
@@ -125,6 +131,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                 zodValidationSchema: import("zod").ZodString;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => number;
@@ -153,6 +161,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                 zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -170,6 +180,8 @@ declare const schemas: {
                                 initialValue: number;
                                 zodClientSchema: import("zod").ZodBoolean;
                                 zodValidationSchema: import("zod").ZodBoolean;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => boolean;
@@ -197,6 +209,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                 zodValidationSchema: import("zod").ZodString;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => number;
@@ -225,6 +239,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                 zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -242,6 +258,8 @@ declare const schemas: {
                                 initialValue: number;
                                 zodClientSchema: import("zod").ZodBoolean;
                                 zodValidationSchema: import("zod").ZodBoolean;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => boolean;
@@ -269,6 +287,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                 zodValidationSchema: import("zod").ZodString;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => number;
@@ -297,6 +317,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                 zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -314,6 +336,8 @@ declare const schemas: {
                                 initialValue: number;
                                 zodClientSchema: import("zod").ZodBoolean;
                                 zodValidationSchema: import("zod").ZodBoolean;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => boolean;
@@ -341,6 +365,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                 zodValidationSchema: import("zod").ZodString;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => number;
@@ -369,6 +395,8 @@ declare const schemas: {
                                 initialValue: string;
                                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                 zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -386,6 +414,8 @@ declare const schemas: {
                                 initialValue: number;
                                 zodClientSchema: import("zod").ZodBoolean;
                                 zodValidationSchema: import("zod").ZodBoolean;
+                                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                             } & {
                                 transforms: {
                                     toClient: (dbValue: number) => boolean;
@@ -521,6 +551,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                     zodValidationSchema: import("zod").ZodString;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => number;
@@ -549,6 +581,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                     zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -566,6 +600,8 @@ declare const schemas: {
                                     initialValue: number;
                                     zodClientSchema: import("zod").ZodBoolean;
                                     zodValidationSchema: import("zod").ZodBoolean;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => boolean;
@@ -593,6 +629,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                     zodValidationSchema: import("zod").ZodString;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => number;
@@ -621,6 +659,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                     zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -638,6 +678,8 @@ declare const schemas: {
                                     initialValue: number;
                                     zodClientSchema: import("zod").ZodBoolean;
                                     zodValidationSchema: import("zod").ZodBoolean;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => boolean;
@@ -665,6 +707,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                     zodValidationSchema: import("zod").ZodString;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => number;
@@ -693,6 +737,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                     zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -710,6 +756,8 @@ declare const schemas: {
                                     initialValue: number;
                                     zodClientSchema: import("zod").ZodBoolean;
                                     zodValidationSchema: import("zod").ZodBoolean;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => boolean;
@@ -737,6 +785,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                                     zodValidationSchema: import("zod").ZodString;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => number;
@@ -765,6 +815,8 @@ declare const schemas: {
                                     initialValue: string;
                                     zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                                     zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -782,6 +834,8 @@ declare const schemas: {
                                     initialValue: number;
                                     zodClientSchema: import("zod").ZodBoolean;
                                     zodValidationSchema: import("zod").ZodBoolean;
+                                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                                 } & {
                                     transforms: {
                                         toClient: (dbValue: number) => boolean;
@@ -871,6 +925,8 @@ declare const schemas: {
                         favourite: number;
                         userId?: any;
                     }>, "many">;
+                    clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                    validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
                 } & {
                     transforms: {
                         toClient: (dbValue: {
@@ -917,6 +973,8 @@ declare const schemas: {
                 initialValue: string;
                 zodClientSchema: import("zod").ZodUnion<[import("zod").ZodNumber, import("zod").ZodNumber]>;
                 zodValidationSchema: import("zod").ZodString;
+                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
             } & {
                 transforms: {
                     toClient: (dbValue: number) => number;
@@ -945,6 +1003,8 @@ declare const schemas: {
                 initialValue: string;
                 zodClientSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
                 zodValidationSchema: import("zod").ZodArray<import("zod").ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
             } & {
                 transforms: {
                     toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
@@ -962,6 +1022,8 @@ declare const schemas: {
                 initialValue: number;
                 zodClientSchema: import("zod").ZodBoolean;
                 zodValidationSchema: import("zod").ZodBoolean;
+                clientTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
+                validationTransform?: (schema: import("zod").ZodTypeAny) => import("zod").ZodTypeAny;
             } & {
                 transforms: {
                     toClient: (dbValue: number) => boolean;
