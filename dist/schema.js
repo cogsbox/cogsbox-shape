@@ -422,68 +422,35 @@ function isRelation(value) {
         "toKey" in value &&
         "schema" in value);
 }
-// In your cogsbox-shape file...
-// Replace the entire existing createSchema function with this SINGLE, CORRECT version.
-// In your cogsbox-shape file...
-// Replace the entire existing createSchema function with this SINGLE, CORRECT version.
 export function createSchema(schema) {
     const sqlFields = {};
     const clientFields = {};
     const validationFields = {};
     const defaultValues = {};
-    // Store the functions to be executed in a second pass
     const deferredFields = [];
-    // --- PASS 1: Process all non-function fields ---
+    // --- PASS 1: Separate immediate fields from deferred relations/references ---
     for (const key in schema) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
         const definition = schema[key];
-        if (typeof definition === "function") {
-            // It's a hasMany, belongsTo, etc. Defer it.
+        if ((definition && typeof definition.config === "object") || // It's a builder
+            typeof definition === "function" || // It's a legacy relation
+            (definition && definition.type === "reference") // It's a reference
+        ) {
+            // Defer all builders, functions, and references to Pass 2
             deferredFields.push({ key, definition });
         }
-        else if (definition && definition.type === "reference") {
-            // It's a reference. Defer it.
-            deferredFields.push({ key, definition });
-        }
-        else if (definition && typeof definition.config === "object") {
-            // Check if it's a relation builder
-            const sqlConfig = definition.config.sql;
-            if (sqlConfig &&
-                typeof sqlConfig === "object" &&
-                ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(sqlConfig.type)) {
-                // It's a relation builder - defer it
-                deferredFields.push({ key, definition: sqlConfig });
-            }
-            else {
-                // It's a standard field builder. Process it now.
-                sqlFields[key] = definition.config.zodSqlSchema;
-                clientFields[key] = definition.config.zodClientSchema;
-                validationFields[key] = definition.config.zodValidationSchema;
-                defaultValues[key] = definition.config.initialValue;
-            }
+        else {
+            // This case should ideally not be hit with the builder pattern, but is safe to have.
+            // Process any non-builder, non-deferred fields if they exist.
         }
     }
-    // In createSchema function, in PASS 2 where relations are processed:
+    // --- PASS 2: Process all deferred references and relations ---
     for (const { key, definition } of deferredFields) {
         let resolvedDefinition = definition;
-        // If it's a relation like hasMany, call the outer function to get the config object
         if (typeof resolvedDefinition === "function") {
+            // Handle legacy function style: hasMany(...)
             resolvedDefinition = resolvedDefinition();
-        }
-        if (resolvedDefinition && resolvedDefinition.type === "reference") {
-            const referencedField = resolvedDefinition.to(); // This is now safe to call
-            if (!referencedField || !referencedField.config) {
-                throw new Error(`Could not resolve reference for key "${key}"`);
-            }
-            sqlFields[key] = referencedField.config.zodSqlSchema;
-            clientFields[key] = referencedField.config.zodClientSchema;
-            validationFields[key] = referencedField.config.zodValidationSchema;
-            defaultValues[key] = referencedField.config.initialValue;
-        }
-        else if (resolvedDefinition &&
-            ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(resolvedDefinition.type)) {
-            // Handle legacy function-style relations
             const relation = resolvedDefinition;
             const childSchemaResult = createSchema(relation.schema);
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
@@ -495,46 +462,61 @@ export function createSchema(schema) {
                 defaultValues[key] = Array.from({ length: relation.defaultCount || 0 }, () => childSchemaResult.defaultValues);
             }
             else {
-                // hasOne or belongsTo
                 sqlFields[key] = childSchemaResult.sqlSchema.optional();
                 clientFields[key] = childSchemaResult.clientSchema.optional();
                 validationFields[key] = childSchemaResult.validationSchema.optional();
                 defaultValues[key] = childSchemaResult.defaultValues;
             }
         }
-        else if (definition &&
-            definition.config &&
-            definition.config.sql &&
-            typeof definition.config.sql === "object" &&
-            ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(definition.config.sql.type)) {
-            // This is a builder-style relation like `shape.hasMany().client()`
-            const config = definition.config;
-            const relationConfig = config.sql;
-            const childSchemaResult = createSchema(relationConfig.schema);
-            // Create the base schemas for the relation
-            let baseClientSchema;
-            let baseValidationSchema;
-            if (relationConfig.type === "hasMany" ||
-                relationConfig.type === "manyToMany") {
-                baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
-                baseValidationSchema = z
-                    .array(childSchemaResult.validationSchema)
-                    .optional();
-                defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
+        else if (resolvedDefinition && resolvedDefinition.type === "reference") {
+            // Handle reference fields
+            const referencedField = resolvedDefinition.to();
+            sqlFields[key] = referencedField.config.zodSqlSchema;
+            clientFields[key] = referencedField.config.zodClientSchema;
+            validationFields[key] = referencedField.config.zodValidationSchema;
+            defaultValues[key] = referencedField.config.initialValue;
+        }
+        else if (resolvedDefinition && resolvedDefinition.config) {
+            // It's a builder object (`shape.sql(...)` or `shape.hasMany(...)`)
+            const config = resolvedDefinition.config;
+            const sqlConfig = config.sql;
+            if (sqlConfig &&
+                typeof sqlConfig === "object" &&
+                ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
+                // --- THIS IS THE KEY PART FOR RELATION BUILDERS ---
+                const relationConfig = sqlConfig;
+                const childSchemaResult = createSchema(relationConfig.schema);
+                let baseClientSchema;
+                let baseValidationSchema;
+                if (relationConfig.type === "hasMany" ||
+                    relationConfig.type === "manyToMany") {
+                    baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
+                    baseValidationSchema = z
+                        .array(childSchemaResult.validationSchema)
+                        .optional();
+                    defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
+                }
+                else {
+                    baseClientSchema = childSchemaResult.clientSchema.optional();
+                    baseValidationSchema = childSchemaResult.validationSchema.optional();
+                    defaultValues[key] = childSchemaResult.defaultValues;
+                }
+                // Apply the stored transform from the builder if it exists.
+                sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
+                clientFields[key] = config.clientTransform
+                    ? config.clientTransform(baseClientSchema) // APPLY THE TRANSFORM
+                    : baseClientSchema;
+                validationFields[key] = config.validationTransform
+                    ? config.validationTransform(baseValidationSchema) // APPLY VALIDATION TRANSFORM
+                    : clientFields[key]; // Fallback to the (potentially transformed) client schema
             }
             else {
-                baseClientSchema = childSchemaResult.clientSchema.optional();
-                baseValidationSchema = childSchemaResult.validationSchema.optional();
-                defaultValues[key] = childSchemaResult.defaultValues;
+                // It's a standard field builder (`shape.sql(...)`)
+                sqlFields[key] = config.zodSqlSchema;
+                clientFields[key] = config.zodClientSchema;
+                validationFields[key] = config.zodValidationSchema;
+                defaultValues[key] = config.initialValue;
             }
-            sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional(); // SQL schema is never transformed by client
-            clientFields[key] = config.clientTransform
-                ? config.clientTransform(baseClientSchema) // Apply the stored function
-                : baseClientSchema; // Or use the default if no transform exists
-            // Validation falls back to the client schema (which may have been transformed)
-            validationFields[key] = config.validationTransform
-                ? config.validationTransform(baseValidationSchema)
-                : clientFields[key];
         }
     }
     return {
