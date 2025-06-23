@@ -171,7 +171,7 @@ type BaseRelationConfig<T extends Schema<any>> = {
 };
 
 // Extended relation types
-type RelationConfig<T extends Schema<any>> =
+export type RelationConfig<T extends Schema<any>> =
   | (BaseRelationConfig<T> & { type: "hasMany" })
   | (BaseRelationConfig<T> & { type: "hasOne" })
   | (BaseRelationConfig<T> & { type: "belongsTo" })
@@ -1162,7 +1162,6 @@ export function createSchema<T extends { _tableName: string }>(
         const relationConfig = sqlConfig;
         const childSchemaResult = createSchema(relationConfig.schema);
 
-        // --- THE FIX IS HERE ---
         // 1. Create the BASE schema WITHOUT .optional()
         let rawClientSchema: z.ZodTypeAny;
         let rawValidationSchema: z.ZodTypeAny;
@@ -1171,15 +1170,15 @@ export function createSchema<T extends { _tableName: string }>(
           relationConfig.type === "hasMany" ||
           relationConfig.type === "manyToMany"
         ) {
-          rawClientSchema = z.array(childSchemaResult.clientSchema); // No .optional()
-          rawValidationSchema = z.array(childSchemaResult.validationSchema); // No .optional()
+          rawClientSchema = z.array(childSchemaResult.clientSchema);
+          rawValidationSchema = z.array(childSchemaResult.validationSchema);
           defaultValues[key] = Array.from(
             { length: relationConfig.defaultCount || 0 },
             () => childSchemaResult.defaultValues
           );
         } else {
-          rawClientSchema = childSchemaResult.clientSchema; // No .optional()
-          rawValidationSchema = childSchemaResult.validationSchema; // No .optional()
+          rawClientSchema = childSchemaResult.clientSchema;
+          rawValidationSchema = childSchemaResult.validationSchema;
           defaultValues[key] = childSchemaResult.defaultValues;
         }
 
@@ -1192,10 +1191,10 @@ export function createSchema<T extends { _tableName: string }>(
           ? config.validationTransform(rawValidationSchema)
           : transformedClientSchema;
 
-        // 3. NOW, make the final, transformed schema optional.
-        sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
-        clientFields[key] = transformedClientSchema.optional();
-        validationFields[key] = transformedValidationSchema.optional();
+        // 3. Assign the final schemas. NO .optional() is added.
+        sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional(); // SQL is still optional, as it might not be loaded.
+        clientFields[key] = transformedClientSchema; // <-- NO .optional()
+        validationFields[key] = transformedValidationSchema; // <-- NO .optional()
       } else {
         // It's a standard field builder (`shape.sql(...)`)
         sqlFields[key] = config.zodSqlSchema;

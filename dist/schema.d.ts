@@ -85,7 +85,7 @@ type BaseRelationConfig<T extends Schema<any>> = {
     schema: () => T;
     defaultCount?: number;
 };
-type RelationConfig<T extends Schema<any>> = (BaseRelationConfig<T> & {
+export type RelationConfig<T extends Schema<any>> = (BaseRelationConfig<T> & {
     type: "hasMany";
 }) | (BaseRelationConfig<T> & {
     type: "hasOne";

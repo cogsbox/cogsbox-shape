@@ -187,319 +187,78 @@ export declare const userSchema: {
     };
     pets: {
         config: {
-            sql: ({
-                fromKey: string;
-                toKey: () => any;
-                schema: () => {
-                    _tableName: string;
-                    id: {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: string;
-                            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                            zodValidationSchema: z.ZodString;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => number;
-                                toDb: (clientValue: number) => number;
-                            };
-                        };
-                    };
-                    name: import("../schema.js").Builder<"sql", {
-                        type: "varchar";
-                        length: number;
-                    }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                    userId: {
-                        type: "reference";
-                        to: () => import("../schema.js").Builder<"sql", {
+            sql: import("../schema.js").RelationConfig<{
+                _tableName: string;
+                id: {
+                    config: {
+                        sql: {
                             type: "int";
                             pk: true;
-                        }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                    };
-                    fluffynessScale: {
-                        config: {
-                            sql: {
-                                type: "text";
-                            };
-                            zodSqlSchema: z.ZodString;
-                            zodNewSchema: z.ZodString;
-                            initialValue: string;
-                            zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                            };
                         };
-                    };
-                    favourite: {
-                        config: {
-                            sql: {
-                                type: "int";
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: number;
-                            zodClientSchema: z.ZodBoolean;
-                            zodValidationSchema: z.ZodBoolean;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => boolean;
-                                toDb: (clientValue: boolean) => number;
-                            };
+                        zodSqlSchema: z.ZodNumber;
+                        zodNewSchema: z.ZodNumber;
+                        initialValue: string;
+                        zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                        zodValidationSchema: z.ZodString;
+                        clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => number;
+                            toDb: (clientValue: number) => number;
                         };
                     };
                 };
-                defaultCount?: number;
-            } & {
-                type: "hasMany";
-            }) | ({
-                fromKey: string;
-                toKey: () => any;
-                schema: () => {
-                    _tableName: string;
-                    id: {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: string;
-                            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                            zodValidationSchema: z.ZodString;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => number;
-                                toDb: (clientValue: number) => number;
-                            };
+                name: import("../schema.js").Builder<"sql", {
+                    type: "varchar";
+                    length: number;
+                }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
+                userId: {
+                    type: "reference";
+                    to: () => import("../schema.js").Builder<"sql", {
+                        type: "int";
+                        pk: true;
+                    }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
+                };
+                fluffynessScale: {
+                    config: {
+                        sql: {
+                            type: "text";
                         };
-                    };
-                    name: import("../schema.js").Builder<"sql", {
-                        type: "varchar";
-                        length: number;
-                    }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                    userId: {
-                        type: "reference";
-                        to: () => import("../schema.js").Builder<"sql", {
-                            type: "int";
-                            pk: true;
-                        }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                    };
-                    fluffynessScale: {
-                        config: {
-                            sql: {
-                                type: "text";
-                            };
-                            zodSqlSchema: z.ZodString;
-                            zodNewSchema: z.ZodString;
-                            initialValue: string;
-                            zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                            };
-                        };
-                    };
-                    favourite: {
-                        config: {
-                            sql: {
-                                type: "int";
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: number;
-                            zodClientSchema: z.ZodBoolean;
-                            zodValidationSchema: z.ZodBoolean;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => boolean;
-                                toDb: (clientValue: boolean) => number;
-                            };
+                        zodSqlSchema: z.ZodString;
+                        zodNewSchema: z.ZodString;
+                        initialValue: string;
+                        zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                        zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                        clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                            toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
                         };
                     };
                 };
-                defaultCount?: number;
-            } & {
-                type: "hasOne";
-            }) | ({
-                fromKey: string;
-                toKey: () => any;
-                schema: () => {
-                    _tableName: string;
-                    id: {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: string;
-                            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                            zodValidationSchema: z.ZodString;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => number;
-                                toDb: (clientValue: number) => number;
-                            };
-                        };
-                    };
-                    name: import("../schema.js").Builder<"sql", {
-                        type: "varchar";
-                        length: number;
-                    }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                    userId: {
-                        type: "reference";
-                        to: () => import("../schema.js").Builder<"sql", {
+                favourite: {
+                    config: {
+                        sql: {
                             type: "int";
-                            pk: true;
-                        }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                    };
-                    fluffynessScale: {
-                        config: {
-                            sql: {
-                                type: "text";
-                            };
-                            zodSqlSchema: z.ZodString;
-                            zodNewSchema: z.ZodString;
-                            initialValue: string;
-                            zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                            };
                         };
-                    };
-                    favourite: {
-                        config: {
-                            sql: {
-                                type: "int";
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: number;
-                            zodClientSchema: z.ZodBoolean;
-                            zodValidationSchema: z.ZodBoolean;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => boolean;
-                                toDb: (clientValue: boolean) => number;
-                            };
+                        zodSqlSchema: z.ZodNumber;
+                        zodNewSchema: z.ZodNumber;
+                        initialValue: number;
+                        zodClientSchema: z.ZodBoolean;
+                        zodValidationSchema: z.ZodBoolean;
+                        clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                    } & {
+                        transforms: {
+                            toClient: (dbValue: number) => boolean;
+                            toDb: (clientValue: boolean) => number;
                         };
                     };
                 };
-                defaultCount?: number;
-            } & {
-                type: "belongsTo";
-            }) | ({
-                fromKey: string;
-                toKey: () => any;
-                schema: () => {
-                    _tableName: string;
-                    id: {
-                        config: {
-                            sql: {
-                                type: "int";
-                                pk: true;
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: string;
-                            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                            zodValidationSchema: z.ZodString;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => number;
-                                toDb: (clientValue: number) => number;
-                            };
-                        };
-                    };
-                    name: import("../schema.js").Builder<"sql", {
-                        type: "varchar";
-                        length: number;
-                    }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                    userId: {
-                        type: "reference";
-                        to: () => import("../schema.js").Builder<"sql", {
-                            type: "int";
-                            pk: true;
-                        }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                    };
-                    fluffynessScale: {
-                        config: {
-                            sql: {
-                                type: "text";
-                            };
-                            zodSqlSchema: z.ZodString;
-                            zodNewSchema: z.ZodString;
-                            initialValue: string;
-                            zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                            };
-                        };
-                    };
-                    favourite: {
-                        config: {
-                            sql: {
-                                type: "int";
-                            };
-                            zodSqlSchema: z.ZodNumber;
-                            zodNewSchema: z.ZodNumber;
-                            initialValue: number;
-                            zodClientSchema: z.ZodBoolean;
-                            zodValidationSchema: z.ZodBoolean;
-                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                        } & {
-                            transforms: {
-                                toClient: (dbValue: number) => boolean;
-                                toDb: (clientValue: boolean) => number;
-                            };
-                        };
-                    };
-                };
-                defaultCount?: number;
-            } & {
-                type: "manyToMany";
-            });
+            }>;
             zodSqlSchema: z.ZodArray<z.ZodObject<{
                 id: z.ZodNumber;
                 name: z.ZodString;
@@ -607,319 +366,78 @@ export declare const userSchema: {
             }[];
         }) => {
             config: {
-                sql: ({
-                    fromKey: string;
-                    toKey: () => any;
-                    schema: () => {
-                        _tableName: string;
-                        id: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: string;
-                                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                                zodValidationSchema: z.ZodString;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => number;
-                                    toDb: (clientValue: number) => number;
-                                };
-                            };
-                        };
-                        name: import("../schema.js").Builder<"sql", {
-                            type: "varchar";
-                            length: number;
-                        }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                        userId: {
-                            type: "reference";
-                            to: () => import("../schema.js").Builder<"sql", {
+                sql: import("../schema.js").RelationConfig<{
+                    _tableName: string;
+                    id: {
+                        config: {
+                            sql: {
                                 type: "int";
                                 pk: true;
-                            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                        };
-                        fluffynessScale: {
-                            config: {
-                                sql: {
-                                    type: "text";
-                                };
-                                zodSqlSchema: z.ZodString;
-                                zodNewSchema: z.ZodString;
-                                initialValue: string;
-                                zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                                };
                             };
-                        };
-                        favourite: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: number;
-                                zodClientSchema: z.ZodBoolean;
-                                zodValidationSchema: z.ZodBoolean;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => boolean;
-                                    toDb: (clientValue: boolean) => number;
-                                };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: z.ZodNumber;
+                            initialValue: string;
+                            zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
+                            zodValidationSchema: z.ZodString;
+                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => number;
+                                toDb: (clientValue: number) => number;
                             };
                         };
                     };
-                    defaultCount?: number;
-                } & {
-                    type: "hasMany";
-                }) | ({
-                    fromKey: string;
-                    toKey: () => any;
-                    schema: () => {
-                        _tableName: string;
-                        id: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: string;
-                                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                                zodValidationSchema: z.ZodString;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => number;
-                                    toDb: (clientValue: number) => number;
-                                };
+                    name: import("../schema.js").Builder<"sql", {
+                        type: "varchar";
+                        length: number;
+                    }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
+                    userId: {
+                        type: "reference";
+                        to: () => import("../schema.js").Builder<"sql", {
+                            type: "int";
+                            pk: true;
+                        }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
+                    };
+                    fluffynessScale: {
+                        config: {
+                            sql: {
+                                type: "text";
                             };
-                        };
-                        name: import("../schema.js").Builder<"sql", {
-                            type: "varchar";
-                            length: number;
-                        }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                        userId: {
-                            type: "reference";
-                            to: () => import("../schema.js").Builder<"sql", {
-                                type: "int";
-                                pk: true;
-                            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                        };
-                        fluffynessScale: {
-                            config: {
-                                sql: {
-                                    type: "text";
-                                };
-                                zodSqlSchema: z.ZodString;
-                                zodNewSchema: z.ZodString;
-                                initialValue: string;
-                                zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                                };
-                            };
-                        };
-                        favourite: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: number;
-                                zodClientSchema: z.ZodBoolean;
-                                zodValidationSchema: z.ZodBoolean;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => boolean;
-                                    toDb: (clientValue: boolean) => number;
-                                };
+                            zodSqlSchema: z.ZodString;
+                            zodNewSchema: z.ZodString;
+                            initialValue: string;
+                            zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                            zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
+                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
+                                toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
                             };
                         };
                     };
-                    defaultCount?: number;
-                } & {
-                    type: "hasOne";
-                }) | ({
-                    fromKey: string;
-                    toKey: () => any;
-                    schema: () => {
-                        _tableName: string;
-                        id: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: string;
-                                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                                zodValidationSchema: z.ZodString;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => number;
-                                    toDb: (clientValue: number) => number;
-                                };
-                            };
-                        };
-                        name: import("../schema.js").Builder<"sql", {
-                            type: "varchar";
-                            length: number;
-                        }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                        userId: {
-                            type: "reference";
-                            to: () => import("../schema.js").Builder<"sql", {
+                    favourite: {
+                        config: {
+                            sql: {
                                 type: "int";
-                                pk: true;
-                            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                        };
-                        fluffynessScale: {
-                            config: {
-                                sql: {
-                                    type: "text";
-                                };
-                                zodSqlSchema: z.ZodString;
-                                zodNewSchema: z.ZodString;
-                                initialValue: string;
-                                zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                                };
                             };
-                        };
-                        favourite: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: number;
-                                zodClientSchema: z.ZodBoolean;
-                                zodValidationSchema: z.ZodBoolean;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => boolean;
-                                    toDb: (clientValue: boolean) => number;
-                                };
+                            zodSqlSchema: z.ZodNumber;
+                            zodNewSchema: z.ZodNumber;
+                            initialValue: number;
+                            zodClientSchema: z.ZodBoolean;
+                            zodValidationSchema: z.ZodBoolean;
+                            clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                            validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
+                        } & {
+                            transforms: {
+                                toClient: (dbValue: number) => boolean;
+                                toDb: (clientValue: boolean) => number;
                             };
                         };
                     };
-                    defaultCount?: number;
-                } & {
-                    type: "belongsTo";
-                }) | ({
-                    fromKey: string;
-                    toKey: () => any;
-                    schema: () => {
-                        _tableName: string;
-                        id: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                    pk: true;
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: string;
-                                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodNumber]>;
-                                zodValidationSchema: z.ZodString;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => number;
-                                    toDb: (clientValue: number) => number;
-                                };
-                            };
-                        };
-                        name: import("../schema.js").Builder<"sql", {
-                            type: "varchar";
-                            length: number;
-                        }, z.ZodString, z.ZodString, string, z.ZodString, z.ZodString>;
-                        userId: {
-                            type: "reference";
-                            to: () => import("../schema.js").Builder<"sql", {
-                                type: "int";
-                                pk: true;
-                            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-                        };
-                        fluffynessScale: {
-                            config: {
-                                sql: {
-                                    type: "text";
-                                };
-                                zodSqlSchema: z.ZodString;
-                                zodNewSchema: z.ZodString;
-                                initialValue: string;
-                                zodClientSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                zodValidationSchema: z.ZodArray<z.ZodEnum<["bald", "fuzzy", "fluffy", "poof"]>, "many">;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: string) => ("bald" | "fuzzy" | "fluffy" | "poof")[];
-                                    toDb: (clientValue: ("bald" | "fuzzy" | "fluffy" | "poof")[]) => string;
-                                };
-                            };
-                        };
-                        favourite: {
-                            config: {
-                                sql: {
-                                    type: "int";
-                                };
-                                zodSqlSchema: z.ZodNumber;
-                                zodNewSchema: z.ZodNumber;
-                                initialValue: number;
-                                zodClientSchema: z.ZodBoolean;
-                                zodValidationSchema: z.ZodBoolean;
-                                clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                                validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-                            } & {
-                                transforms: {
-                                    toClient: (dbValue: number) => boolean;
-                                    toDb: (clientValue: boolean) => number;
-                                };
-                            };
-                        };
-                    };
-                    defaultCount?: number;
-                } & {
-                    type: "manyToMany";
-                });
+                }>;
                 zodSqlSchema: z.ZodArray<z.ZodObject<{
                     id: z.ZodNumber;
                     name: z.ZodString;
