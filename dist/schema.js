@@ -437,7 +437,7 @@ export function createSchema(schema) {
             }
         }
     }
-    // --- PASS 2: Process all deferred references and relations ---
+    // In createSchema function, in PASS 2 where relations are processed:
     for (const { key, definition } of deferredFields) {
         let resolvedDefinition = definition;
         // If it's a relation like hasMany, call the outer function to get the config object
@@ -456,6 +456,7 @@ export function createSchema(schema) {
         }
         else if (resolvedDefinition &&
             ["hasMany", "manyToMany", "hasOne", "belongsTo"].includes(resolvedDefinition.type)) {
+            // Handle legacy function-style relations
             const relation = resolvedDefinition;
             const childSchemaResult = createSchema(relation.schema);
             if (relation.type === "hasMany" || relation.type === "manyToMany") {
@@ -473,6 +474,37 @@ export function createSchema(schema) {
                 validationFields[key] = childSchemaResult.validationSchema.optional();
                 defaultValues[key] = childSchemaResult.defaultValues;
             }
+        }
+        else if (definition &&
+            definition.config &&
+            definition.config.sql &&
+            typeof definition.config.sql === "object" &&
+            ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(definition.config.sql.type)) {
+            // Handle builder-style relations (shape.hasMany().client())
+            const relationConfig = definition.config.sql;
+            const childSchemaResult = createSchema(relationConfig.schema);
+            // Create base schemas
+            let baseSqlSchema, baseClientSchema, baseValidationSchema;
+            if (relationConfig.type === "hasMany" ||
+                relationConfig.type === "manyToMany") {
+                baseSqlSchema = z.array(childSchemaResult.sqlSchema).optional();
+                baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
+                baseValidationSchema = z
+                    .array(childSchemaResult.validationSchema)
+                    .optional();
+                defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
+            }
+            else {
+                baseSqlSchema = childSchemaResult.sqlSchema.optional();
+                baseClientSchema = childSchemaResult.clientSchema.optional();
+                baseValidationSchema = childSchemaResult.validationSchema.optional();
+                defaultValues[key] = childSchemaResult.defaultValues;
+            }
+            // Apply the transforms from the builder config
+            sqlFields[key] = definition.config.zodSqlSchema || baseSqlSchema;
+            clientFields[key] = definition.config.zodClientSchema || baseClientSchema;
+            validationFields[key] =
+                definition.config.zodValidationSchema || baseValidationSchema;
         }
     }
     return {
