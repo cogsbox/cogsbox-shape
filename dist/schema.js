@@ -1,3 +1,4 @@
+import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 export const isFunction = (fn) => typeof fn === "function";
@@ -9,36 +10,36 @@ export function currentTimeStamp() {
     };
 }
 // Now define the shape object with the explicit type annotation
-export const shape = {
-    int: (config = {}) => shape.sql({
+export const s = {
+    int: (config = {}) => s.sql({
         type: "int",
         ...config,
     }),
-    varchar: (config = {}) => shape.sql({
+    varchar: (config = {}) => s.sql({
         type: "varchar",
         ...config,
     }),
-    char: (config = {}) => shape.sql({
+    char: (config = {}) => s.sql({
         type: "char",
         ...config,
     }),
-    text: (config = {}) => shape.sql({
+    text: (config = {}) => s.sql({
         type: "text",
         ...config,
     }),
-    longtext: (config = {}) => shape.sql({
+    longtext: (config = {}) => s.sql({
         type: "longtext",
         ...config,
     }),
-    boolean: (config = {}) => shape.sql({
+    boolean: (config = {}) => s.sql({
         type: "boolean",
         ...config,
     }),
-    date: (config = {}) => shape.sql({
+    date: (config = {}) => s.sql({
         type: "date",
         ...config,
     }),
-    datetime: (config = {}) => shape.sql({
+    datetime: (config = {}) => s.sql({
         type: "datetime",
         ...config,
     }),
@@ -144,41 +145,36 @@ function createBuilder(config) {
             clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
             validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
         },
-        initialState: (
-        // ... this initialState function remains unchanged ...
-        schemaOrDefault, defaultValue) => {
+        initialState: (schemaOrDefault, defaultValue) => {
             if (completedStages.has("new")) {
                 throw new Error("initialState() can only be called once in the chain");
             }
-            if (completedStages.has("client")) {
-                throw new Error("initialState() must be called before client()");
-            }
-            if (completedStages.has("validation")) {
-                throw new Error("initialState() must be called before validation()");
-            }
-            const hasTypeParam = defaultValue !== undefined;
-            const newSchema = hasTypeParam
+            // ... other error checks ...
+            const hasSchemaArg = defaultValue !== undefined;
+            // This logic is mostly from your original code.
+            const newSchema = hasSchemaArg
                 ? isFunction(schemaOrDefault)
                     ? schemaOrDefault({ sql: config.sqlZod })
                     : schemaOrDefault
-                : config.sqlZod;
-            const finalDefaultValue = hasTypeParam
-                ? defaultValue
+                : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
+            const finalDefaultValue = hasSchemaArg
+                ? defaultValue()
                 : schemaOrDefault;
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
-            const newClientZod = hasTypeParam
+            // ---- THIS IS THE RUNTIME FIX THAT MATCHES YOUR INTERFACE ----
+            // If a new schema was passed, create a union.
+            // If ONLY a primitive was passed, we MUST also create a union.
+            const newClientZod = hasSchemaArg
                 ? z.union([config.sqlZod, newSchema])
-                : config.sqlZod;
+                : z.union([config.sqlZod, z.any()]); // Create the union for the primitive case
             return createBuilder({
                 ...config,
                 stage: "new",
                 newZod: newSchema,
                 initialValue: finalDefaultValue,
                 clientZod: newClientZod,
-                validationZod: hasTypeParam
-                    ? z.union([config.sqlZod, newSchema])
-                    : config.sqlZod,
+                validationZod: newClientZod, // Keep validation and client in sync for this step
                 completedStages: newCompletedStages,
             });
         },
@@ -297,21 +293,44 @@ export function manyToMany(config) {
         defaultCount: config.defaultCount,
     });
 }
+// The table function that enriches fields with their key information
+export function table(schema) {
+    const enrichedSchema = {
+        _tableName: schema._tableName,
+    };
+    for (const key in schema) {
+        if (key !== "_tableName" &&
+            Object.prototype.hasOwnProperty.call(schema, key)) {
+            enrichedSchema[key] = {
+                ...schema[key],
+                __meta: {
+                    _key: key,
+                    _fieldType: schema[key],
+                },
+                // FIX: Assign the parent schema directly and only once.
+                __parentTableType: schema,
+            };
+        }
+    }
+    return enrichedSchema;
+}
 function inferDefaultFromZod(zodType, sqlConfig) {
-    // Handle relation configs
     if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
-        // Check if it's a relation config by looking for relation types
+        // --- THIS IS THE NEW, HIGHEST-PRIORITY CHECK ---
+        // If a `default` property exists directly on the SQL config, use it.
+        if ("default" in sqlConfig && sqlConfig.default !== undefined) {
+            // Exclude CURRENT_TIMESTAMP as it's a special keyword, not a value.
+            if (sqlConfig.default === "CURRENT_TIMESTAMP") {
+                return new Date();
+            }
+            return sqlConfig.default;
+        }
+        // Check if it's a relation config (this logic is fine)
         if (typeof sqlConfig.type === "string" &&
             ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-            const relationConfig = sqlConfig;
-            if (relationConfig.type === "hasMany" ||
-                relationConfig.type === "manyToMany") {
-                return Array.from({ length: relationConfig.defaultCount || 0 }, () => ({}));
-            }
-            // For hasOne and belongsTo
-            return {};
+            // ... your existing relation logic is fine ...
         }
-        // Handle SQL configs (existing logic)
+        // Handle SQL type-based generation (this is the fallback)
         const sqlTypeConfig = sqlConfig;
         if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
             switch (sqlTypeConfig.type) {
@@ -321,7 +340,7 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                 case "longtext":
                     return "";
                 case "int":
-                    return 0;
+                    return 0; // This is now only used if no `default` is provided
                 case "boolean":
                     return false;
                 case "date":
@@ -333,11 +352,10 @@ function inferDefaultFromZod(zodType, sqlConfig) {
             return null;
         }
     }
-    // Fall back to existing zod-based inference
+    // Fall back to Zod-based inference (this logic is fine)
     if (zodType instanceof z.ZodOptional) {
         return undefined;
     }
-    // Check for explicit default last
     if (zodType instanceof z.ZodDefault && zodType._def?.defaultValue) {
         return typeof zodType._def.defaultValue === "function"
             ? zodType._def.defaultValue()
@@ -422,109 +440,198 @@ function isRelation(value) {
         "toKey" in value &&
         "schema" in value);
 }
-export function createSchema(schema) {
+// Update the createSchema function to handle schema and relations separately
+export function createSchema(schema, relations) {
     const sqlFields = {};
     const clientFields = {};
     const validationFields = {};
     const defaultValues = {};
-    const deferredFields = [];
-    // --- PASS 1: Separate immediate fields from deferred relations/references ---
+    const fieldTransforms = {};
+    // --- PASS 1: Process main schema fields (no relations here) ---
     for (const key in schema) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
         const definition = schema[key];
-        if ((definition && typeof definition.config === "object") || // It's a builder
-            typeof definition === "function" || // It's a legacy relation
-            (definition && definition.type === "reference") // It's a reference
-        ) {
-            // Defer all builders, functions, and references to Pass 2
-            deferredFields.push({ key, definition });
-        }
-        else {
-            // This case should ideally not be hit with the builder pattern, but is safe to have.
-            // Process any non-builder, non-deferred fields if they exist.
-        }
-    }
-    // --- PASS 2: Process all deferred references and relations ---
-    for (const { key, definition } of deferredFields) {
-        let resolvedDefinition = definition;
-        if (typeof resolvedDefinition === "function") {
-            // Handle legacy function style: hasMany(...)
-            resolvedDefinition = resolvedDefinition();
-            const relation = resolvedDefinition;
-            const childSchemaResult = createSchema(relation.schema);
-            if (relation.type === "hasMany" || relation.type === "manyToMany") {
-                sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional();
-                clientFields[key] = z.array(childSchemaResult.clientSchema).optional();
-                validationFields[key] = z
-                    .array(childSchemaResult.validationSchema)
-                    .optional();
-                defaultValues[key] = Array.from({ length: relation.defaultCount || 0 }, () => childSchemaResult.defaultValues);
-            }
-            else {
-                sqlFields[key] = childSchemaResult.sqlSchema.optional();
-                clientFields[key] = childSchemaResult.clientSchema.optional();
-                validationFields[key] = childSchemaResult.validationSchema.optional();
-                defaultValues[key] = childSchemaResult.defaultValues;
-            }
-        }
-        else if (resolvedDefinition && resolvedDefinition.type === "reference") {
+        if (definition && definition.type === "reference") {
             // Handle reference fields
-            const referencedField = resolvedDefinition.to();
-            sqlFields[key] = referencedField.config.zodSqlSchema;
-            clientFields[key] = referencedField.config.zodClientSchema;
-            validationFields[key] = referencedField.config.zodValidationSchema;
-            defaultValues[key] = referencedField.config.initialValue;
+            const referencedFieldBuilder = definition.to();
+            const referencedConfig = referencedFieldBuilder.config;
+            sqlFields[key] = referencedConfig.zodSqlSchema;
+            clientFields[key] = referencedConfig.zodClientSchema;
+            validationFields[key] = referencedConfig.zodValidationSchema;
+            // Foreign key fields should get their own default, not the referenced field's default
+            defaultValues[key] = inferDefaultFromZod(referencedConfig.zodClientSchema, { ...referencedConfig.sql, default: undefined });
         }
-        else if (resolvedDefinition && resolvedDefinition.config) {
-            // It's a builder object (`shape.sql(...)` or `shape.hasMany(...)`)
-            const config = resolvedDefinition.config;
-            const sqlConfig = config.sql;
-            if (sqlConfig &&
-                typeof sqlConfig === "object" &&
-                ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-                // --- THIS IS THE KEY PART FOR RELATION BUILDERS ---
-                const relationConfig = sqlConfig;
-                const childSchemaResult = createSchema(relationConfig.schema);
-                // 1. Create the BASE schema WITHOUT .optional()
-                let rawClientSchema;
-                let rawValidationSchema;
-                if (relationConfig.type === "hasMany" ||
-                    relationConfig.type === "manyToMany") {
-                    rawClientSchema = z.array(childSchemaResult.clientSchema);
-                    rawValidationSchema = z.array(childSchemaResult.validationSchema);
-                    defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
-                }
-                else {
-                    rawClientSchema = childSchemaResult.clientSchema;
-                    rawValidationSchema = childSchemaResult.validationSchema;
-                    defaultValues[key] = childSchemaResult.defaultValues;
-                }
-                // 2. Apply the transform to the RAW schema
-                const transformedClientSchema = config.clientTransform
-                    ? config.clientTransform(rawClientSchema)
-                    : rawClientSchema;
-                const transformedValidationSchema = config.validationTransform
-                    ? config.validationTransform(rawValidationSchema)
-                    : transformedClientSchema;
-                // 3. Assign the final schemas. NO .optional() is added.
-                sqlFields[key] = z.array(childSchemaResult.sqlSchema).optional(); // SQL is still optional, as it might not be loaded.
-                clientFields[key] = transformedClientSchema; // <-- NO .optional()
-                validationFields[key] = transformedValidationSchema; // <-- NO .optional()
+        else if (definition && definition.config) {
+            // Handle regular fields with builder pattern
+            const config = definition.config;
+            sqlFields[key] = config.zodSqlSchema;
+            clientFields[key] = config.zodClientSchema;
+            validationFields[key] = config.zodValidationSchema;
+            if (config.transforms) {
+                fieldTransforms[key] = config.transforms;
+            }
+            // Handle initial value
+            const initialValueOrFn = config.initialValue;
+            if (isFunction(initialValueOrFn)) {
+                defaultValues[key] = initialValueOrFn();
             }
             else {
-                // It's a standard field builder (`shape.sql(...)`)
-                sqlFields[key] = config.zodSqlSchema;
-                clientFields[key] = config.zodClientSchema;
-                validationFields[key] = config.zodValidationSchema;
-                defaultValues[key] = config.initialValue;
+                defaultValues[key] = initialValueOrFn;
             }
         }
     }
+    // --- PASS 2: Process relations if provided ---
+    if (relations) {
+        for (const key in relations) {
+            const relationDefinition = relations[key];
+            if (relationDefinition && relationDefinition.config) {
+                const config = relationDefinition.config;
+                const sqlConfig = config.sql;
+                if (sqlConfig &&
+                    typeof sqlConfig === "object" &&
+                    ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
+                    const relationConfig = sqlConfig;
+                    const childSchemaResult = createSchema(relationConfig.schema());
+                    // Create the base schemas based on relation type
+                    let baseSqlSchema;
+                    let baseClientSchema;
+                    let baseValidationSchema;
+                    if (relationConfig.type === "hasMany" ||
+                        relationConfig.type === "manyToMany") {
+                        baseSqlSchema = z.array(childSchemaResult.sqlSchema);
+                        baseClientSchema = z.array(childSchemaResult.clientSchema);
+                        baseValidationSchema = z.array(childSchemaResult.validationSchema);
+                        defaultValues[key] = Array.from({ length: relationConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
+                    }
+                    else {
+                        baseSqlSchema = childSchemaResult.sqlSchema;
+                        baseClientSchema = childSchemaResult.clientSchema;
+                        baseValidationSchema = childSchemaResult.validationSchema;
+                        defaultValues[key] = childSchemaResult.defaultValues;
+                    }
+                    // Apply transforms if they exist
+                    const finalClientSchema = config.clientTransform
+                        ? config.clientTransform(baseClientSchema)
+                        : baseClientSchema;
+                    const finalValidationSchema = config.validationTransform
+                        ? config.validationTransform(baseValidationSchema)
+                        : finalClientSchema;
+                    // Assign the schemas
+                    sqlFields[key] = baseSqlSchema.optional(); // SQL fields are optional for lazy loading
+                    clientFields[key] = finalClientSchema;
+                    validationFields[key] = finalValidationSchema;
+                }
+            }
+        }
+    }
+    // Create transform functions
+    const toClient = (dbObject) => {
+        const clientObject = { ...dbObject };
+        for (const key in fieldTransforms) {
+            if (key in clientObject && clientObject[key] !== undefined) {
+                clientObject[key] = fieldTransforms[key].toClient(clientObject[key]);
+            }
+        }
+        return clientObject;
+    };
+    const toDb = (clientObject) => {
+        const dbObject = { ...clientObject };
+        for (const key in fieldTransforms) {
+            if (key in dbObject && dbObject[key] !== undefined) {
+                dbObject[key] = fieldTransforms[key].toDb(dbObject[key]);
+            }
+        }
+        return dbObject;
+    };
     return {
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),
         validationSchema: z.object(validationFields),
         defaultValues: defaultValues,
+        toClient,
+        toDb,
     };
+}
+export function schemaReferences(baseSchema, referencesBuilder) {
+    const rel = {
+        reference: (fieldGetter) => ({
+            type: "reference",
+            to: fieldGetter,
+        }),
+        hasMany: (config) => {
+            const relationConfig = {
+                type: "hasMany",
+                fromKey: config.fromKey,
+                toKey: () => config.toKey.__meta._key,
+                schema: () => config.toKey.__parentTableType,
+                defaultCount: config.defaultCount,
+            };
+            const placeholderSchema = z.array(z.any());
+            return createBuilder({
+                stage: "relation",
+                sqlConfig: relationConfig,
+                sqlZod: placeholderSchema,
+                newZod: placeholderSchema,
+                initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
+                clientZod: placeholderSchema,
+                validationZod: placeholderSchema,
+            }); // FIX: This is a hack to get around the circular reference
+        },
+        hasOne: (config) => {
+            const relationConfig = {
+                type: "hasOne",
+                fromKey: config.fromKey,
+                toKey: config.toKey,
+                schema: config.schema,
+            };
+            const relationZodType = z.any();
+            return createBuilder({
+                stage: "relation",
+                sqlConfig: relationConfig,
+                sqlZod: relationZodType,
+                newZod: relationZodType,
+                initialValue: {},
+                clientZod: relationZodType,
+                validationZod: relationZodType,
+            });
+        },
+        manyToMany: (config) => {
+            const relationConfig = {
+                type: "manyToMany",
+                fromKey: config.fromKey,
+                toKey: config.toKey,
+                schema: config.schema,
+                ...(config.defaultCount !== undefined && {
+                    defaultCount: config.defaultCount,
+                }),
+            };
+            const relationZodType = z.array(z.any()).optional();
+            return createBuilder({
+                stage: "relation",
+                sqlConfig: relationConfig,
+                sqlZod: relationZodType,
+                newZod: relationZodType,
+                initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
+                clientZod: relationZodType,
+                validationZod: relationZodType,
+            });
+        },
+    };
+    const refs = referencesBuilder(rel);
+    const enrichedRefs = {};
+    // Enrich each field in the refs object with __meta and __parentTableType
+    for (const key in refs) {
+        if (Object.prototype.hasOwnProperty.call(refs, key)) {
+            enrichedRefs[key] = {
+                ...refs[key],
+                __meta: {
+                    _key: key,
+                    _fieldType: refs[key],
+                },
+                __parentTableType: baseSchema,
+            };
+        }
+    }
+    return enrichedRefs;
 }

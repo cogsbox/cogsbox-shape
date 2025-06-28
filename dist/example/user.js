@@ -1,77 +1,54 @@
 import { z } from "zod";
-import { createSchema, hasMany, reference, shape, } from "../schema.js";
-export const petSchema = {
+import { createSchema, table, s, schemaReferences } from "../schema.js";
+export const petSchema = table({
     _tableName: "pets",
-    id: shape
-        .sql({ type: "int", pk: true })
-        .initialState(() => "uuidexample")
-        .client(({ sql, initialState }) => z.union([sql, initialState]))
-        .validation(z.string())
-        .transform({
-        toClient: (dbValue) => dbValue,
-        toDb: (clientValue) => Number(clientValue),
-    }),
-    name: shape.sql({ type: "varchar", length: 255 }),
-    userId: reference(() => userSchema.id),
-    fluffynessScale: shape
+    id: s.sql({ type: "int", pk: true }).initialState(() => "sdasds"),
+    name: s.sql({ type: "varchar", length: 255 }).initialState(() => z.string()),
+    fluffynessScale: s
         .sql({ type: "text" })
         .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
         .transform({
         toClient: (value) => value.split(",").filter(Boolean),
         toDb: (value) => value.join(","),
     }),
-    favourite: shape
+    favourite: s
         .sql({ type: "int" })
         .client(({ sql }) => z.boolean())
         .transform({
         toClient: (dbValue) => dbValue === 1,
         toDb: (clientValue) => (clientValue ? 1 : 0),
     }),
-};
-export const userSchema = {
-    //The inferred type of this node exceeds the maximum length the compiler will serialize. An explicit type annotation is needed.
+});
+export const userSchema = table({
     _tableName: "users",
-    id: shape.sql({ type: "int", pk: true }),
-    firstname: shape
+    id: s.sql({ type: "int", pk: true }).initialState(() => z.string()),
+    firstname: s
         .sql({ type: "varchar", length: 255 })
         .initialState(() => "test")
         .validation(({ sql }) => sql.min(1)),
-    surname: shape
+    surname: s
         .sql({ type: "varchar", length: 255 })
         .validation(({ sql }) => sql.min(1)),
-    email: shape
+    email: s
         .sql({ type: "varchar", length: 255 })
         .validation(({ sql }) => sql.email()),
-    pets: shape
+});
+export const userReferences = schemaReferences(userSchema, (s) => ({
+    pets: s
         .hasMany({
         fromKey: "id",
-        toKey: () => petSchema.userId,
-        schema: () => petSchema,
+        toKey: petSchema.id,
         defaultCount: 1,
     })
         .validation(({ sql }) => sql.min(1)),
-};
-const testPets = {
-    _tableName: "users",
-    id: shape
-        .sql({ type: "int", pk: true })
-        .initialState(z.string().uuid(), () => "sdasdsad")
-        .client(({ sql, initialState }) => z.union([sql, initialState]))
-        .validation(({ sql }) => sql)
-        .transform({
-        toClient: (dbValue) => dbValue,
-        toDb: (clientValue) => Number(clientValue),
-    }),
-    email: shape
-        .sql({ type: "varchar", length: 255 })
-        .validation(({ sql }) => sql),
-    createdAt: shape
-        .sql({ type: "datetime" })
-        .client(({ sql }) => z.string())
-        .validation(({ sql }) => sql.optional())
-        .transform({
-        toClient: (date) => date.toISOString(),
-        toDb: (str) => new Date(str),
-    }),
-};
-const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema(userSchema);
+    petId: s.reference(() => petSchema.id),
+}));
+const test = petSchema.id;
+const test2 = test.__parentTableType;
+const { sqlSchema, clientSchema: clSchema, defaultValues, validationSchema, } = createSchema(userSchema, { ...userReferences });
+/*type clientTestType = z.ZodObject<{
+    id: z.ZodNumber;
+    firstname: z.ZodString;
+    surname: z.ZodString;
+    email: z.ZodString;
+    pets: z.ZodArray<z.ZodObject<{*/
