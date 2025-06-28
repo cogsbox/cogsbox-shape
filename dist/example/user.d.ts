@@ -2475,6 +2475,7 @@ export declare const petSchema: {
     };
 } & {
     _tableName: string;
+    _schemaWrapper: true;
 };
 export declare const userSchema: {
     _tableName: string & {
@@ -4357,6 +4358,7 @@ export declare const userSchema: {
     };
 } & {
     _tableName: string;
+    _schemaWrapper: true;
 };
 export declare const userReferences: {
     pets: {
@@ -8023,6 +8025,7 @@ export declare const userReferences: {
             };
         } & {
             _tableName: string;
+            _schemaWrapper: true;
         };
     };
     petId: {
@@ -11245,6 +11248,7 @@ export declare const userReferences: {
             };
         } & {
             _tableName: string;
+            _schemaWrapper: true;
         };
     };
 };

@@ -1,6 +1,4 @@
-import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 import { z } from "zod";
-import zodToJsonSchema from "zod-to-json-schema";
 export const isFunction = (fn) => typeof fn === "function";
 // Function to create a properly typed current timestamp config
 export function currentTimeStamp() {
@@ -187,7 +185,6 @@ function createBuilder(config) {
             }
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("client");
-            // ---- THIS IS THE MAIN FIX ----
             if (config.stage === "relation") {
                 return createBuilder({
                     ...config,
@@ -259,42 +256,8 @@ function createBuilder(config) {
     };
     return builderObject;
 }
-export function hasMany(config) {
-    return () => ({
-        type: "hasMany",
-        fromKey: config.fromKey,
-        toKey: config.toKey(),
-        schema: config.schema(),
-        defaultCount: config.defaultCount,
-    });
-}
-export function hasOne(config) {
-    return () => ({
-        type: "hasOne",
-        fromKey: config.fromKey,
-        toKey: config.toKey(),
-        schema: config.schema(),
-    });
-}
-export function belongsTo(config) {
-    return () => ({
-        type: "belongsTo",
-        fromKey: config.fromKey,
-        toKey: config.toKey(),
-        schema: config.schema(),
-    });
-}
-export function manyToMany(config) {
-    return () => ({
-        type: "manyToMany",
-        fromKey: config.fromKey,
-        toKey: config.toKey(),
-        schema: config.schema(),
-        defaultCount: config.defaultCount,
-    });
-}
 // The table function that enriches fields with their key information
-export function table(schema) {
+export function schema(schema) {
     const enrichedSchema = {
         _tableName: schema._tableName,
     };
@@ -440,7 +403,6 @@ function isRelation(value) {
         "toKey" in value &&
         "schema" in value);
 }
-// Update the createSchema function to handle schema and relations separately
 export function createSchema(schema, relations) {
     const sqlFields = {};
     const clientFields = {};
@@ -553,7 +515,7 @@ export function createSchema(schema, relations) {
         toDb,
     };
 }
-export function schemaReferences(baseSchema, referencesBuilder) {
+export function schemaRelations(baseSchema, referencesBuilder) {
     const rel = {
         reference: (fieldGetter) => ({
             type: "reference",

@@ -1880,6 +1880,7 @@ declare const schemas: {
         };
     } & {
         _tableName: string;
+        _schemaWrapper: true;
     };
     pet: {
         _tableName: string & {
@@ -4357,6 +4358,7 @@ declare const schemas: {
         };
     } & {
         _tableName: string;
+        _schemaWrapper: true;
     };
 };
 export { schemas };

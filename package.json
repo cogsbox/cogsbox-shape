@@ -12,7 +12,7 @@
         "build": " tsc",
         "lint": "eslint src --ext .ts",
         "format": "prettier --write \"src/**/*.ts\"",
-         "test": "vitest"
+        "test": "vitest  "
     },
     "bin": {
         "cogsbox-shape": "tsx ./dist/cli.js"
@@ -48,7 +48,7 @@
         "expect-type": "^1.2.1",
         "prettier": "^3.1.1",
         "typescript": "^5.3.3",
-        "vitest": "^3.2.4",
+        "vitest": "^3.2.0",
         "zod": "^3.25.67"
     },
     "peerDependencies": {

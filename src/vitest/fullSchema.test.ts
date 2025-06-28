@@ -8,9 +8,10 @@ import {
   createSchema,
   reference,
   type InferSchemaTypes,
-  schemaReferences,
-  table,
+  schemaRelations,
+  schema,
 } from "../schema";
+import { table } from "console";
 
 /*
 ================================================================
@@ -64,25 +65,25 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
 
   // THIS SECTION WAS MISTAKENLY REMOVED AND IS NOW RESTORED
   describe("`createSchema` Integration with Relations", () => {
-    const userSchema = table({
+    const userSchema = schema({
       _tableName: "users",
       id: s.sql({ type: "int", pk: true }).initialState(() => "new-user"),
     });
-    const userSchemaRels = schemaReferences(userSchema, (s) => ({
+    const userSchemaRels = schemaRelations(userSchema, (s) => ({
       posts: s.hasMany({
         fromKey: "id",
-        toKey: postSchemaRels.authorId,
+        toKey: () => postSchemaRels.authorId,
       }),
     }));
 
-    const postSchema = table({
+    const postSchema = schema({
       _tableName: "posts",
       id: s.sql({ type: "int", pk: true }),
 
       isPublished: s.sql({ type: "int" }).client(() => z.boolean()),
     });
 
-    const postSchemaRels = schemaReferences(postSchema, (s) => ({
+    const postSchemaRels = schemaRelations(postSchema, (s) => ({
       authorId: s.reference(() => userSchema.id),
     }));
 
@@ -109,11 +110,11 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
   // THIS SECTION WAS MISTAKENLY REMOVED AND IS NOW RESTORED
   describe("High-Level Utility Types", () => {
     it("should correctly infer all types using InferSchemaTypes", () => {
-      const productSchema = {
+      const productSchema = schema({
         _tableName: "products",
         id: s.sql({ type: "int", pk: true }).initialState(() => "new-prod"),
         price: s.sql({ type: "int" }),
-      };
+      });
       type ProductTypes = InferSchemaTypes<typeof productSchema>;
       expectTypeOf<ProductTypes["client"]["id"]>().toEqualTypeOf<
         string | number
@@ -134,21 +135,14 @@ describe("Schema Builder Runtime Behavior", () => {
   describe("Default Value Generation", () => {
     // Dummy schema for the relation
     const itemSchema = { _tableName: "items", id: s.int() };
-
-    const { defaultValues } = createSchema({
+    const defaultValuesSchema = schema({
       _tableName: "defaults",
       fromInitialState: s.varchar().initialState(() => "from-initial-state"),
       fromSqlDefault: s.int({ default: 99 }),
       isNullable: s.boolean({ nullable: true }),
       hasNoDefault: s.int(),
-      twoDefaultItems: s.hasMany({
-        fromKey: "id",
-        toKey: () => itemSchema.id,
-        schema: () => itemSchema,
-        defaultCount: 2,
-      }),
-      referenceField: reference(() => itemSchema.id),
     });
+    const { defaultValues } = createSchema(defaultValuesSchema);
 
     it("should get default from .initialState()", () => {
       expect(defaultValues.fromInitialState).toBe("from-initial-state");
@@ -165,19 +159,11 @@ describe("Schema Builder Runtime Behavior", () => {
     it("should use the generated default (e.g., 0 for int) when none is provided", () => {
       expect(defaultValues.hasNoDefault).toBe(0);
     });
-
-    it("should generate a default array for hasMany with defaultCount", () => {
-      expect(defaultValues.twoDefaultItems).toEqual([{ id: 0 }, { id: 0 }]);
-    });
-
-    it("should not generate a default for a reference field", () => {
-      expect(defaultValues.referenceField).toBeUndefined();
-    });
   });
 
   describe("Schema Parsing, Validation, and Transformation", () => {
     // This schema definition is correct and has the .transform() method.
-    const complexSchemaDef = {
+    const complexSchemaDef = schema({
       _tableName: "complex",
       id: s.sql({ type: "int", pk: true }),
       status: s
@@ -190,7 +176,7 @@ describe("Schema Builder Runtime Behavior", () => {
       name: s
         .sql({ type: "varchar" })
         .validation(({ sql }) => sql.min(3, "Name is too short")),
-    };
+    });
 
     // ---- THE FIX IS HERE ----
     // We now destructure the new toClient and toDb functions from the result.

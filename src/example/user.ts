@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { createSchema, table, s, schemaReferences } from "../schema.js";
+import { createSchema, schema, s, schemaRelations } from "../schema.js";
 
-export const petSchema = table({
+export const petSchema = schema({
   _tableName: "pets",
   id: s.sql({ type: "int", pk: true }).initialState(() => "sdasds"),
   name: s.sql({ type: "varchar", length: 255 }).initialState(() => z.string()),
@@ -22,7 +22,7 @@ export const petSchema = table({
     }),
 });
 
-export const userSchema = table({
+export const userSchema = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(() => z.string()),
   firstname: s
@@ -37,19 +37,17 @@ export const userSchema = table({
     .validation(({ sql }) => sql.email()),
 });
 
-export const userReferences = schemaReferences(userSchema, (s) => ({
+export const userReferences = schemaRelations(userSchema, (s) => ({
   pets: s
     .hasMany({
       fromKey: "id",
-      toKey: petSchema.id,
+      toKey: () => petSchema.id,
       defaultCount: 1,
     })
     .validation(({ sql }) => sql.min(1)),
   petId: s.reference(() => petSchema.id),
 }));
 
-const test = petSchema.id;
-const test2 = test.__parentTableType;
 const {
   sqlSchema,
   clientSchema: clSchema,
