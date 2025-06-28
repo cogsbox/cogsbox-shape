@@ -23,6 +23,6 @@
       "noUncheckedIndexedAccess": true,
       "lib": ["dom", "dom.iterable", "esnext"]
     },
-    "include": ["src"],
-    "exclude": ["node_modules", "dist"]
+   "include": ["src/**/*.ts", "src/**/*.tsx"],
+    "exclude": ["node_modules", "dist","src/vitest"]
   }
