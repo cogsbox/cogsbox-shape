@@ -3,14 +3,7 @@ import { expect, describe, it } from "vitest";
 import { expectTypeOf } from "expect-type";
 import { z } from "zod";
 
-import {
-  s,
-  createSchema,
-  reference,
-  type InferSchemaTypes,
-  schemaRelations,
-  schema,
-} from "../schema";
+import { s, createSchema, schemaRelations, schema } from "../schema";
 import { table } from "console";
 
 /*
@@ -104,24 +97,6 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
       type PostClient = z.infer<typeof finalPostResult.clientSchema>;
 
       expectTypeOf<PostClient["authorId"]>().toEqualTypeOf<string | number>();
-    });
-  });
-
-  // THIS SECTION WAS MISTAKENLY REMOVED AND IS NOW RESTORED
-  describe("High-Level Utility Types", () => {
-    it("should correctly infer all types using InferSchemaTypes", () => {
-      const productSchema = schema({
-        _tableName: "products",
-        id: s.sql({ type: "int", pk: true }).initialState(() => "new-prod"),
-        price: s.sql({ type: "int" }),
-      });
-      type ProductTypes = InferSchemaTypes<typeof productSchema>;
-      expectTypeOf<ProductTypes["client"]["id"]>().toEqualTypeOf<
-        string | number
-      >();
-      expectTypeOf<ProductTypes["sql"]["id"]>().toEqualTypeOf<number>();
-      expectTypeOf<ProductTypes["defaults"]["id"]>().toEqualTypeOf<string>();
-      expectTypeOf<ProductTypes["defaults"]["price"]>().toEqualTypeOf<number>();
     });
   });
 });

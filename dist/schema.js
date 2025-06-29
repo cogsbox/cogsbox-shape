@@ -257,9 +257,12 @@ function createBuilder(config) {
     return builderObject;
 }
 // The table function that enriches fields with their key information
+const SchemaWrapperBrand = Symbol("SchemaWrapper");
+// Update the schema function to use the symbol
 export function schema(schema) {
     const enrichedSchema = {
         _tableName: schema._tableName,
+        [SchemaWrapperBrand]: true, // Add the symbol property
     };
     for (const key in schema) {
         if (key !== "_tableName" &&
@@ -270,7 +273,6 @@ export function schema(schema) {
                     _key: key,
                     _fieldType: schema[key],
                 },
-                // FIX: Assign the parent schema directly and only once.
                 __parentTableType: schema,
             };
         }
@@ -326,12 +328,12 @@ function inferDefaultFromZod(zodType, sqlConfig) {
     }
     return undefined;
 }
-export function reference(config) {
-    return {
-        type: "reference",
-        to: config,
-    };
-}
+// export function reference<TField extends object>(config: TField) {
+//   return {
+//     type: "reference" as const,
+//     to: config,
+//   };
+// }
 export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
     // If schemas are provided, use them (to avoid circular calls)
     if (clientSchema && dbSchema) {
