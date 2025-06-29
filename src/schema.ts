@@ -102,7 +102,19 @@ type ZodTypeFromPrimitive<T> = T extends string
       : T extends Date
         ? z.ZodDate
         : z.ZodAny;
-
+type IsLiteralType<T> = T extends string
+  ? string extends T
+    ? false
+    : true
+  : T extends number
+    ? number extends T
+      ? false
+      : true
+    : T extends boolean
+      ? boolean extends T
+        ? false
+        : true
+      : false;
 interface IBuilderMethods<
   T extends SQLType | RelationConfig<any>,
   TSql extends z.ZodTypeAny,
@@ -111,8 +123,10 @@ interface IBuilderMethods<
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > {
+  // PASTE THIS ENTIRE BLOCK. THIS IS THE ONE.
+
   initialState: {
-    // When called with one argument - direct value case
+    // ONE-ARGUMENT OVERLOAD (Correct as-is)
     <const TResult>(
       defaultValue: TResult
     ): TResult extends () => infer R
@@ -175,22 +189,49 @@ interface IBuilderMethods<
               >
             >;
 
-    // When called with two arguments
+    // TWO-ARGUMENT OVERLOAD (The single, conditional version you suggested)
     <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
       schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: TDefaultNext | (() => TDefaultNext)
+      defaultValue: TDefaultNext // TDefaultNext is either the value OR the function
     ): Prettify<
       Builder<
         "new",
         T,
         TSql,
-        TNewNext,
-        TDefaultNext extends () => infer R ? R : TDefaultNext,
-        InferSmartClientType<TSql, TNewNext>,
-        InferSmartClientType<TSql, TNewNext>
+        // TNew: The schema remains a union of the provided schema and the literal default
+        z.ZodUnion<
+          [
+            TNewNext,
+            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
+          ]
+        >,
+        // TInitialValue: *** THE SMART LOGIC IS HERE ***
+        // If the schema is literal-based (like an enum), use the specific default value type.
+        // Otherwise, use the general type inferred from the schema.
+        IsLiteralType<z.infer<TNewNext>> extends true
+          ? TDefaultNext extends () => infer R
+            ? R
+            : TDefaultNext
+          : z.infer<TNewNext>,
+        // TClient/TValidation: The most complete union of all possible types.
+        z.ZodUnion<
+          [
+            TSql,
+            TNewNext,
+            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
+          ]
+        >,
+        z.ZodUnion<
+          [
+            TSql,
+            TNewNext,
+            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
+          ]
+        >
       >
     >;
   };
+
   client: <TClientNext extends z.ZodTypeAny>(
     schema:
       | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
@@ -631,8 +672,12 @@ function createBuilder<
         : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
 
       const finalDefaultValue = hasSchemaArg
-        ? defaultValue!()
-        : (schemaOrDefault as () => TDefaultNext);
+        ? isFunction(defaultValue)
+          ? (defaultValue as () => TDefaultNext)() // If it's a function, call it
+          : defaultValue // If it's a direct value, use it as-is
+        : isFunction(schemaOrDefault)
+          ? (schemaOrDefault as () => TDefaultNext)()
+          : schemaOrDefault;
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("new");
@@ -1083,7 +1128,7 @@ type InferDefaultValues2<T> = {
   [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
     config: { initialValue: infer D };
   }
-    ? D
+    ? D // This should preserve the literal type
     : T[K] extends () => {
           type: "hasMany" | "manyToMany";
           schema: infer S extends SchemaDefinition;

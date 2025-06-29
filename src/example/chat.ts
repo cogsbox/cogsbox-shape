@@ -37,7 +37,7 @@ export const recipitentsSchema = schema({
   ),
   recipient_type: s
     .sql({ type: "varchar", length: 10 })
-    .client(({ sql }) => z.enum(["user", "group"])),
+    .initialState(({ sql }) => z.enum(["user", "group"])),
   read_status: s.sql({ type: "boolean", default: false }),
 });
 const recipitentsRelations = schemaRelations(recipitentsSchema, (s) => ({
