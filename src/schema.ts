@@ -251,7 +251,7 @@ type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
 // Updated stage methods to include relation
 type StageMethods = {
   sql: "initialState" | "client" | "validation" | "transform";
-  relation: "validation" | "transform"; // Relations can be chained like fields
+  relation: "validation" | "transform";
   new: "client" | "validation" | "transform";
   client: "validation" | "transform";
   validation: "transform";
