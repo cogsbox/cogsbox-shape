@@ -38,7 +38,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         .sql({ type: "int", pk: true })
         .initialState(() => "temp-uuid-123");
       type InferredClient = z.infer<typeof idField.config.zodClientSchema>;
-      expectTypeOf<InferredClient>().toEqualTypeOf<number | string>();
+      expectTypeOf<InferredClient>().toEqualTypeOf<number | "temp-uuid-123">();
     });
 
     it("should NOT create a union type when .initialState provides the same type", () => {
@@ -85,7 +85,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
 
     it("should infer correct types for the final client schema", () => {
       type UserClient = z.infer<typeof finalUserResult.clientSchema>;
-      expectTypeOf<UserClient["id"]>().toEqualTypeOf<string | number>();
+      expectTypeOf<UserClient["id"]>().toEqualTypeOf<"new-user" | number>();
       expectTypeOf<UserClient["posts"]>().toBeArray();
       const postInRelation =
         finalUserResult.clientSchema.shape.posts.element.shape;
@@ -96,7 +96,9 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     it("should correctly handle reference types", () => {
       type PostClient = z.infer<typeof finalPostResult.clientSchema>;
 
-      expectTypeOf<PostClient["authorId"]>().toEqualTypeOf<string | number>();
+      expectTypeOf<PostClient["authorId"]>().toEqualTypeOf<
+        "new-user" | number
+      >();
     });
   });
 });

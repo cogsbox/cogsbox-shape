@@ -112,44 +112,80 @@ interface IBuilderMethods<
   TValidation extends z.ZodTypeAny,
 > {
   initialState: {
-    // FIX: When called with one argument, check if it returns a Zod type
-    <TResult>(
-      defaultValue: () => TResult
-    ): TResult extends z.ZodTypeAny
-      ? Prettify<
-          Builder<
-            "new",
-            T,
-            TSql,
-            TResult,
-            z.infer<TResult>,
-            InferSmartClientType<TSql, TResult>,
-            InferSmartClientType<TSql, TResult>
+    // When called with one argument - direct value case
+    <const TResult>(
+      defaultValue: TResult
+    ): TResult extends () => infer R
+      ? R extends z.ZodTypeAny
+        ? Prettify<
+            Builder<
+              "new",
+              T,
+              TSql,
+              R,
+              z.infer<R>,
+              InferSmartClientType<TSql, R>,
+              InferSmartClientType<TSql, R>
+            >
           >
-        >
-      : Prettify<
-          Builder<
-            "new",
-            T,
-            TSql,
-            ZodTypeFromPrimitive<TResult>,
-            TResult,
-            InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>,
-            InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>
+        : Prettify<
+            Builder<
+              "new",
+              T,
+              TSql,
+              z.ZodLiteral<R>,
+              R,
+              z.ZodUnion<[TSql, z.ZodLiteral<R>]>,
+              z.ZodUnion<[TSql, z.ZodLiteral<R>]>
+            >
           >
-        >;
+      : TResult extends z.ZodTypeAny
+        ? Prettify<
+            Builder<
+              "new",
+              T,
+              TSql,
+              TResult,
+              z.infer<TResult>,
+              InferSmartClientType<TSql, TResult>,
+              InferSmartClientType<TSql, TResult>
+            >
+          >
+        : TResult extends string | number | boolean
+          ? Prettify<
+              Builder<
+                "new",
+                T,
+                TSql,
+                z.ZodLiteral<TResult>,
+                TResult,
+                z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>,
+                z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>
+              >
+            >
+          : Prettify<
+              Builder<
+                "new",
+                T,
+                TSql,
+                ZodTypeFromPrimitive<TResult>,
+                TResult,
+                InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>,
+                InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>
+              >
+            >;
 
     // When called with two arguments
-    <TNewNext extends z.ZodTypeAny, TDefaultNext>(
+    <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
       schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: () => TDefaultNext
+      defaultValue: TDefaultNext | (() => TDefaultNext)
     ): Prettify<
       Builder<
         "new",
         T,
         TSql,
         TNewNext,
-        z.infer<TNewNext>,
+        TDefaultNext extends () => infer R ? R : TDefaultNext,
         InferSmartClientType<TSql, TNewNext>,
         InferSmartClientType<TSql, TNewNext>
       >
@@ -992,7 +1028,9 @@ type InferSchemaByKey<
 > = Depth["length"] extends 10 // Prevent infinite recursion
   ? any
   : {
-      [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+      [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
+        ? never
+        : K]: T[K] extends {
         // Case 1: Builder for hasMany/manyToMany
         config: {
           sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
@@ -1000,7 +1038,12 @@ type InferSchemaByKey<
       }
         ? z.ZodArray<
             S extends { _tableName: string }
-              ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
+              ? z.ZodObject<
+                  Omit<
+                    InferSchemaByKey<S, Key, [...Depth, 1]>,
+                    typeof SchemaWrapperBrand
+                  >
+                >
               : z.ZodObject<any>
           >
         : // Case 2: Builder for hasOne/belongsTo
@@ -1010,31 +1053,26 @@ type InferSchemaByKey<
               };
             }
           ? S extends { _tableName: string }
-            ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
+            ? z.ZodObject<
+                Omit<
+                  InferSchemaByKey<S, Key, [...Depth, 1]>,
+                  typeof SchemaWrapperBrand
+                >
+              >
             : z.ZodObject<any>
-          : // Case 3: Legacy standalone function
-            T[K] extends () => {
-                type: "hasMany" | "manyToMany";
-                schema: infer S extends { _tableName: string };
-              }
-            ? z.ZodArray<z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>>
-            : T[K] extends () => {
-                  type: "hasOne" | "belongsTo";
-                  schema: infer S extends { _tableName: string };
+          : // Case 3: Reference fields
+            T[K] extends { type: "reference"; to: () => infer RefField }
+            ? RefField extends { config: { [P in Key]: infer ZodSchema } }
+              ? ZodSchema
+              : never
+            : // Case 4: Standard field builder
+              T[K] extends {
+                  config: {
+                    [P in Key]: infer ZodSchema extends z.ZodTypeAny;
+                  };
                 }
-              ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>
-              : T[K] extends { type: "reference"; to: () => infer RefField }
-                ? RefField extends { config: { [P in Key]: infer ZodSchema } }
-                  ? ZodSchema
-                  : never
-                : // Case 5: Standard field builder
-                  T[K] extends {
-                      config: {
-                        [P in Key]: infer ZodSchema extends z.ZodTypeAny;
-                      };
-                    }
-                  ? ZodSchema
-                  : never;
+              ? ZodSchema
+              : never;
     };
 
 type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;

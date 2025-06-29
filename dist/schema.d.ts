@@ -57,10 +57,10 @@ type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;
 interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
     initialState: {
-        <TResult>(defaultValue: () => TResult): TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TResult>, TResult, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>>>;
-        <TNewNext extends z.ZodTypeAny, TDefaultNext>(schema: ((tools: {
+        <const TResult>(defaultValue: TResult): TResult extends () => infer R ? R extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, R, z.infer<R>, InferSmartClientType<TSql, R>, InferSmartClientType<TSql, R>>> : Prettify<Builder<"new", T, TSql, z.ZodLiteral<R>, R, z.ZodUnion<[TSql, z.ZodLiteral<R>]>, z.ZodUnion<[TSql, z.ZodLiteral<R>]>>> : TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : TResult extends string | number | boolean ? Prettify<Builder<"new", T, TSql, z.ZodLiteral<TResult>, TResult, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TResult>, TResult, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>>>;
+        <TNewNext extends z.ZodTypeAny, const TDefaultNext>(schema: ((tools: {
             sql: TSql;
-        }) => TNewNext) | TNewNext, defaultValue: () => TDefaultNext): Prettify<Builder<"new", T, TSql, TNewNext, z.infer<TNewNext>, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>>;
+        }) => TNewNext) | TNewNext, defaultValue: TDefaultNext | (() => TDefaultNext)): Prettify<Builder<"new", T, TSql, TNewNext, TDefaultNext extends () => infer R ? R : TDefaultNext, InferSmartClientType<TSql, TNewNext>, InferSmartClientType<TSql, TNewNext>>>;
     };
     client: <TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
@@ -220,7 +220,7 @@ type SchemaDefinition = {
     [key: string]: any;
 };
 type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
-    [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
+    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : K]: T[K] extends {
         config: {
             sql: {
                 type: "hasMany" | "manyToMany";
@@ -229,7 +229,7 @@ type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodVa
         };
     } ? z.ZodArray<S extends {
         _tableName: string;
-    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : z.ZodObject<any>> : T[K] extends {
+    } ? z.ZodObject<Omit<InferSchemaByKey<S, Key, [...Depth, 1]>, typeof SchemaWrapperBrand>> : z.ZodObject<any>> : T[K] extends {
         config: {
             sql: {
                 type: "hasOne" | "belongsTo";
@@ -238,17 +238,7 @@ type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodVa
         };
     } ? S extends {
         _tableName: string;
-    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : z.ZodObject<any> : T[K] extends () => {
-        type: "hasMany" | "manyToMany";
-        schema: infer S extends {
-            _tableName: string;
-        };
-    } ? z.ZodArray<z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>>> : T[K] extends () => {
-        type: "hasOne" | "belongsTo";
-        schema: infer S extends {
-            _tableName: string;
-        };
-    } ? z.ZodObject<InferSchemaByKey<S, Key, [...Depth, 1]>> : T[K] extends {
+    } ? z.ZodObject<Omit<InferSchemaByKey<S, Key, [...Depth, 1]>, typeof SchemaWrapperBrand>> : z.ZodObject<any> : T[K] extends {
         type: "reference";
         to: () => infer RefField;
     } ? RefField extends {

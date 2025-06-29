@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { createSchema, schema, s, schemaRelations } from "../schema.js";
 
+import { v4 as uuidv4 } from "uuid";
+
 export const petSchema = schema({
   _tableName: "pets",
   id: s.sql({ type: "int", pk: true }).initialState(() => "sdasds"),
@@ -24,7 +26,7 @@ export const petSchema = schema({
 
 export const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).initialState(() => z.string()),
+  id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4()),
   firstname: s
     .sql({ type: "varchar", length: 255 })
     .initialState(() => "test")
@@ -45,7 +47,6 @@ export const userReferences = schemaRelations(userSchema, (s) => ({
       defaultCount: 1,
     })
     .validation(({ sql }) => sql.min(1)),
-  petId: s.reference(() => petSchema.id),
 }));
 
 const {
@@ -53,10 +54,10 @@ const {
   clientSchema: clSchema,
   defaultValues,
   validationSchema,
-} = createSchema(userSchema, { ...userReferences });
+} = createSchema(userSchema, userReferences);
 
 type User = z.infer<typeof sqlSchema>;
-type UserDb = z.infer<typeof clSchema>;
+type UserClient = z.infer<typeof clSchema>;
 type UserValidation = z.infer<typeof validationSchema>;
 
 /*type clientTestType = z.ZodObject<{
