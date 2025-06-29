@@ -27,7 +27,7 @@ export const petSchema = schema({
     }),
 });
 
-const petReferences = schemaRelations(petSchema, (s) => ({
+export const petReferences = schemaRelations(petSchema, (s) => ({
   userId: s.reference(() => userSchema.id),
 }));
 

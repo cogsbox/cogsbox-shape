@@ -1,6 +1,7 @@
-import type { Schema } from "./schema";
-type SchemaInput = Record<string, Schema<any>> | {
-    schemas: Record<string, Schema<any>>;
+type SchemaInput = Record<string, any> | {
+    schemas: Record<string, any>;
 };
-export declare function generateSQL(input: SchemaInput, outputPath?: string): Promise<string>;
+export declare function generateSQL(input: SchemaInput, outputPath?: string, options?: {
+    includeForeignKeys?: boolean;
+}): Promise<string>;
 export {};

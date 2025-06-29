@@ -8,51 +8,64 @@ import { spawnSync } from "child_process";
 
 const program = new Command();
 
-program.command("generate-sql <file>").action(async (file) => {
-  try {
-    const fullPath = path.resolve(process.cwd(), file);
+program
+  .name("cogsbox-shape")
+  .description("CLI for cogsbox-shape schema tools")
+  .version("0.5.70");
 
-    if (file.endsWith(".ts")) {
-      // Create a virtual module that imports and outputs the schema
-      const virtualModule = `
-        import { schemas } from '${pathToFileURL(fullPath).href}';
-        console.log(JSON.stringify(schemas));
-      `;
+program
+  .command("generate-sql <file>")
+  .description("Generate SQL from your schema definitions")
+  .option(
+    "-o, --output <path>",
+    "Output SQL file path",
+    "./cogsbox-shape-sql.sql"
+  )
+  .option("--no-foreign-keys", "Generate SQL without foreign key constraints")
+  .action(async (file, options) => {
+    try {
+      const fullPath = path.resolve(process.cwd(), file);
 
-      // Write this to a temporary file
-      const tmpFile = path.join(
-        path.dirname(fullPath),
-        ".tmp-schema-loader.ts"
-      );
-      await writeFile(tmpFile, virtualModule, "utf8");
+      if (file.endsWith(".ts")) {
+        // Create a virtual module that imports and USES the schema directly
+        const virtualModule = `
+    import { schemas } from '${pathToFileURL(fullPath).href}';
+    import { generateSQL } from '${pathToFileURL(path.join(process.cwd(), "dist/generateSQL.js")).href}';
+    
+    generateSQL(schemas, '${options.output}', { includeForeignKeys: ${options.foreignKeys !== false} })
+      .then(() => console.log('Done'))
+      .catch(err => console.error(err));
+  `;
 
-      const result = spawnSync("npx", ["tsx", tmpFile], {
-        encoding: "utf8",
-        stdio: ["inherit", "pipe", "pipe"],
-      });
+        // Write this to a temporary file
+        const tmpFile = path.join(
+          path.dirname(fullPath),
+          ".tmp-schema-loader.ts"
+        );
+        await writeFile(tmpFile, virtualModule, "utf8");
 
-      // Clean up temp file
-      await unlink(tmpFile).catch(() => {});
+        const result = spawnSync("npx", ["tsx", tmpFile], {
+          encoding: "utf8",
+          stdio: "inherit",
+        });
 
-      if (result.error) {
-        throw result.error;
+        // Clean up temp file
+        await unlink(tmpFile).catch(() => {});
+
+        if (result.error) {
+          throw result.error;
+        }
+      } else {
+        const schema = await import(pathToFileURL(fullPath).href);
+        await generateSQL(schema.schemas, options.output, {
+          includeForeignKeys: options.foreignKeys,
+        });
       }
-
-      if (result.stderr) {
-        console.error("stderr:", result.stderr);
-      }
-
-      const schema = JSON.parse(result.stdout);
-      await generateSQL(schema);
-    } else {
-      const schema = await import(pathToFileURL(fullPath).href);
-      await generateSQL(schema.schemas);
+      console.log(`Generated SQL successfully at ${options.output}`);
+    } catch (error) {
+      console.error("Error:", error);
+      process.exit(1);
     }
-    console.log("Generated SQL successfully");
-  } catch (error) {
-    console.error("Error:", error);
-    process.exit(1);
-  }
-});
+  });
 
 program.parse();
