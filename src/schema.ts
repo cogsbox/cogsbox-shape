@@ -251,7 +251,7 @@ type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
 // Updated stage methods to include relation
 type StageMethods = {
   sql: "initialState" | "client" | "validation" | "transform";
-  relation: "initialState" | "client" | "validation" | "transform"; // Relations can be chained like fields
+  relation: "validation" | "transform"; // Relations can be chained like fields
   new: "client" | "validation" | "transform";
   client: "validation" | "transform";
   validation: "transform";
@@ -1353,7 +1353,7 @@ export function schemaRelations<
       _key: K;
       _fieldType: RefObject[K];
     };
-    __parentTableType: TSchema;
+    __parentTableType: TSchema & RefObject;
   };
 } {
   const rel = {

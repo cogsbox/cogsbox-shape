@@ -6,7 +6,10 @@ import { v4 as uuidv4 } from "uuid";
 
 export const petSchema = schema({
   _tableName: "pets",
-  id: s.sql({ type: "int", pk: true }).initialState(() => "sdasds"),
+  id: s.sql({ type: "int", pk: true }).initialState(
+    () => z.string(),
+    () => uuidv4()
+  ),
   name: s.sql({ type: "varchar", length: 255 }).initialState(() => z.string()),
   fluffynessScale: s
     .sql({ type: "text" })
@@ -24,6 +27,10 @@ export const petSchema = schema({
     }),
 });
 
+const petReferences = schemaRelations(petSchema, (s) => ({
+  userId: s.reference(() => userSchema.id),
+}));
+
 export const userSchema = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4()),
@@ -40,13 +47,14 @@ export const userSchema = schema({
 });
 
 export const userReferences = schemaRelations(userSchema, (s) => ({
+  testId: s.reference(() => petSchema.id),
   pets: s
     .hasMany({
       fromKey: "id",
-      toKey: () => petSchema.id,
+      toKey: () => petReferences.userId,
       defaultCount: 1,
     })
-    .validation(({ sql }) => sql.min(1)),
+    .validation(({ client }) => client.min(1)),
 }));
 
 const {
@@ -60,9 +68,15 @@ type User = z.infer<typeof sqlSchema>;
 type UserClient = z.infer<typeof clSchema>;
 type UserValidation = z.infer<typeof validationSchema>;
 
-/*type clientTestType = z.ZodObject<{
-    id: z.ZodNumber;
-    firstname: z.ZodString;
-    surname: z.ZodString;
-    email: z.ZodString;
-    pets: z.ZodArray<z.ZodObject<{*/
+/*type UserClient = {
+    pets: {
+        id: string | number;
+        name: string;
+        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
+        favourite: boolean;
+    }[];
+    id: string | number;
+    firstname: string;
+    surname: string;
+    email: string;
+}*/

@@ -98,7 +98,7 @@ export type RelationConfig<T extends Schema<any>> = (BaseRelationConfig<T> & {
 type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
 type StageMethods = {
     sql: "initialState" | "client" | "validation" | "transform";
-    relation: "initialState" | "client" | "validation" | "transform";
+    relation: "validation" | "transform";
     new: "client" | "validation" | "transform";
     client: "validation" | "transform";
     validation: "transform";
@@ -307,7 +307,7 @@ export declare function schemaRelations<TSchema extends Schema<any>, RefObject e
             _key: K;
             _fieldType: RefObject[K];
         };
-        __parentTableType: TSchema;
+        __parentTableType: TSchema & RefObject;
     };
 };
 export {};
