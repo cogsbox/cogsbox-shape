@@ -1557,10 +1557,45 @@ type InferByKey<
               : never;
     };
 
-/**
- * [INTERNAL] Core utility to infer default values directly from the schema definition.
- */
-type InferDefaults<T> = {
+type DeriveSchemaByKey<
+  T,
+  Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
+  Depth extends any[] = [],
+> = Depth["length"] extends 10 // Recursion guard
+  ? any
+  : {
+      [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
+        ? never
+        : K]: T[K] extends {
+        config: {
+          sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
+        };
+      }
+        ? z.ZodArray<
+            S extends { _tableName: string }
+              ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+              : z.ZodObject<any>
+          >
+        : T[K] extends {
+              config: {
+                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
+              };
+            }
+          ? S extends { _tableName: string }
+            ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+            : z.ZodObject<any>
+          : T[K] extends { type: "reference"; to: () => infer RefField }
+            ? RefField extends { config: { [P in Key]: infer ZodSchema } }
+              ? ZodSchema
+              : never
+            : T[K] extends {
+                  config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
+                }
+              ? ZodSchema
+              : never;
+    };
+
+type DeriveDefaults<T> = Prettify<{
   [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
     ? never
     : K]: T[K] extends {
@@ -1568,51 +1603,35 @@ type InferDefaults<T> = {
   }
     ? D extends () => infer R
       ? R
-      : D // Handle function defaults
+      : D
     : never;
-};
+}>;
 
-/**
- * A new, non-conflicting namespace for directly inferring types from your schema definitions.
- * This is more performant than using `ReturnType<typeof createSchema>`.
- */
-export namespace Infer {
-  /**
-   * Directly infers the Zod schema for the **SQL (database)** layer.
-   */
-  export type SqlSchema<T extends { _tableName: string }> = z.ZodObject<
-    Prettify<InferByKey<T, "zodSqlSchema">>
+export type InferFromSchema<T extends { _tableName: string }> = Prettify<{
+  /** The Zod schema for the **SQL (database)** layer. */
+  SqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>;
+
+  /** The Zod schema for the **Client** layer. */
+  ClientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>;
+
+  /** The Zod schema for the **Validation** layer. */
+  ValidationSchema: z.ZodObject<
+    Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>
   >;
 
-  /**
-   * Directly infers the Zod schema for the **Client** layer.
-   */
-  export type ClientSchema<T extends { _tableName: string }> = z.ZodObject<
-    Prettify<InferByKey<T, "zodClientSchema">>
+  /** The TypeScript type for data as it exists in the **database**. */
+  Sql: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>;
+
+  /** The TypeScript type for data as it is represented on the **client**. */
+  Client: z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>
   >;
 
-  /**
-   * Directly infers the Zod schema for the **Validation** layer.
-   */
-  export type ValidationSchema<T extends { _tableName: string }> = z.ZodObject<
-    Prettify<InferByKey<T, "zodValidationSchema">>
+  /** The TypeScript type for **validation** data, often the most flexible shape. */
+  Validation: z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>
   >;
 
-  /** The TypeScript type for data as it exists in the database. */
-  export type Sql<T extends { _tableName: string }> = z.infer<SqlSchema<T>>;
-
-  /** The TypeScript type for data as it is represented on the client. */
-  export type Client<T extends { _tableName: string }> = z.infer<
-    ClientSchema<T>
-  >;
-
-  /** The TypeScript type for validation data, often the most flexible shape. */
-  export type Validation<T extends { _tableName: string }> = z.infer<
-    ValidationSchema<T>
-  >;
-
-  /** The TypeScript type for the default values object. */
-  export type Defaults<T extends { _tableName: string }> = Prettify<
-    InferDefaults<T>
-  >;
-}
+  /** The TypeScript type for the object of **default values**. */
+  Defaults: DeriveDefaults<T>;
+}>;

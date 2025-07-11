@@ -322,12 +322,7 @@ export declare function schemaRelations<TSchema extends Schema<any>, RefObject e
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
-/**
- * [INTERNAL] Core recursive utility to inspect the schema definition.
- * It iterates through the schema, finds the `config` object in each
- * builder, and extracts the specified Zod schema.
- */
-type InferByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
+type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
     [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : K]: T[K] extends {
         config: {
             sql: {
@@ -337,7 +332,7 @@ type InferByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidati
         };
     } ? z.ZodArray<S extends {
         _tableName: string;
-    } ? z.ZodObject<Prettify<InferByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any>> : T[K] extends {
+    } ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any>> : T[K] extends {
         config: {
             sql: {
                 type: "hasOne" | "belongsTo";
@@ -346,7 +341,7 @@ type InferByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidati
         };
     } ? S extends {
         _tableName: string;
-    } ? z.ZodObject<Prettify<InferByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any> : T[K] extends {
+    } ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any> : T[K] extends {
         type: "reference";
         to: () => infer RefField;
     } ? RefField extends {
@@ -359,54 +354,29 @@ type InferByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidati
         };
     } ? ZodSchema : never;
 };
-/**
- * [INTERNAL] Core utility to infer default values directly from the schema definition.
- */
-type InferDefaults<T> = {
+type DeriveDefaults<T> = Prettify<{
     [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : K]: T[K] extends {
         config: {
             initialValue: infer D;
         };
     } ? D extends () => infer R ? R : D : never;
-};
-/**
- * A new, non-conflicting namespace for directly inferring types from your schema definitions.
- * This is more performant than using `ReturnType<typeof createSchema>`.
- */
-export declare namespace Infer {
-    /**
-     * Directly infers the Zod schema for the **SQL (database)** layer.
-     */
-    type SqlSchema<T extends {
-        _tableName: string;
-    }> = z.ZodObject<Prettify<InferByKey<T, "zodSqlSchema">>>;
-    /**
-     * Directly infers the Zod schema for the **Client** layer.
-     */
-    type ClientSchema<T extends {
-        _tableName: string;
-    }> = z.ZodObject<Prettify<InferByKey<T, "zodClientSchema">>>;
-    /**
-     * Directly infers the Zod schema for the **Validation** layer.
-     */
-    type ValidationSchema<T extends {
-        _tableName: string;
-    }> = z.ZodObject<Prettify<InferByKey<T, "zodValidationSchema">>>;
-    /** The TypeScript type for data as it exists in the database. */
-    type Sql<T extends {
-        _tableName: string;
-    }> = z.infer<SqlSchema<T>>;
-    /** The TypeScript type for data as it is represented on the client. */
-    type Client<T extends {
-        _tableName: string;
-    }> = z.infer<ClientSchema<T>>;
-    /** The TypeScript type for validation data, often the most flexible shape. */
-    type Validation<T extends {
-        _tableName: string;
-    }> = z.infer<ValidationSchema<T>>;
-    /** The TypeScript type for the default values object. */
-    type Defaults<T extends {
-        _tableName: string;
-    }> = Prettify<InferDefaults<T>>;
-}
+}>;
+export type InferFromSchema<T extends {
+    _tableName: string;
+}> = Prettify<{
+    /** The Zod schema for the **SQL (database)** layer. */
+    SqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>;
+    /** The Zod schema for the **Client** layer. */
+    ClientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>;
+    /** The Zod schema for the **Validation** layer. */
+    ValidationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>;
+    /** The TypeScript type for data as it exists in the **database**. */
+    Sql: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>;
+    /** The TypeScript type for data as it is represented on the **client**. */
+    Client: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>;
+    /** The TypeScript type for **validation** data, often the most flexible shape. */
+    Validation: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>>;
+    /** The TypeScript type for the object of **default values**. */
+    Defaults: DeriveDefaults<T>;
+}>;
 export {};
