@@ -345,24 +345,24 @@ export type Builder<
 >;
 // First, define the interface for the shape object
 interface ShapeAPI {
-  int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
-  varchar: (
-    config?: Omit<StringConfig, "type">
-  ) => ReturnType<typeof createBuilder>;
-  char: (
-    config?: Omit<StringConfig, "type">
-  ) => ReturnType<typeof createBuilder>;
-  text: (
-    config?: Omit<StringConfig, "type" | "length">
-  ) => ReturnType<typeof createBuilder>;
-  longtext: (
-    config?: Omit<StringConfig, "type" | "length">
-  ) => ReturnType<typeof createBuilder>;
-  boolean: (config?: BooleanConfig) => ReturnType<typeof createBuilder>;
-  date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
-  datetime: (
-    config?: Omit<DateConfig, "type">
-  ) => ReturnType<typeof createBuilder>;
+  // int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
+  // varchar: (
+  //   config?: Omit<StringConfig, "type">
+  // ) => ReturnType<typeof createBuilder>;
+  // char: (
+  //   config?: Omit<StringConfig, "type">
+  // ) => ReturnType<typeof createBuilder>;
+  // text: (
+  //   config?: Omit<StringConfig, "type" | "length">
+  // ) => ReturnType<typeof createBuilder>;
+  // longtext: (
+  //   config?: Omit<StringConfig, "type" | "length">
+  // ) => ReturnType<typeof createBuilder>;
+  // boolean: (config?: BooleanConfig) => ReturnType<typeof createBuilder>;
+  // date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
+  // datetime: (
+  //   config?: Omit<DateConfig, "type">
+  // ) => ReturnType<typeof createBuilder>;
   sql: <T extends SQLType>(
     sqlConfig: T
   ) => Builder<
@@ -427,53 +427,53 @@ interface ShapeAPI {
 
 // Now define the shape object with the explicit type annotation
 export const s: ShapeAPI = {
-  int: (config: IntConfig = {}) =>
-    s.sql({
-      type: "int",
-      ...config,
-    }),
+  // int: (config: IntConfig = {}) =>
+  //   s.sql({
+  //     type: "int",
+  //     ...config,
+  //   }),
 
-  varchar: (config: Omit<StringConfig, "type"> = {}) =>
-    s.sql({
-      type: "varchar",
-      ...config,
-    }),
+  // varchar: (config: Omit<StringConfig, "type"> = {}) =>
+  //   s.sql({
+  //     type: "varchar",
+  //     ...config,
+  //   }),
 
-  char: (config: Omit<StringConfig, "type"> = {}) =>
-    s.sql({
-      type: "char",
-      ...config,
-    }),
+  // char: (config: Omit<StringConfig, "type"> = {}) =>
+  //   s.sql({
+  //     type: "char",
+  //     ...config,
+  //   }),
 
-  text: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-    s.sql({
-      type: "text",
-      ...config,
-    }),
+  // text: (config: Omit<StringConfig, "type" | "length"> = {}) =>
+  //   s.sql({
+  //     type: "text",
+  //     ...config,
+  //   }),
 
-  longtext: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-    s.sql({
-      type: "longtext",
-      ...config,
-    }),
+  // longtext: (config: Omit<StringConfig, "type" | "length"> = {}) =>
+  //   s.sql({
+  //     type: "longtext",
+  //     ...config,
+  //   }),
 
-  boolean: (config: BooleanConfig = {}) =>
-    s.sql({
-      type: "boolean",
-      ...config,
-    }),
+  // boolean: (config: BooleanConfig = {}) =>
+  //   s.sql({
+  //     type: "boolean",
+  //     ...config,
+  //   }),
 
-  date: (config: Omit<DateConfig, "type"> = {}) =>
-    s.sql({
-      type: "date",
-      ...config,
-    }),
+  // date: (config: Omit<DateConfig, "type"> = {}) =>
+  //   s.sql({
+  //     type: "date",
+  //     ...config,
+  //   }),
 
-  datetime: (config: Omit<DateConfig, "type"> = {}) =>
-    s.sql({
-      type: "datetime",
-      ...config,
-    }),
+  // datetime: (config: Omit<DateConfig, "type"> = {}) =>
+  //   s.sql({
+  //     type: "datetime",
+  //     ...config,
+  //   }),
 
   sql: <T extends SQLType>(sqlConfig: T) => {
     const sqlZodType = (() => {

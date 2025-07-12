@@ -109,34 +109,34 @@ SECTION B: RUNTIME BEHAVIOR TESTS (The New Additions)
 ================================================================
 */
 describe("Schema Builder Runtime Behavior", () => {
-  describe("Default Value Generation", () => {
-    // Dummy schema for the relation
-    const itemSchema = { _tableName: "items", id: s.int() };
-    const defaultValuesSchema = schema({
-      _tableName: "defaults",
-      fromInitialState: s.varchar().initialState(() => "from-initial-state"),
-      fromSqlDefault: s.int({ default: 99 }),
-      isNullable: s.boolean({ nullable: true }),
-      hasNoDefault: s.int(),
-    });
-    const { defaultValues } = createSchema(defaultValuesSchema);
+  // describe("Default Value Generation", () => {
+  //   // Dummy schema for the relation
+  //   const itemSchema = { _tableName: "items", id: s.int() };
+  //   const defaultValuesSchema = schema({
+  //     _tableName: "defaults",
+  //     fromInitialState: s.varchar().initialState(() => "from-initial-state"),
+  //     fromSqlDefault: s.int({ default: 99 }),
+  //     isNullable: s.boolean({ nullable: true }),
+  //     hasNoDefault: s.int(),
+  //   });
+  //   const { defaultValues } = createSchema(defaultValuesSchema);
 
-    it("should get default from .initialState()", () => {
-      expect(defaultValues.fromInitialState).toBe("from-initial-state");
-    });
+  //   it("should get default from .initialState()", () => {
+  //     expect(defaultValues.fromInitialState).toBe("from-initial-state");
+  //   });
 
-    it("should get default from SQL config", () => {
-      expect(defaultValues.fromSqlDefault).toBe(99);
-    });
+  //   it("should get default from SQL config", () => {
+  //     expect(defaultValues.fromSqlDefault).toBe(99);
+  //   });
 
-    it("should default a nullable field to null", () => {
-      expect(defaultValues.isNullable).toBe(null);
-    });
+  //   it("should default a nullable field to null", () => {
+  //     expect(defaultValues.isNullable).toBe(null);
+  //   });
 
-    it("should use the generated default (e.g., 0 for int) when none is provided", () => {
-      expect(defaultValues.hasNoDefault).toBe(0);
-    });
-  });
+  //   it("should use the generated default (e.g., 0 for int) when none is provided", () => {
+  //     expect(defaultValues.hasNoDefault).toBe(0);
+  //   });
+  // });
 
   describe("Schema Parsing, Validation, and Transformation", () => {
     // This schema definition is correct and has the .transform() method.

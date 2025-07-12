@@ -9,38 +9,46 @@ export function currentTimeStamp() {
 }
 // Now define the shape object with the explicit type annotation
 export const s = {
-    int: (config = {}) => s.sql({
-        type: "int",
-        ...config,
-    }),
-    varchar: (config = {}) => s.sql({
-        type: "varchar",
-        ...config,
-    }),
-    char: (config = {}) => s.sql({
-        type: "char",
-        ...config,
-    }),
-    text: (config = {}) => s.sql({
-        type: "text",
-        ...config,
-    }),
-    longtext: (config = {}) => s.sql({
-        type: "longtext",
-        ...config,
-    }),
-    boolean: (config = {}) => s.sql({
-        type: "boolean",
-        ...config,
-    }),
-    date: (config = {}) => s.sql({
-        type: "date",
-        ...config,
-    }),
-    datetime: (config = {}) => s.sql({
-        type: "datetime",
-        ...config,
-    }),
+    // int: (config: IntConfig = {}) =>
+    //   s.sql({
+    //     type: "int",
+    //     ...config,
+    //   }),
+    // varchar: (config: Omit<StringConfig, "type"> = {}) =>
+    //   s.sql({
+    //     type: "varchar",
+    //     ...config,
+    //   }),
+    // char: (config: Omit<StringConfig, "type"> = {}) =>
+    //   s.sql({
+    //     type: "char",
+    //     ...config,
+    //   }),
+    // text: (config: Omit<StringConfig, "type" | "length"> = {}) =>
+    //   s.sql({
+    //     type: "text",
+    //     ...config,
+    //   }),
+    // longtext: (config: Omit<StringConfig, "type" | "length"> = {}) =>
+    //   s.sql({
+    //     type: "longtext",
+    //     ...config,
+    //   }),
+    // boolean: (config: BooleanConfig = {}) =>
+    //   s.sql({
+    //     type: "boolean",
+    //     ...config,
+    //   }),
+    // date: (config: Omit<DateConfig, "type"> = {}) =>
+    //   s.sql({
+    //     type: "date",
+    //     ...config,
+    //   }),
+    // datetime: (config: Omit<DateConfig, "type"> = {}) =>
+    //   s.sql({
+    //     type: "datetime",
+    //     ...config,
+    //   }),
     sql: (sqlConfig) => {
         const sqlZodType = (() => {
             let baseType;

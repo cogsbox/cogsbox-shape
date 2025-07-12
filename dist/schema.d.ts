@@ -30,25 +30,6 @@ export type SQLType = ({
 }) & {
     pk?: true;
 };
-type BaseConfig = {
-    nullable?: boolean;
-    pk?: true;
-    field?: string;
-};
-type IntConfig = BaseConfig & {
-    default?: number;
-};
-type BooleanConfig = BaseConfig & {
-    default?: boolean;
-};
-type DateConfig = BaseConfig & {
-    type?: "date" | "datetime";
-    default?: Date;
-};
-type StringConfig = BaseConfig & {
-    length?: number;
-    default?: string;
-};
 type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodBoolean> : T["type"] extends "date" | "datetime" ? T extends {
     default: "CURRENT_TIMESTAMP";
 } ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodBoolean : T["type"] extends "date" | "datetime" ? T extends {
@@ -138,14 +119,6 @@ export type Builder<TStage extends Stage, T extends SQLType | RelationConfig<any
     };
 } & Pick<IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>, StageMethods[TStage]>;
 interface ShapeAPI {
-    int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
-    varchar: (config?: Omit<StringConfig, "type">) => ReturnType<typeof createBuilder>;
-    char: (config?: Omit<StringConfig, "type">) => ReturnType<typeof createBuilder>;
-    text: (config?: Omit<StringConfig, "type" | "length">) => ReturnType<typeof createBuilder>;
-    longtext: (config?: Omit<StringConfig, "type" | "length">) => ReturnType<typeof createBuilder>;
-    boolean: (config?: BooleanConfig) => ReturnType<typeof createBuilder>;
-    date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
-    datetime: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
     sql: <T extends SQLType>(sqlConfig: T) => Builder<"sql", T, SQLToZodType<T, false>, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
     hasMany: <T extends Schema<any>, CreateSchema extends ReturnType<typeof createSchema<T>>>(config: {
         fromKey: string;
@@ -166,18 +139,6 @@ interface ShapeAPI {
     }) => Builder<"relation", RelationConfig<T>, z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>, any[], z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>>;
 }
 export declare const s: ShapeAPI;
-declare function createBuilder<TStage extends "sql" | "relation" | "new" | "client" | "validation", T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny>(config: {
-    stage: TStage;
-    sqlConfig: T;
-    sqlZod: TSql;
-    newZod: TNew;
-    initialValue: TInitialValue;
-    clientZod: TClient;
-    validationZod: TValidation;
-    completedStages?: Set<string>;
-    clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-    validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-}): Builder<TStage, T, TSql, TNew, TInitialValue, TClient, TValidation>;
 type EnrichedField<K extends string, V, TSchema extends ShapeSchema> = V & {
     __meta: {
         _key: K;
