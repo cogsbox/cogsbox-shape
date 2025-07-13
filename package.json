@@ -16,6 +16,9 @@
     },
     "bin": {
         "cogsbox-shape": "tsx ./dist/cli.js"
+    },    
+    "exports": {
+        ".": "./dist/index.js"
     },
     "keywords": [
         "typescript",
@@ -23,7 +26,7 @@
         "database",
         "full-stack",
         "type-safe",
-        "client-server",
+        "client-server",    
         "zod",
         "validation",
         "cogs",
@@ -36,7 +39,7 @@
         "commander": "^13.1.0",
         "tsx": "^4.19.3",
         "uuid": "^9.0.0",
-        "zod": "^3.22.4",
+    
         "zod-to-json-schema": "^3.22.3"
     },
     "devDependencies": {
@@ -48,8 +51,8 @@
         "expect-type": "^1.2.1",
         "prettier": "^3.1.1",
         "typescript": "^5.3.3",
-        "vitest": "^3.2.0",
-        "zod": "^4.25.67"
+        "vitest": "^3.2.0",          
+         "zod": "^3.25.0 || ^4.0.0"
     },
     "peerDependencies": {
         "zod": "^3.22.4"
