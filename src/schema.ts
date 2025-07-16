@@ -828,7 +828,7 @@ export type EnrichFields<T extends ShapeSchema> = {
 };
 
 // The table function that enriches fields with their key information
-export const SchemaWrapperBrand = Symbol("SchemaWrapper");
+export const SchemaWrapperBrand: unique symbol = Symbol("SchemaWrapper") as any;
 
 export function schema<T extends ShapeSchema>(
   schema: T

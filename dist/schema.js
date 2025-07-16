@@ -270,7 +270,6 @@ function createBuilder(config) {
 }
 // The table function that enriches fields with their key information
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
-// Update the schema function to use the symbol
 export function schema(schema) {
     const enrichedSchema = {
         _tableName: schema._tableName,
