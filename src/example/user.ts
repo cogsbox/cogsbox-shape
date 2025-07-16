@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { createSchema, schema, s, schemaRelations } from "../schema.js";
+import {
+  createSchema,
+  schema,
+  s,
+  schemaRelations,
+  InferFromSchema,
+} from "../schema.js";
 
 import { v4 as uuidv4 } from "uuid";
 
@@ -52,31 +58,23 @@ export const userReferences = schemaRelations(userSchema, (s) => ({
     .hasMany({
       fromKey: "id",
       toKey: () => petReferences.userId,
-      defaultCount: 1,
     })
     .validation(({ client }) => client.min(1)),
 }));
 
-const {
-  sqlSchema,
-  clientSchema: clSchema,
-  defaultValues,
-  validationSchema,
-} = createSchema(userSchema, userReferences);
+// const {
+//   sqlSchema,
+//   clientSchema: clSchema,
+//   defaultValues,
+//   validationSchema,
+// } = createSchema(userSchema, userReferences);
 
-type User = z.infer<typeof sqlSchema>;
-type UserClient = z.infer<typeof clSchema>;
-type UserValidation = z.infer<typeof validationSchema>;
+const merged = { ...userSchema, ...userReferences };
+const pets = petSchema.id.__parentTableType;
 
-/*type UserClient = {
-    pets: {
-        id: string | number;
-        name: string;
-        fluffynessScale: ("bald" | "fuzzy" | "fluffy" | "poof")[];
-        favourite: boolean;
-    }[];
-    id: string | number;
-    firstname: string;
-    surname: string;
-    email: string;
-}*/
+type inferred = InferFromSchema<typeof merged>;
+type pettype = inferred;
+type defaults = inferred["Defaults"];
+type val = inferred["Validation"];
+type vals = inferred["ValidationSchema"];
+type PetsField = typeof userReferences.pets;

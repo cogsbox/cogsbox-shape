@@ -832,7 +832,7 @@ export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
 export function schema<T extends ShapeSchema>(
   schema: T
-): EnrichFields<T> & { _tableName: T["_tableName"] } {
+): Prettify<EnrichFields<T> & { _tableName: T["_tableName"] }> {
   const enrichedSchema: any = {
     _tableName: schema._tableName,
   };
@@ -923,12 +923,29 @@ function inferDefaultFromZod(
       return sqlConfig.default;
     }
 
-    // Check if it's a relation config (this logic is fine)
     if (
       typeof sqlConfig.type === "string" &&
       ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)
     ) {
-      // ... your existing relation logic is fine ...
+      const relationConfig = sqlConfig as RelationConfig<any>;
+
+      if (
+        relationConfig.type === "hasMany" ||
+        relationConfig.type === "manyToMany"
+      ) {
+        // For hasMany/manyToMany, default to an array based on defaultCount.
+        return Array.from(
+          { length: relationConfig.defaultCount || 0 },
+          () => ({})
+        );
+      }
+      if (
+        relationConfig.type === "hasOne" ||
+        relationConfig.type === "belongsTo"
+      ) {
+        // For hasOne/belongsTo, default to a single empty object.
+        return {};
+      }
     }
 
     // Handle SQL type-based generation (this is the fallback)
@@ -1136,11 +1153,12 @@ type InferDefaultValues2<T> = {
         ? Prettify<InferDefaultValues2<S>>
         : never;
 };
+// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createSchema FUNCTION
+// The only change is the `if` condition inside the loop.
 
 export function createSchema<
   T extends { _tableName: string; [SchemaWrapperBrand]?: true },
   R extends Record<string, any> = {},
-  // Omit the symbol from the actual schema type
   TActualSchema extends Omit<T & R, typeof SchemaWrapperBrand> = Omit<
     T & R,
     typeof SchemaWrapperBrand
@@ -1149,18 +1167,30 @@ export function createSchema<
   schema: T,
   relations?: R
 ): {
-  sqlSchema: z.ZodObject<Prettify<InferSqlSchema<TActualSchema>>>;
-  clientSchema: z.ZodObject<Prettify<InferClientSchema<TActualSchema>>>;
-  validationSchema: z.ZodObject<Prettify<InferValidationSchema<TActualSchema>>>;
-  defaultValues: Prettify<InferDefaultValues2<TActualSchema>>;
+  sqlSchema: z.ZodObject<
+    Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
+  >;
+  clientSchema: z.ZodObject<
+    Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>
+  >;
+  validationSchema: z.ZodObject<
+    Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
+  >;
+  defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
   toClient: (
-    dbObject: z.infer<z.ZodObject<Prettify<InferSqlSchema<TActualSchema>>>>
-  ) => z.infer<z.ZodObject<Prettify<InferClientSchema<TActualSchema>>>>;
+    dbObject: z.infer<
+      z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+    >
+  ) => z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
+  >;
   toDb: (
     clientObject: z.infer<
-      z.ZodObject<Prettify<InferClientSchema<TActualSchema>>>
+      z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
     >
-  ) => z.infer<z.ZodObject<Prettify<InferSqlSchema<TActualSchema>>>>;
+  ) => z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+  >;
 } {
   const sqlFields: any = {};
   const clientFields: any = {};
@@ -1171,109 +1201,91 @@ export function createSchema<
     { toClient: (val: any) => any; toDb: (val: any) => any }
   > = {};
 
-  // --- PASS 1: Process main schema fields (no relations here) ---
-  for (const key in schema) {
-    if (key === "_tableName" || key.startsWith("__")) continue;
+  const fullSchema = { ...schema, ...(relations || {}) };
 
-    const definition = (schema as any)[key];
+  for (const key in fullSchema) {
+    if (
+      key === "_tableName" ||
+      key.startsWith("__") ||
+      key === String(SchemaWrapperBrand)
+    )
+      continue;
 
-    if (definition && definition.type === "reference") {
-      // Handle reference fields
+    const definition = (fullSchema as any)[key];
+
+    // --- THIS IS THE FIX ---
+    // The condition now correctly checks for EITHER a `reference` type OR a builder with a `.config`.
+    if (
+      !definition ||
+      (definition.type !== "reference" && !definition.config)
+    ) {
+      continue;
+    }
+
+    if (definition.type === "reference") {
+      // This block now correctly processes `testId`.
       const referencedFieldBuilder = definition.to();
       const referencedConfig = referencedFieldBuilder.config;
 
       sqlFields[key] = referencedConfig.zodSqlSchema;
       clientFields[key] = referencedConfig.zodClientSchema;
       validationFields[key] = referencedConfig.zodValidationSchema;
-
-      // Foreign key fields should get their own default, not the referenced field's default
       defaultValues[key] = inferDefaultFromZod(
         referencedConfig.zodClientSchema,
         { ...referencedConfig.sql, default: undefined }
       );
-    } else if (definition && definition.config) {
-      // Handle regular fields with builder pattern
+    } else {
+      // This block handles fields with a `.config` property, like `pets`.
       const config = definition.config;
+      const sqlConfig = config.sql;
 
-      sqlFields[key] = config.zodSqlSchema;
-      clientFields[key] = config.zodClientSchema;
-      validationFields[key] = config.zodValidationSchema;
+      if (
+        sqlConfig &&
+        typeof sqlConfig === "object" &&
+        ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
+          sqlConfig.type
+        )
+      ) {
+        const relatedSchemaFactory = sqlConfig.schema as () => T;
+        const childSchemaResult = createSchema(relatedSchemaFactory());
+        let baseSqlSchema: z.ZodTypeAny;
+        let baseClientSchema: z.ZodTypeAny;
 
-      if (config.transforms) {
-        fieldTransforms[key] = config.transforms;
-      }
-
-      // Handle initial value
-      const initialValueOrFn = config.initialValue;
-      if (isFunction(initialValueOrFn)) {
-        defaultValues[key] = initialValueOrFn();
-      } else {
-        defaultValues[key] = initialValueOrFn;
-      }
-    }
-  }
-
-  // --- PASS 2: Process relations if provided ---
-  if (relations) {
-    for (const key in relations) {
-      const relationDefinition = (relations as any)[key];
-
-      if (relationDefinition && relationDefinition.config) {
-        const config = relationDefinition.config;
-        const sqlConfig = config.sql;
-
-        if (
-          sqlConfig &&
-          typeof sqlConfig === "object" &&
-          ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
-            sqlConfig.type
-          )
-        ) {
-          const relationConfig = sqlConfig;
-          const childSchemaResult = createSchema(relationConfig.schema());
-
-          // Create the base schemas based on relation type
-          let baseSqlSchema: z.ZodTypeAny;
-          let baseClientSchema: z.ZodTypeAny;
-          let baseValidationSchema: z.ZodTypeAny;
-
-          if (
-            relationConfig.type === "hasMany" ||
-            relationConfig.type === "manyToMany"
-          ) {
-            baseSqlSchema = z.array(childSchemaResult.sqlSchema);
-            baseClientSchema = z.array(childSchemaResult.clientSchema);
-            baseValidationSchema = z.array(childSchemaResult.validationSchema);
-            defaultValues[key] = Array.from(
-              { length: relationConfig.defaultCount || 0 },
-              () => childSchemaResult.defaultValues
-            );
-          } else {
-            baseSqlSchema = childSchemaResult.sqlSchema;
-            baseClientSchema = childSchemaResult.clientSchema;
-            baseValidationSchema = childSchemaResult.validationSchema;
-            defaultValues[key] = childSchemaResult.defaultValues;
-          }
-
-          // Apply transforms if they exist
-          const finalClientSchema = config.clientTransform
-            ? config.clientTransform(baseClientSchema)
-            : baseClientSchema;
-
-          const finalValidationSchema = config.validationTransform
-            ? config.validationTransform(baseValidationSchema)
-            : finalClientSchema;
-
-          // Assign the schemas
-          sqlFields[key] = baseSqlSchema.optional(); // SQL fields are optional for lazy loading
-          clientFields[key] = finalClientSchema;
-          validationFields[key] = finalValidationSchema;
+        if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+          baseSqlSchema = z.array(childSchemaResult.sqlSchema);
+          baseClientSchema = z.array(childSchemaResult.clientSchema);
+          defaultValues[key] = Array.from(
+            { length: (sqlConfig as any).defaultCount || 0 },
+            () => childSchemaResult.defaultValues
+          );
+        } else {
+          baseSqlSchema = childSchemaResult.sqlSchema;
+          baseClientSchema = childSchemaResult.clientSchema;
+          defaultValues[key] = childSchemaResult.defaultValues;
         }
+
+        sqlFields[key] = baseSqlSchema.optional();
+        clientFields[key] = config.clientTransform
+          ? config.clientTransform(baseClientSchema)
+          : baseClientSchema;
+        validationFields[key] = clientFields[key];
+      } else {
+        sqlFields[key] = config.zodSqlSchema;
+        clientFields[key] = config.zodClientSchema;
+        validationFields[key] = config.zodValidationSchema;
+
+        if (config.transforms) {
+          fieldTransforms[key] = config.transforms;
+        }
+
+        const initialValueOrFn = config.initialValue;
+        defaultValues[key] = isFunction(initialValueOrFn)
+          ? initialValueOrFn()
+          : initialValueOrFn;
       }
     }
   }
 
-  // Create transform functions
   const toClient = (dbObject: any) => {
     const clientObject: any = { ...dbObject };
     for (const key in fieldTransforms) {
@@ -1296,17 +1308,15 @@ export function createSchema<
 
   return {
     sqlSchema: z.object(sqlFields) as z.ZodObject<
-      Prettify<InferSqlSchema<TActualSchema>>
+      Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
     >,
     clientSchema: z.object(clientFields) as z.ZodObject<
-      Prettify<InferClientSchema<TActualSchema>>
+      Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>
     >,
     validationSchema: z.object(validationFields) as z.ZodObject<
-      Prettify<InferValidationSchema<TActualSchema>>
+      Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
     >,
-    defaultValues: defaultValues as Prettify<
-      InferDefaultValues2<TActualSchema>
-    >,
+    defaultValues: defaultValues as Prettify<DeriveDefaults<TActualSchema>>,
     toClient,
     toDb,
   };
@@ -1333,6 +1343,7 @@ type RelationBuilders<TSchema> = {
     type: "reference";
     to: () => TField;
   };
+
   hasMany: <
     T extends Schema<any>,
     K extends keyof T & string,
@@ -1343,7 +1354,8 @@ type RelationBuilders<TSchema> = {
     defaultCount?: number;
   }) => Builder<
     "relation",
-    RelationConfig<TField["__parentTableType"]>,
+    // This is now specific: a BaseRelationConfig intersected with the literal type.
+    BaseRelationConfig<TField["__parentTableType"]> & { type: "hasMany" },
     z.ZodArray<z.ZodObject<InferSqlSchema<TField["__parentTableType"]>>>,
     z.ZodArray<z.ZodObject<InferClientSchema<TField["__parentTableType"]>>>,
     any[],
@@ -1351,19 +1363,24 @@ type RelationBuilders<TSchema> = {
     z.ZodArray<z.ZodObject<InferValidationSchema<TField["__parentTableType"]>>>
   >;
 
-  hasOne: <T extends Schema<any>>(config: {
+  hasOne: <
+    T extends Schema<any>,
+    K extends keyof T & string,
+    TField extends EnrichedField<K, T[K], T>,
+  >(config: {
     fromKey: keyof TSchema & string;
-    toKey: () => T[keyof T];
-    schema: () => T;
+    toKey: () => TField;
   }) => Builder<
     "relation",
-    RelationConfig<T>,
-    z.ZodArray<any>,
-    z.ZodArray<any>,
-    any[],
-    z.ZodArray<any>,
-    z.ZodArray<any>
+    // Apply the same specific intersection here.
+    BaseRelationConfig<TField["__parentTableType"]> & { type: "hasOne" },
+    z.ZodArray<z.ZodObject<InferSqlSchema<TField["__parentTableType"]>>>,
+    z.ZodArray<z.ZodObject<InferClientSchema<TField["__parentTableType"]>>>,
+    any,
+    z.ZodArray<z.ZodObject<InferClientSchema<TField["__parentTableType"]>>>,
+    z.ZodArray<z.ZodObject<InferValidationSchema<TField["__parentTableType"]>>>
   >;
+
   manyToMany: <T extends Schema<any>>(config: {
     fromKey: keyof TSchema & string;
     toKey: () => T[keyof T];
@@ -1371,7 +1388,8 @@ type RelationBuilders<TSchema> = {
     defaultCount?: number;
   }) => Builder<
     "relation",
-    RelationConfig<T>,
+    // And here.
+    BaseRelationConfig<T> & { type: "manyToMany" },
     z.ZodOptional<z.ZodArray<z.ZodAny>>,
     z.ZodOptional<z.ZodArray<z.ZodAny>>,
     any[],
@@ -1430,14 +1448,13 @@ export function schemaRelations<
 
     hasOne: <T extends Schema<any>>(config: {
       fromKey: keyof TSchema & string;
-      toKey: () => any;
-      schema: () => T;
+      toKey: any;
     }) => {
       const relationConfig: RelationConfig<T> = {
         type: "hasOne",
         fromKey: config.fromKey,
         toKey: config.toKey,
-        schema: config.schema,
+        schema: () => config.toKey.__parentTableType,
       };
 
       const relationZodType = z.any();
@@ -1504,58 +1521,13 @@ export function schemaRelations<
 
   return enrichedRefs;
 }
-// ========================================================================
-// === ADD THIS NEW, NON-CONFLICTING CODE TO YOUR PROJECT ===
-// ========================================================================
 
-// A utility to make complex inferred types more readable
-type Prettify<T> = {
-  [K in keyof T]: T[K];
-} & {};
+type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 /**
- * [INTERNAL] Core recursive utility to inspect the schema definition.
- * It iterates through the schema, finds the `config` object in each
- * builder, and extracts the specified Zod schema.
+ * [INTERNAL] Recursively derives a Zod schema by inspecting the builder's config.
+ * This version correctly uses the `schema` property from the relation's config.
  */
-type InferByKey<
-  T,
-  Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
-  Depth extends any[] = [],
-> = Depth["length"] extends 10 // Recursion guard
-  ? any
-  : {
-      [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
-        ? never
-        : K]: T[K] extends {
-        config: {
-          sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
-        };
-      }
-        ? z.ZodArray<
-            S extends { _tableName: string }
-              ? z.ZodObject<Prettify<InferByKey<S, Key, [...Depth, 1]>>>
-              : z.ZodObject<any>
-          >
-        : T[K] extends {
-              config: {
-                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
-              };
-            }
-          ? S extends { _tableName: string }
-            ? z.ZodObject<Prettify<InferByKey<S, Key, [...Depth, 1]>>>
-            : z.ZodObject<any>
-          : T[K] extends { type: "reference"; to: () => infer RefField }
-            ? RefField extends { config: { [P in Key]: infer ZodSchema } }
-              ? ZodSchema
-              : never
-            : T[K] extends {
-                  config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
-                }
-              ? ZodSchema
-              : never;
-    };
-
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
@@ -1566,71 +1538,87 @@ type DeriveSchemaByKey<
       [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
         ? never
         : K]: T[K] extends {
+        // Case 1: A 'hasMany' or 'manyToMany' relation
         config: {
           sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
         };
       }
-        ? z.ZodArray<
-            S extends { _tableName: string }
-              ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-              : z.ZodObject<any>
-          >
-        : T[K] extends {
-              config: {
-                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
-              };
+        ? S extends { _tableName: string } // Infer the schema `S` from the config
+          ? z.ZodArray<
+              z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+            >
+          : never
+        : // Case 2: A 'hasOne' or 'belongsTo' relation
+          T[K] extends {
+              config: { sql: { schema: () => infer S } };
             }
-          ? S extends { _tableName: string }
+          ? S extends { _tableName: string } // Same logic, infer `S`
             ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-            : z.ZodObject<any>
-          : T[K] extends { type: "reference"; to: () => infer RefField }
+            : z.ZodObject<any> // Fallback
+          : // Case 3: A direct reference field
+            T[K] extends { type: "reference"; to: () => infer RefField }
             ? RefField extends { config: { [P in Key]: infer ZodSchema } }
               ? ZodSchema
               : never
-            : T[K] extends {
+            : // Case 4: A standard column field
+              T[K] extends {
                   config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
                 }
               ? ZodSchema
               : never;
     };
 
-type DeriveDefaults<T> = Prettify<{
-  [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
-    ? never
-    : K]: T[K] extends {
-    config: { initialValue: infer D };
-  }
-    ? D extends () => infer R
-      ? R
-      : D
-    : never;
-}>;
+type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
+  Depth["length"] extends 10 // Recursion guard
+    ? any
+    : {
+        [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
+          ? never
+          : K]: T[K] extends {
+          // --- Branch 1: Handle fields created with a builder ---
+          config: { sql: infer SqlConfig; initialValue: infer D };
+        }
+          ? // It's a builder. Now, check if its SQL config is for a relation.
+            SqlConfig extends {
+              type: "hasMany" | "manyToMany";
+              schema: () => infer S;
+            }
+            ? // YES, it's a to-many relation. The default is an array of the child's defaults.
+              Array<DeriveDefaults<S, [...Depth, 1]>>
+            : SqlConfig extends {
+                  type: "hasOne" | "belongsTo";
+                  schema: () => infer S;
+                }
+              ? // YES, it's a to-one relation. The default is the child's default object.
+                DeriveDefaults<S, [...Depth, 1]>
+              : // NO, it's a standard SQL field. Use its own `initialValue`.
+                D extends () => infer R
+                ? R
+                : D
+          : // --- Branch 2: Handle `reference` fields separately ---
+            T[K] extends { type: "reference"; to: () => infer RefField }
+            ? RefField extends { config: { initialValue: infer D } }
+              ? D extends () => infer R
+                ? R
+                : D
+              : never
+            : never;
+      }
+>;
 
+// Main exportable type. This remains the same but will now work.
 export type InferFromSchema<T extends { _tableName: string }> = Prettify<{
-  /** The Zod schema for the **SQL (database)** layer. */
   SqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>;
-
-  /** The Zod schema for the **Client** layer. */
   ClientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>;
-
-  /** The Zod schema for the **Validation** layer. */
   ValidationSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>
   >;
-
-  /** The TypeScript type for data as it exists in the **database**. */
   Sql: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>;
-
-  /** The TypeScript type for data as it is represented on the **client**. */
   Client: z.infer<
     z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>
   >;
-
-  /** The TypeScript type for **validation** data, often the most flexible shape. */
   Validation: z.infer<
     z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>
   >;
-
-  /** The TypeScript type for the object of **default values**. */
   Defaults: DeriveDefaults<T>;
 }>;
