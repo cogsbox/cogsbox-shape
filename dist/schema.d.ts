@@ -152,7 +152,7 @@ export type EnrichFields<T extends ShapeSchema> = {
 export declare const SchemaWrapperBrand: unique symbol;
 export declare function schema<T extends ShapeSchema>(schema: T): EnrichFields<T> & {
     _tableName: T["_tableName"];
-} & Record<typeof SchemaWrapperBrand, true>;
+};
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";
 type BaseSchemaField<T extends SQLType = SQLType> = {
     type: "field";

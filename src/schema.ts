@@ -832,12 +832,9 @@ export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
 export function schema<T extends ShapeSchema>(
   schema: T
-): EnrichFields<T> & {
-  _tableName: T["_tableName"];
-} & Record<typeof SchemaWrapperBrand, true> {
+): EnrichFields<T> & { _tableName: T["_tableName"] } {
   const enrichedSchema: any = {
     _tableName: schema._tableName,
-    [SchemaWrapperBrand]: true, // Add the symbol property
   };
 
   for (const key in schema) {
@@ -856,6 +853,7 @@ export function schema<T extends ShapeSchema>(
     }
   }
 
+  enrichedSchema[SchemaWrapperBrand] = true;
   return enrichedSchema as any;
 }
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";

@@ -273,7 +273,6 @@ export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 export function schema(schema) {
     const enrichedSchema = {
         _tableName: schema._tableName,
-        [SchemaWrapperBrand]: true, // Add the symbol property
     };
     for (const key in schema) {
         if (key !== "_tableName" &&
@@ -288,6 +287,7 @@ export function schema(schema) {
             };
         }
     }
+    enrichedSchema[SchemaWrapperBrand] = true;
     return enrichedSchema;
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
