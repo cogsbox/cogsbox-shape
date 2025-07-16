@@ -823,7 +823,6 @@ export type EnrichedField<
   __parentTableType: TSchema;
 };
 
-// Type to enrich all fields in a schema
 export type EnrichFields<T extends ShapeSchema> = {
   [K in keyof T]: K extends string ? EnrichedField<K, T[K], T> : T[K];
 };
@@ -831,7 +830,6 @@ export type EnrichFields<T extends ShapeSchema> = {
 // The table function that enriches fields with their key information
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
-// Update the schema function to use the symbol
 export function schema<T extends ShapeSchema>(
   schema: T
 ): EnrichFields<T> & {
