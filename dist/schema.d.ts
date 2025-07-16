@@ -45,11 +45,11 @@ export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql e
         }) => TNewNext) | TNewNext, defaultValue: TDefaultNext): Prettify<Builder<"new", T, TSql, z.ZodUnion<[
             TNewNext,
             z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
-        ]>, IsLiteralType<z.infer<TNewNext>> extends true ? TDefaultNext extends () => infer R ? R : TDefaultNext : z.infer<TNewNext>, z.ZodUnion<[
+        ]>, IsLiteralType<z.infer<TNewNext>> extends true ? TDefaultNext extends () => infer R ? R : TDefaultNext : z.infer<TNewNext>, (TDefaultNext extends () => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
             TSql,
             TNewNext,
             z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
-        ]>, z.ZodUnion<[
+        ]>, (TDefaultNext extends () => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
             TSql,
             TNewNext,
             z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
@@ -269,10 +269,6 @@ export declare function schemaRelations<TSchema extends Schema<any>, RefObject e
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
-/**
- * [INTERNAL] Recursively derives a Zod schema by inspecting the builder's config.
- * This version correctly uses the `schema` property from the relation's config.
- */
 type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
     [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : K]: T[K] extends {
         config: {

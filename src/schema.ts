@@ -189,45 +189,59 @@ export interface IBuilderMethods<
               >
             >;
 
-    // TWO-ARGUMENT OVERLOAD (The single, conditional version you suggested)
     <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
       schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: TDefaultNext // TDefaultNext is either the value OR the function
+      defaultValue: TDefaultNext
     ): Prettify<
       Builder<
         "new",
         T,
         TSql,
-        // TNew: The schema remains a union of the provided schema and the literal default
+        // TNew: The schema for the "new" state is a union of the provided
+        // schema and the literal default, ensuring both are allowed.
         z.ZodUnion<
           [
             TNewNext,
             z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
           ]
         >,
-        // TInitialValue: *** THE SMART LOGIC IS HERE ***
-        // If the schema is literal-based (like an enum), use the specific default value type.
-        // Otherwise, use the general type inferred from the schema.
+        // TInitialValue: The logic for the default value itself.
         IsLiteralType<z.infer<TNewNext>> extends true
           ? TDefaultNext extends () => infer R
             ? R
             : TDefaultNext
           : z.infer<TNewNext>,
-        // TClient/TValidation: The most complete union of all possible types.
-        z.ZodUnion<
-          [
-            TSql,
-            TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
-          ]
-        >,
-        z.ZodUnion<
-          [
-            TSql,
-            TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
-          ]
-        >
+        // TClient / TValidation: *** THIS IS THE SMART LOGIC ***
+        // It checks if the default value's type is already covered by TNewNext.
+        (
+          TDefaultNext extends () => infer R ? R : TDefaultNext
+        ) extends z.infer<TNewNext>
+          ? // If YES, the client schema is a clean union of just the SQL and new types.
+            z.ZodUnion<[TSql, TNewNext]>
+          : // If NO, we create the three-part union because the default is a distinct type.
+            z.ZodUnion<
+              [
+                TSql,
+                TNewNext,
+                z.ZodLiteral<
+                  TDefaultNext extends () => infer R ? R : TDefaultNext
+                >,
+              ]
+            >,
+        // Repeat the same logic for the validation schema.
+        (
+          TDefaultNext extends () => infer R ? R : TDefaultNext
+        ) extends z.infer<TNewNext>
+          ? z.ZodUnion<[TSql, TNewNext]>
+          : z.ZodUnion<
+              [
+                TSql,
+                TNewNext,
+                z.ZodLiteral<
+                  TDefaultNext extends () => infer R ? R : TDefaultNext
+                >,
+              ]
+            >
       >
     >;
   };
@@ -1076,7 +1090,7 @@ function isRelation(value: any): value is Relation<any> {
     "schema" in value
   );
 }
-type SchemaDefinition = { _tableName: string; [key: string]: any };
+
 type InferSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
@@ -1134,27 +1148,6 @@ type InferSchemaByKey<
 type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
 type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
 type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
-
-type InferDefaultValues2<T> = {
-  [K in keyof T as K extends "_tableName" ? never : K]: T[K] extends {
-    config: { initialValue: infer D };
-  }
-    ? D // This should preserve the literal type
-    : T[K] extends () => {
-          type: "hasMany" | "manyToMany";
-          schema: infer S extends SchemaDefinition;
-          defaultCount?: number;
-        }
-      ? Array<Prettify<InferDefaultValues2<S>>>
-      : T[K] extends () => {
-            type: "hasOne" | "belongsTo";
-            schema: infer S extends SchemaDefinition;
-          }
-        ? Prettify<InferDefaultValues2<S>>
-        : never;
-};
-// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createSchema FUNCTION
-// The only change is the `if` condition inside the loop.
 
 export function createSchema<
   T extends { _tableName: string; [SchemaWrapperBrand]?: true },
@@ -1524,10 +1517,6 @@ export function schemaRelations<
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
-/**
- * [INTERNAL] Recursively derives a Zod schema by inspecting the builder's config.
- * This version correctly uses the `schema` property from the relation's config.
- */
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",

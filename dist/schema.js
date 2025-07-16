@@ -425,8 +425,6 @@ function isRelation(value) {
         "toKey" in value &&
         "schema" in value);
 }
-// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createSchema FUNCTION
-// The only change is the `if` condition inside the loop.
 export function createSchema(schema, relations) {
     const sqlFields = {};
     const clientFields = {};
