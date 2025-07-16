@@ -828,14 +828,13 @@ export type EnrichFields<T extends ShapeSchema> = {
 };
 
 // The table function that enriches fields with their key information
-export const SchemaWrapperBrand: unique symbol = Symbol("SchemaWrapper") as any;
+export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
 export function schema<T extends ShapeSchema>(
   schema: T
 ): EnrichFields<T> & {
   _tableName: T["_tableName"];
-  [SchemaWrapperBrand]: true;
-} {
+} & Record<typeof SchemaWrapperBrand, true> {
   const enrichedSchema: any = {
     _tableName: schema._tableName,
     [SchemaWrapperBrand]: true, // Add the symbol property
