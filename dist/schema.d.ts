@@ -37,7 +37,7 @@ type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends
 } ? TDefault extends true ? never : z.ZodDate : z.ZodDate : never;
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;
 type IsLiteralType<T> = T extends string ? string extends T ? false : true : T extends number ? number extends T ? false : true : T extends boolean ? boolean extends T ? false : true : false;
-interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
+export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
     initialState: {
         <const TResult>(defaultValue: TResult): TResult extends () => infer R ? R extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, R, z.infer<R>, InferSmartClientType<TSql, R>, InferSmartClientType<TSql, R>>> : Prettify<Builder<"new", T, TSql, z.ZodLiteral<R>, R, z.ZodUnion<[TSql, z.ZodLiteral<R>]>, z.ZodUnion<[TSql, z.ZodLiteral<R>]>>> : TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : TResult extends string | number | boolean ? Prettify<Builder<"new", T, TSql, z.ZodLiteral<TResult>, TResult, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TResult>, TResult, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>>>;
         <TNewNext extends z.ZodTypeAny, const TDefaultNext>(schema: ((tools: {
@@ -139,17 +139,17 @@ interface ShapeAPI {
     }) => Builder<"relation", RelationConfig<T>, z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>, any[], z.ZodOptional<z.ZodArray<z.ZodAny>>, z.ZodOptional<z.ZodArray<z.ZodAny>>>;
 }
 export declare const s: ShapeAPI;
-type EnrichedField<K extends string, V, TSchema extends ShapeSchema> = V & {
+export type EnrichedField<K extends string, V, TSchema extends ShapeSchema> = V & {
     __meta: {
         _key: K;
         _fieldType: V;
     };
     __parentTableType: TSchema;
 };
-type EnrichFields<T extends ShapeSchema> = {
+export type EnrichFields<T extends ShapeSchema> = {
     [K in keyof T]: K extends string ? EnrichedField<K, T[K], T> : T[K];
 };
-declare const SchemaWrapperBrand: unique symbol;
+export declare const SchemaWrapperBrand: unique symbol;
 export declare function schema<T extends ShapeSchema>(schema: T): EnrichFields<T> & {
     _tableName: T["_tableName"];
     [SchemaWrapperBrand]: true;

@@ -269,7 +269,7 @@ function createBuilder(config) {
     return builderObject;
 }
 // The table function that enriches fields with their key information
-const SchemaWrapperBrand = Symbol("SchemaWrapper");
+export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 // Update the schema function to use the symbol
 export function schema(schema) {
     const enrichedSchema = {

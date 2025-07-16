@@ -115,7 +115,7 @@ type IsLiteralType<T> = T extends string
         ? false
         : true
       : false;
-interface IBuilderMethods<
+export interface IBuilderMethods<
   T extends SQLType | RelationConfig<any>,
   TSql extends z.ZodTypeAny,
   TNew extends z.ZodTypeAny,
@@ -811,7 +811,11 @@ function createBuilder<
   return builderObject as any;
 }
 
-type EnrichedField<K extends string, V, TSchema extends ShapeSchema> = V & {
+export type EnrichedField<
+  K extends string,
+  V,
+  TSchema extends ShapeSchema,
+> = V & {
   __meta: {
     _key: K;
     _fieldType: V;
@@ -820,12 +824,12 @@ type EnrichedField<K extends string, V, TSchema extends ShapeSchema> = V & {
 };
 
 // Type to enrich all fields in a schema
-type EnrichFields<T extends ShapeSchema> = {
+export type EnrichFields<T extends ShapeSchema> = {
   [K in keyof T]: K extends string ? EnrichedField<K, T[K], T> : T[K];
 };
 
 // The table function that enriches fields with their key information
-const SchemaWrapperBrand = Symbol("SchemaWrapper");
+export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
 // Update the schema function to use the symbol
 export function schema<T extends ShapeSchema>(
