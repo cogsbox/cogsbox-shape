@@ -486,19 +486,15 @@ export function createSchema(schema, relations) {
                 ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
                 const relatedSchemaFactory = sqlConfig.schema;
                 const childSchemaResult = createSchema(relatedSchemaFactory());
-                let baseSqlSchema;
                 let baseClientSchema;
                 if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-                    baseSqlSchema = z.array(childSchemaResult.sqlSchema);
                     baseClientSchema = z.array(childSchemaResult.clientSchema);
                     defaultValues[key] = Array.from({ length: sqlConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
                 }
                 else {
-                    baseSqlSchema = childSchemaResult.sqlSchema;
                     baseClientSchema = childSchemaResult.clientSchema;
                     defaultValues[key] = childSchemaResult.defaultValues;
                 }
-                sqlFields[key] = baseSqlSchema.optional();
                 clientFields[key] = config.clientTransform
                     ? config.clientTransform(baseClientSchema)
                     : baseClientSchema;

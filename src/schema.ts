@@ -1268,23 +1268,20 @@ export function createSchema<
       ) {
         const relatedSchemaFactory = sqlConfig.schema as () => T;
         const childSchemaResult = createSchema(relatedSchemaFactory());
-        let baseSqlSchema: z.ZodTypeAny;
+
         let baseClientSchema: z.ZodTypeAny;
 
         if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-          baseSqlSchema = z.array(childSchemaResult.sqlSchema);
           baseClientSchema = z.array(childSchemaResult.clientSchema);
           defaultValues[key] = Array.from(
             { length: (sqlConfig as any).defaultCount || 0 },
             () => childSchemaResult.defaultValues
           );
         } else {
-          baseSqlSchema = childSchemaResult.sqlSchema;
           baseClientSchema = childSchemaResult.clientSchema;
           defaultValues[key] = childSchemaResult.defaultValues;
         }
 
-        sqlFields[key] = baseSqlSchema.optional();
         clientFields[key] = config.clientTransform
           ? config.clientTransform(baseClientSchema)
           : baseClientSchema;
