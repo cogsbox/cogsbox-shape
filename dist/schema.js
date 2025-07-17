@@ -292,30 +292,30 @@ export function schema(schema) {
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
     if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
-        // --- THIS IS THE NEW, HIGHEST-PRIORITY CHECK ---
-        // If a `default` property exists directly on the SQL config, use it.
+        // --- PRIORITY 1: Check for an explicit `default` on the SQL config ---
         if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-            // Exclude CURRENT_TIMESTAMP as it's a special keyword, not a value.
+            // FIX #1: If the default is CURRENT_TIMESTAMP, it's a DB responsibility.
+            // Return undefined so no client-side default is generated.
             if (sqlConfig.default === "CURRENT_TIMESTAMP") {
-                return new Date();
+                return undefined;
             }
+            // Otherwise, use the provided SQL default.
             return sqlConfig.default;
         }
+        // --- PRESERVED LOGIC: Handle relation types (NO CHANGES HERE) ---
         if (typeof sqlConfig.type === "string" &&
             ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
             const relationConfig = sqlConfig;
             if (relationConfig.type === "hasMany" ||
                 relationConfig.type === "manyToMany") {
-                // For hasMany/manyToMany, default to an array based on defaultCount.
                 return Array.from({ length: relationConfig.defaultCount || 0 }, () => ({}));
             }
             if (relationConfig.type === "hasOne" ||
                 relationConfig.type === "belongsTo") {
-                // For hasOne/belongsTo, default to a single empty object.
                 return {};
             }
         }
-        // Handle SQL type-based generation (this is the fallback)
+        // --- PRESERVED LOGIC: Handle basic SQL types as a fallback (NO CHANGES HERE) ---
         const sqlTypeConfig = sqlConfig;
         if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
             switch (sqlTypeConfig.type) {
@@ -325,7 +325,7 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                 case "longtext":
                     return "";
                 case "int":
-                    return 0; // This is now only used if no `default` is provided
+                    return 0;
                 case "boolean":
                     return false;
                 case "date":
@@ -337,7 +337,7 @@ function inferDefaultFromZod(zodType, sqlConfig) {
             return null;
         }
     }
-    // Fall back to Zod-based inference (this logic is fine)
+    // --- PRESERVED LOGIC: Fall back to Zod-based inference ---
     if (zodType instanceof z.ZodOptional) {
         return undefined;
     }
@@ -346,6 +346,12 @@ function inferDefaultFromZod(zodType, sqlConfig) {
             ? zodType._def.defaultValue()
             : zodType._def.defaultValue;
     }
+    // --- FIX #2: Add intelligent fallback for unrecognized Zod types ---
+    // This handles z.email(), z.url(), etc., by checking the base type.
+    if (zodType instanceof z.ZodString) {
+        return "";
+    }
+    // Return undefined if no other default can be determined.
     return undefined;
 }
 // export function reference<TField extends object>(config: TField) {
