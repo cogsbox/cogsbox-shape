@@ -55,10 +55,10 @@ export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql e
             z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
         ]>>>;
     };
-    references: <TRefSchema extends {
+    reference: <TRefSchema extends {
         _tableName: string;
     }>(fieldGetter: () => any) => Builder<"sql", T & {
-        references: typeof fieldGetter;
+        reference: typeof fieldGetter;
     }, TSql, TNew, TInitialValue, TClient, TValidation>;
     client: <TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
@@ -95,7 +95,7 @@ export type RelationConfig<T extends Schema<any>> = (BaseRelationConfig<T> & {
 });
 type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
 type StageMethods = {
-    sql: "initialState" | "client" | "validation" | "transform" | "references";
+    sql: "initialState" | "client" | "validation" | "transform" | "reference";
     relation: "validation" | "transform";
     new: "client" | "validation" | "transform";
     client: "validation" | "transform";

@@ -206,12 +206,12 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
-        references: (fieldGetter) => {
+        reference: (fieldGetter) => {
             return createBuilder({
                 ...config,
                 sqlConfig: {
                     ...config.sqlConfig,
-                    references: fieldGetter,
+                    reference: fieldGetter,
                 },
             });
         },

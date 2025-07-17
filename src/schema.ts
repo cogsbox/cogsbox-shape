@@ -246,11 +246,11 @@ export interface IBuilderMethods<
       >
     >;
   };
-  references: <TRefSchema extends { _tableName: string }>(
+  reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any
   ) => Builder<
     "sql",
-    T & { references: typeof fieldGetter },
+    T & { reference: typeof fieldGetter },
     TSql,
     TNew,
     TInitialValue,
@@ -316,7 +316,7 @@ type Stage = "sql" | "relation" | "new" | "client" | "validation" | "done";
 
 // Updated stage methods to include relation
 type StageMethods = {
-  sql: "initialState" | "client" | "validation" | "transform" | "references";
+  sql: "initialState" | "client" | "validation" | "transform" | "reference";
   relation: "validation" | "transform";
   new: "client" | "validation" | "transform";
   client: "validation" | "transform";
@@ -744,15 +744,15 @@ function createBuilder<
         completedStages: newCompletedStages,
       }) as any;
     },
-    references: <TRefSchema extends { _tableName: string }>(
+    reference: <TRefSchema extends { _tableName: string }>(
       fieldGetter: () => any
     ) => {
       return createBuilder({
         ...config,
         sqlConfig: {
           ...config.sqlConfig,
-          references: fieldGetter,
-        } as T & { references: typeof fieldGetter },
+          reference: fieldGetter,
+        } as T & { reference: typeof fieldGetter },
       });
     },
     client: <TClientNext extends z.ZodTypeAny>(
