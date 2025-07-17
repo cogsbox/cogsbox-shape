@@ -1579,23 +1579,25 @@ type DeriveSchemaByKey<
   : {
       [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
         ? never
-        : T[K] extends {
+        : K extends keyof T
+          ? T[K] extends {
               config: {
                 sql: {
                   type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
                 };
               };
             }
-          ? Key extends "zodSqlSchema"
-            ? never // This strips the key entirely when it's a relation and we're building SQL schema
-            : K
-          : K]: T[K] extends {
-        // Case 1: Builder for hasMany/manyToMany
+            ? Key extends "zodSqlSchema"
+              ? never // Strip this key when it's SQL schema
+              : K // Keep it for client/validation schemas
+            : K // Keep non-relation keys
+          : never]: T[K] extends {
+        // Case 1: A 'hasMany' or 'manyToMany' relation
         config: {
           sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
         };
       }
-        ? S extends { _tableName: string }
+        ? S extends { _tableName: string } // Infer the schema `S` from the config
           ? z.ZodArray<
               z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
             >
