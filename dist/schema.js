@@ -206,6 +206,15 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
+        references: (fieldGetter) => {
+            return createBuilder({
+                ...config,
+                sqlConfig: {
+                    ...config.sqlConfig,
+                    references: fieldGetter,
+                },
+            });
+        },
         client: (assert) => {
             if (completedStages.has("client")) {
                 throw new Error("client() can only be called once in the chain");
