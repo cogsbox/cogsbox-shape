@@ -687,11 +687,13 @@ function createBuilder<
 
       const finalDefaultValue = hasSchemaArg
         ? isFunction(defaultValue)
-          ? (defaultValue as () => TDefaultNext)() // If it's a function, call it
-          : defaultValue // If it's a direct value, use it as-is
+          ? defaultValue()
+          : defaultValue
         : isFunction(schemaOrDefault)
-          ? (schemaOrDefault as () => TDefaultNext)()
-          : schemaOrDefault;
+          ? schemaOrDefault({ sql: config.sqlZod })
+          : schemaOrDefault && (schemaOrDefault as any)._def
+            ? inferDefaultFromZod(schemaOrDefault as any, config.sqlConfig)
+            : schemaOrDefault;
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("new");

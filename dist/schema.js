@@ -165,11 +165,13 @@ function createBuilder(config) {
                 : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
             const finalDefaultValue = hasSchemaArg
                 ? isFunction(defaultValue)
-                    ? defaultValue() // If it's a function, call it
-                    : defaultValue // If it's a direct value, use it as-is
+                    ? defaultValue()
+                    : defaultValue
                 : isFunction(schemaOrDefault)
-                    ? schemaOrDefault()
-                    : schemaOrDefault;
+                    ? schemaOrDefault({ sql: config.sqlZod })
+                    : schemaOrDefault && schemaOrDefault._def
+                        ? inferDefaultFromZod(schemaOrDefault, config.sqlConfig)
+                        : schemaOrDefault;
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
             // ---- THIS IS THE RUNTIME FIX THAT MATCHES YOUR INTERFACE ----
