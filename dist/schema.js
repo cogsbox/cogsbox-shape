@@ -163,15 +163,29 @@ function createBuilder(config) {
                     ? schemaOrDefault({ sql: config.sqlZod })
                     : schemaOrDefault
                 : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
-            const finalDefaultValue = hasSchemaArg
-                ? isFunction(defaultValue)
+            let finalDefaultValue;
+            if (hasSchemaArg) {
+                // Handles two arguments: .initialState(schema, defaultValue)
+                finalDefaultValue = isFunction(defaultValue)
                     ? defaultValue()
-                    : defaultValue
-                : isFunction(schemaOrDefault)
-                    ? schemaOrDefault({ sql: config.sqlZod })
-                    : schemaOrDefault && schemaOrDefault._def
-                        ? inferDefaultFromZod(schemaOrDefault, config.sqlConfig)
-                        : schemaOrDefault;
+                    : defaultValue;
+            }
+            else {
+                // Handles one argument: .initialState(z.email()) OR .initialState(() => uuid())
+                const singleArg = schemaOrDefault;
+                if (singleArg &&
+                    typeof singleArg === "object" &&
+                    singleArg._def) {
+                    // THIS IS THE FIX: If it's a Zod schema, INFER the value.
+                    finalDefaultValue = inferDefaultFromZod(singleArg, config.sqlConfig);
+                }
+                else {
+                    // Otherwise, it's a function or primitive value.
+                    finalDefaultValue = isFunction(singleArg)
+                        ? singleArg({ sql: config.sqlZod })
+                        : singleArg;
+                }
+            }
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
             // ---- THIS IS THE RUNTIME FIX THAT MATCHES YOUR INTERFACE ----
