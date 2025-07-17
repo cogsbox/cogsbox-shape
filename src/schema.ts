@@ -1585,18 +1585,23 @@ type DeriveSchemaByKey<
           sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
         };
       }
-        ? S extends { _tableName: string } // Infer the schema `S` from the config
-          ? z.ZodArray<
-              z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-            >
-          : never
-        : // Case 2: A 'hasOne' or 'belongsTo' relation
-          T[K] extends {
-              config: { sql: { schema: () => infer S } };
+        ? Key extends "zodSqlSchema"
+          ? never // DON'T include relations in SQL schema!
+          : S extends { _tableName: string }
+            ? z.ZodArray<
+                z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+              >
+            : never
+        : T[K] extends {
+              config: {
+                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
+              };
             }
-          ? S extends { _tableName: string } // Same logic, infer `S`
-            ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-            : z.ZodObject<any> // Fallback
+          ? Key extends "zodSqlSchema"
+            ? never // DON'T include relations in SQL schema!
+            : S extends { _tableName: string }
+              ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+              : z.ZodObject<any>
           : // Case 3: A direct reference field
             T[K] extends { type: "reference"; to: () => infer RefField }
             ? RefField extends { config: { [P in Key]: infer ZodSchema } }

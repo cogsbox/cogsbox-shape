@@ -285,15 +285,16 @@ type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodV
                 schema: () => infer S;
             };
         };
-    } ? S extends {
+    } ? Key extends "zodSqlSchema" ? never : S extends {
         _tableName: string;
     } ? z.ZodArray<z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>> : never : T[K] extends {
         config: {
             sql: {
+                type: "hasOne" | "belongsTo";
                 schema: () => infer S;
             };
         };
-    } ? S extends {
+    } ? Key extends "zodSqlSchema" ? never : S extends {
         _tableName: string;
     } ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any> : T[K] extends {
         type: "reference";
