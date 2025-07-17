@@ -278,23 +278,28 @@ type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
 type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
-    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : K]: T[K] extends {
+    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand ? never : T[K] extends {
+        config: {
+            sql: {
+                type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+            };
+        };
+    } ? Key extends "zodSqlSchema" ? never : K : K]: T[K] extends {
         config: {
             sql: {
                 type: "hasMany" | "manyToMany";
                 schema: () => infer S;
             };
         };
-    } ? Key extends "zodSqlSchema" ? never : S extends {
+    } ? S extends {
         _tableName: string;
     } ? z.ZodArray<z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>> : never : T[K] extends {
         config: {
             sql: {
-                type: "hasOne" | "belongsTo";
                 schema: () => infer S;
             };
         };
-    } ? Key extends "zodSqlSchema" ? never : S extends {
+    } ? S extends {
         _tableName: string;
     } ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>> : z.ZodObject<any> : T[K] extends {
         type: "reference";

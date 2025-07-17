@@ -1579,29 +1579,34 @@ type DeriveSchemaByKey<
   : {
       [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
         ? never
-        : K]: T[K] extends {
-        // Case 1: A 'hasMany' or 'manyToMany' relation
+        : T[K] extends {
+              config: {
+                sql: {
+                  type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                };
+              };
+            }
+          ? Key extends "zodSqlSchema"
+            ? never // This strips the key entirely when it's a relation and we're building SQL schema
+            : K
+          : K]: T[K] extends {
+        // Case 1: Builder for hasMany/manyToMany
         config: {
           sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
         };
       }
-        ? Key extends "zodSqlSchema"
-          ? never // DON'T include relations in SQL schema!
-          : S extends { _tableName: string }
-            ? z.ZodArray<
-                z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-              >
-            : never
-        : T[K] extends {
-              config: {
-                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
-              };
+        ? S extends { _tableName: string }
+          ? z.ZodArray<
+              z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+            >
+          : never
+        : // Case 2: A 'hasOne' or 'belongsTo' relation
+          T[K] extends {
+              config: { sql: { schema: () => infer S } };
             }
-          ? Key extends "zodSqlSchema"
-            ? never // DON'T include relations in SQL schema!
-            : S extends { _tableName: string }
-              ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-              : z.ZodObject<any>
+          ? S extends { _tableName: string } // Same logic, infer `S`
+            ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
+            : z.ZodObject<any> // Fallback
           : // Case 3: A direct reference field
             T[K] extends { type: "reference"; to: () => infer RefField }
             ? RefField extends { config: { [P in Key]: infer ZodSchema } }
