@@ -58,7 +58,7 @@ export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql e
     reference: <TRefSchema extends {
         _tableName: string;
     }>(fieldGetter: () => any) => Builder<"sql", T & {
-        reference: typeof fieldGetter;
+        references: typeof fieldGetter;
     }, TSql, TNew, TInitialValue, TClient, TValidation>;
     client: <TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
@@ -216,10 +216,13 @@ type InferSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodVa
             [P in Key]: infer ZodSchema;
         };
     } ? ZodSchema : never : T[K] extends {
-        config: {
-            [P in Key]: infer ZodSchema extends z.ZodTypeAny;
-        };
-    } ? ZodSchema : never;
+        config: infer Config;
+    } ? Key extends "zodSqlSchema" ? Config extends {
+        sql: infer SqlConfig;
+        zodSqlSchema: infer ZodSchema extends z.ZodTypeAny;
+    } ? ZodSchema : never : Config extends {
+        [P in Key]: infer ZodSchema extends z.ZodTypeAny;
+    } ? ZodSchema : never : never;
 };
 type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
 type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;

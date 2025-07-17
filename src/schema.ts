@@ -250,7 +250,7 @@ export interface IBuilderMethods<
     fieldGetter: () => any
   ) => Builder<
     "sql",
-    T & { reference: typeof fieldGetter },
+    T & { references: typeof fieldGetter },
     TSql,
     TNew,
     TInitialValue,
@@ -1184,11 +1184,20 @@ type InferSchemaByKey<
               : never
             : // Case 4: Standard field builder
               T[K] extends {
-                  config: {
-                    [P in Key]: infer ZodSchema extends z.ZodTypeAny;
-                  };
+                  config: infer Config;
                 }
-              ? ZodSchema
+              ? Key extends "zodSqlSchema"
+                ? Config extends {
+                    sql: infer SqlConfig;
+                    zodSqlSchema: infer ZodSchema extends z.ZodTypeAny;
+                  }
+                  ? ZodSchema
+                  : never
+                : Config extends {
+                      [P in Key]: infer ZodSchema extends z.ZodTypeAny;
+                    }
+                  ? ZodSchema
+                  : never
               : never;
     };
 
