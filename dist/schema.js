@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ca } from "zod/v4/locales";
 export const isFunction = (fn) => typeof fn === "function";
 // Function to create a properly typed current timestamp config
 export function currentTimeStamp() {
@@ -65,6 +66,7 @@ export const s = {
                         break;
                     case "date":
                     case "datetime":
+                    case "timestamp":
                         baseType = z.date();
                         break;
                     default:
