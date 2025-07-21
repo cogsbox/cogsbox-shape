@@ -116,6 +116,11 @@ type IsLiteralType<T> = T extends string
         ? false
         : true
       : false;
+
+type CollapsedUnion<
+  A extends z.ZodTypeAny,
+  B extends z.ZodTypeAny,
+> = A extends B ? (B extends A ? A : z.ZodUnion<[A, B]>) : z.ZodUnion<[A, B]>;
 export interface IBuilderMethods<
   T extends SQLType | RelationConfig<any>,
   TSql extends z.ZodTypeAny,
@@ -126,169 +131,110 @@ export interface IBuilderMethods<
 > {
   // PASTE THIS ENTIRE BLOCK. THIS IS THE ONE.
   initialState: {
-    // =================================================================================
-    // TWO-ARGUMENT OVERLOAD - Corrected
-    // This signature must come first for correct overload resolution.
-    // =================================================================================
-    <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
-      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      // This union provides contextual typing for the (tools) => ... case
-      defaultValue: TDefaultNext | ((tools: { sql: TSql }) => TDefaultNext)
-    ): Prettify<
-      Builder<
-        "new",
-        T,
-        TSql,
-        // TNew: Union of the schema and the literal default value.
-        z.ZodUnion<
-          [
-            TNewNext,
-            z.ZodLiteral<
-              // FIX: This generic function check correctly infers the literal return
-              // type from BOTH `() => R` and `(t) => R` without widening it.
-              TDefaultNext extends (...args: any[]) => infer R
-                ? R
-                : TDefaultNext
-            >,
-          ]
-        >,
-        // TInitialValue: The logic for the default value itself.
-        IsLiteralType<z.infer<TNewNext>> extends true
-          ? TDefaultNext extends (...args: any[]) => infer R
-            ? R
-            : TDefaultNext
-          : z.infer<TNewNext>,
-        // TClient / TValidation: Smart logic to check if the default is covered.
-        (
-          TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext
-        ) extends z.infer<TNewNext>
-          ? z.ZodUnion<[TSql, TNewNext]>
-          : z.ZodUnion<
-              [
-                TSql,
-                TNewNext,
-                z.ZodLiteral<
-                  TDefaultNext extends (...args: any[]) => infer R
-                    ? R
-                    : TDefaultNext
-                >,
-              ]
-            >,
-        // Repeat for the validation schema.
-        (
-          TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext
-        ) extends z.infer<TNewNext>
-          ? z.ZodUnion<[TSql, TNewNext]>
-          : z.ZodUnion<
-              [
-                TSql,
-                TNewNext,
-                z.ZodLiteral<
-                  TDefaultNext extends (...args: any[]) => infer R
-                    ? R
-                    : TDefaultNext
-                >,
-              ]
-            >
-      >
-    >;
-
-    // =================================================================================
-    // ONE-ARGUMENT OVERLOADS - Corrected
-    // These are now three distinct signatures. TypeScript will pick the most specific match.
-    // =================================================================================
-
-    // SIGNATURE 1: For functions that accept the 'tools' parameter.
-    // This provides the essential contextual typing to prevent `(parameter) sql: any`.
-    <const TResult>(
-      defaultValue: (tools: { sql: TSql }) => TResult
-    ): TResult extends z.ZodTypeAny
-      ? Prettify<
-          Builder<
-            "new",
-            T,
-            TSql,
-            TResult,
-            z.infer<TResult>,
-            InferSmartClientType<TSql, TResult>,
-            InferSmartClientType<TSql, TResult>
-          >
-        >
-      : Prettify<
-          Builder<
-            "new",
-            T,
-            TSql,
-            z.ZodLiteral<TResult>,
-            TResult,
-            z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>,
-            z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>
-          >
-        >;
-
-    // SIGNATURE 2: For all other values (primitives, Zod schemas, parameterless functions).
-    // This overload will be chosen for anything that doesn't match the more specific signature above.
-    // It uses a conditional type to handle the different kinds of TResult.
-    <const TResult>(defaultValue: TResult): TResult extends () => infer R // Check for parameterless function first
-      ? R extends z.ZodTypeAny
-        ? Prettify<
-            Builder<
-              "new",
-              T,
-              TSql,
-              R,
-              z.infer<R>,
-              InferSmartClientType<TSql, R>,
-              InferSmartClientType<TSql, R>
-            >
-          >
-        : Prettify<
-            Builder<
-              "new",
-              T,
-              TSql,
-              z.ZodLiteral<R>,
-              R,
-              z.ZodUnion<[TSql, z.ZodLiteral<R>]>,
-              z.ZodUnion<[TSql, z.ZodLiteral<R>]>
-            >
-          >
-      : TResult extends z.ZodTypeAny // Check for Zod schema
-        ? Prettify<
-            Builder<
-              "new",
-              T,
-              TSql,
-              TResult,
-              z.infer<TResult>,
-              InferSmartClientType<TSql, TResult>,
-              InferSmartClientType<TSql, TResult>
-            >
-          >
-        : TResult extends string | number | boolean // Check for primitive
+    // Single argument - value or Zod schema
+    <const TValue>(
+      value: TValue extends (...args: any[]) => void | undefined
+        ? never
+        : TValue
+    ): TValue extends (...args: any[]) => infer R
+      ? R extends void | undefined
+        ? never
+        : TValue extends z.ZodTypeAny
           ? Prettify<
               Builder<
                 "new",
                 T,
                 TSql,
-                z.ZodLiteral<TResult>,
-                TResult,
-                z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>,
-                z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>
+                TValue,
+                z.infer<TValue>,
+                CollapsedUnion<TSql, TValue>, // <-- FIX
+                CollapsedUnion<TSql, TValue> // <-- FIX
               >
             >
-          : // Fallback
-            Prettify<
+          : R extends string | number | boolean
+            ? Prettify<
+                Builder<
+                  "new",
+                  T,
+                  TSql,
+                  z.ZodLiteral<R>,
+                  R,
+                  CollapsedUnion<TSql, z.ZodLiteral<R>>, // <-- FIX
+                  CollapsedUnion<TSql, z.ZodLiteral<R>> // <-- FIX
+                >
+              >
+            : Prettify<
+                Builder<
+                  "new",
+                  T,
+                  TSql,
+                  ZodTypeFromPrimitive<R>,
+                  R,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, // <-- FIX
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>> // <-- FIX
+                >
+              >
+      : TValue extends z.ZodTypeAny
+        ? Prettify<
+            Builder<
+              "new",
+              T,
+              TSql,
+              TValue,
+              z.infer<TValue>,
+              CollapsedUnion<TSql, TValue>, // <-- FIX
+              CollapsedUnion<TSql, TValue> // <-- FIX
+            >
+          >
+        : TValue extends string | number | boolean
+          ? Prettify<
               Builder<
                 "new",
                 T,
                 TSql,
-                ZodTypeFromPrimitive<TResult>,
-                TResult,
-                InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>,
-                InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>
+                z.ZodLiteral<TValue>,
+                TValue,
+                CollapsedUnion<TSql, z.ZodLiteral<TValue>>, // <-- FIX
+                CollapsedUnion<TSql, z.ZodLiteral<TValue>> // <-- FIX
+              >
+            >
+          : Prettify<
+              Builder<
+                "new",
+                T,
+                TSql,
+                ZodTypeFromPrimitive<TValue>,
+                TValue,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, // <-- FIX
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>> // <-- FIX
               >
             >;
+
+    // Two arguments - value + schema modifier
+    <const TValue, TSchema extends z.ZodTypeAny>(
+      value: TValue extends (...args: any[]) => void | undefined
+        ? never
+        : TValue,
+      schemaModifier: (
+        baseSchema: TValue extends () => infer R
+          ? R extends string | number | boolean
+            ? z.ZodLiteral<R>
+            : ZodTypeFromPrimitive<R>
+          : TValue extends string | number | boolean
+            ? z.ZodLiteral<TValue>
+            : ZodTypeFromPrimitive<TValue>
+      ) => TSchema
+    ): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        TSchema,
+        TValue extends () => infer R ? R : TValue,
+        CollapsedUnion<TSql, TSchema>, // <-- FIX
+        CollapsedUnion<TSql, TSchema> // <-- FIX
+      >
+    >;
   };
   reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any
@@ -571,23 +517,25 @@ export const s: ShapeAPI = {
         baseType = baseType.nullable();
       }
       return baseType;
-    })() as SQLToZodType<T, false>;
+    })();
 
-    type TSql =
-      SQLToZodType<T, false> extends z.ZodTypeAny
-        ? SQLToZodType<T, false>
-        : never;
-    type DT = z.infer<TSql>;
-
-    return createBuilder<"sql", T, TSql, TSql, DT, TSql, TSql>({
+    return createBuilder({
       stage: "sql",
       sqlConfig: sqlConfig,
-      sqlZod: sqlZodType,
-      newZod: sqlZodType,
-      initialValue: undefined,
-      clientZod: sqlZodType,
-      validationZod: sqlZodType,
-    });
+      sqlZod: sqlZodType as SQLToZodType<T, false>,
+      newZod: sqlZodType as SQLToZodType<T, false>,
+      initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
+      clientZod: sqlZodType as SQLToZodType<T, false>,
+      validationZod: sqlZodType as SQLToZodType<T, false>,
+    }) as Builder<
+      "sql",
+      T,
+      SQLToZodType<T, false>,
+      SQLToZodType<T, false>,
+      z.infer<SQLToZodType<T, false>>,
+      SQLToZodType<T, false>,
+      SQLToZodType<T, false>
+    >;
   },
   hasMany: <T extends Schema<any>>(config: {
     fromKey: string;
@@ -719,72 +667,63 @@ function createBuilder<
       clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
       validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
     },
-
-    initialState: <TNewNext extends z.ZodTypeAny, TDefaultNext>(
-      schemaOrDefault:
-        | ((tools: { sql: TSql }) => TNewNext)
-        | TNewNext
-        | (() => TDefaultNext),
-      defaultValue?: () => TDefaultNext
+    initialState: <const TValue, TSchema extends z.ZodTypeAny>(
+      value: TValue | (() => TValue),
+      schemaModifier?: (baseSchema: z.ZodTypeAny) => TSchema
     ) => {
       if (completedStages.has("new")) {
         throw new Error("initialState() can only be called once in the chain");
       }
-      // ... other error checks ...
 
-      const hasSchemaArg = defaultValue !== undefined;
+      let actualValue: any;
+      let baseSchema: z.ZodTypeAny;
 
-      // This logic is mostly from your original code.
-      const newSchema = hasSchemaArg
-        ? isFunction(schemaOrDefault)
-          ? (schemaOrDefault as any)({ sql: config.sqlZod })
-          : schemaOrDefault
-        : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
-      let finalDefaultValue: any;
-
-      if (hasSchemaArg) {
-        // Handles two arguments: .initialState(schema, defaultValue)
-        finalDefaultValue = isFunction(defaultValue)
-          ? defaultValue()
-          : defaultValue;
+      // Check if value is a Zod schema
+      if (value && typeof value === "object" && "_def" in value) {
+        // It's a Zod schema - infer the default value
+        baseSchema = value as any;
+        actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
       } else {
-        // Handles one argument: .initialState(z.email()) OR .initialState(() => uuid())
-        const singleArg = schemaOrDefault;
+        // Get the actual value
+        actualValue = isFunction(value) ? (value as any)() : value;
+
+        // Create base Zod schema from the value type
+        // Check if it's a literal value (string, number, boolean)
         if (
-          singleArg &&
-          typeof singleArg === "object" &&
-          (singleArg as any)._def
+          typeof actualValue === "string" ||
+          typeof actualValue === "number" ||
+          typeof actualValue === "boolean"
         ) {
-          // THIS IS THE FIX: If it's a Zod schema, INFER the value.
-          finalDefaultValue = inferDefaultFromZod(
-            singleArg as z.ZodTypeAny,
-            config.sqlConfig
-          );
+          baseSchema = z.literal(actualValue);
+        } else if (actualValue instanceof Date) {
+          baseSchema = z.date();
+        } else if (actualValue === null) {
+          baseSchema = z.null();
+        } else if (actualValue === undefined) {
+          baseSchema = z.undefined();
         } else {
-          // Otherwise, it's a function or primitive value.
-          finalDefaultValue = isFunction(singleArg)
-            ? singleArg({ sql: config.sqlZod })
-            : singleArg;
+          baseSchema = z.any();
         }
       }
+
+      // Apply schema modifier if provided
+      const newSchema = schemaModifier
+        ? schemaModifier(baseSchema)
+        : baseSchema;
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("new");
 
-      // ---- THIS IS THE RUNTIME FIX THAT MATCHES YOUR INTERFACE ----
-      // If a new schema was passed, create a union.
-      // If ONLY a primitive was passed, we MUST also create a union.
-      const newClientZod = hasSchemaArg
-        ? z.union([config.sqlZod, newSchema])
-        : z.union([config.sqlZod, z.any()]); // Create the union for the primitive case
+      // Create union for client/validation
+      const clientValidationSchema = z.union([config.sqlZod, newSchema]);
 
       return createBuilder({
         ...config,
         stage: "new",
         newZod: newSchema,
-        initialValue: finalDefaultValue,
-        clientZod: newClientZod,
-        validationZod: newClientZod, // Keep validation and client in sync for this step
+        initialValue: actualValue,
+        clientZod: clientValidationSchema,
+        validationZod: clientValidationSchema,
         completedStages: newCompletedStages,
       }) as any;
     },

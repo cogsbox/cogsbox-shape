@@ -13,12 +13,12 @@ import { v4 as uuidv4 } from "uuid";
 export const petSchema = schema({
   _tableName: "pets",
   id: s.sql({ type: "int", pk: true }).initialState(
-    () => z.string(),
-    () => uuidv4()
+    () => uuidv4(),
+    () => z.string()
   ),
   name: s
     .sql({ type: "varchar", length: 255 })
-    .initialState(({ sql }) => z.string()),
+    .initialState("() => {}", (V) => z.string()),
   fluffynessScale: s
     .sql({ type: "text" })
     .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
@@ -42,8 +42,8 @@ export const petReferences = schemaRelations(petSchema, (s) => ({
 export const userSchema = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(
-    ({ sql }) => sql.optional(),
-    () => uuidv4()
+    () => uuidv4(),
+    (v) => v.optional()
   ),
   firstname: s
     .sql({ type: "varchar", length: 255 })

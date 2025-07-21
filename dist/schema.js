@@ -84,7 +84,7 @@ export const s = {
             sqlConfig: sqlConfig,
             sqlZod: sqlZodType,
             newZod: sqlZodType,
-            initialValue: undefined,
+            initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
             clientZod: sqlZodType,
             validationZod: sqlZodType,
         });
@@ -153,56 +153,56 @@ function createBuilder(config) {
             clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
             validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
         },
-        initialState: (schemaOrDefault, defaultValue) => {
+        initialState: (value, schemaModifier) => {
             if (completedStages.has("new")) {
                 throw new Error("initialState() can only be called once in the chain");
             }
-            // ... other error checks ...
-            const hasSchemaArg = defaultValue !== undefined;
-            // This logic is mostly from your original code.
-            const newSchema = hasSchemaArg
-                ? isFunction(schemaOrDefault)
-                    ? schemaOrDefault({ sql: config.sqlZod })
-                    : schemaOrDefault
-                : config.sqlZod; // If only a primitive is passed, the "new" schema is still the SQL one.
-            let finalDefaultValue;
-            if (hasSchemaArg) {
-                // Handles two arguments: .initialState(schema, defaultValue)
-                finalDefaultValue = isFunction(defaultValue)
-                    ? defaultValue()
-                    : defaultValue;
+            let actualValue;
+            let baseSchema;
+            // Check if value is a Zod schema
+            if (value && typeof value === "object" && "_def" in value) {
+                // It's a Zod schema - infer the default value
+                baseSchema = value;
+                actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
             }
             else {
-                // Handles one argument: .initialState(z.email()) OR .initialState(() => uuid())
-                const singleArg = schemaOrDefault;
-                if (singleArg &&
-                    typeof singleArg === "object" &&
-                    singleArg._def) {
-                    // THIS IS THE FIX: If it's a Zod schema, INFER the value.
-                    finalDefaultValue = inferDefaultFromZod(singleArg, config.sqlConfig);
+                // Get the actual value
+                actualValue = isFunction(value) ? value() : value;
+                // Create base Zod schema from the value type
+                // Check if it's a literal value (string, number, boolean)
+                if (typeof actualValue === "string" ||
+                    typeof actualValue === "number" ||
+                    typeof actualValue === "boolean") {
+                    baseSchema = z.literal(actualValue);
+                }
+                else if (actualValue instanceof Date) {
+                    baseSchema = z.date();
+                }
+                else if (actualValue === null) {
+                    baseSchema = z.null();
+                }
+                else if (actualValue === undefined) {
+                    baseSchema = z.undefined();
                 }
                 else {
-                    // Otherwise, it's a function or primitive value.
-                    finalDefaultValue = isFunction(singleArg)
-                        ? singleArg({ sql: config.sqlZod })
-                        : singleArg;
+                    baseSchema = z.any();
                 }
             }
+            // Apply schema modifier if provided
+            const newSchema = schemaModifier
+                ? schemaModifier(baseSchema)
+                : baseSchema;
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
-            // ---- THIS IS THE RUNTIME FIX THAT MATCHES YOUR INTERFACE ----
-            // If a new schema was passed, create a union.
-            // If ONLY a primitive was passed, we MUST also create a union.
-            const newClientZod = hasSchemaArg
-                ? z.union([config.sqlZod, newSchema])
-                : z.union([config.sqlZod, z.any()]); // Create the union for the primitive case
+            // Create union for client/validation
+            const clientValidationSchema = z.union([config.sqlZod, newSchema]);
             return createBuilder({
                 ...config,
                 stage: "new",
                 newZod: newSchema,
-                initialValue: finalDefaultValue,
-                clientZod: newClientZod,
-                validationZod: newClientZod, // Keep validation and client in sync for this step
+                initialValue: actualValue,
+                clientZod: clientValidationSchema,
+                validationZod: clientValidationSchema,
                 completedStages: newCompletedStages,
             });
         },
