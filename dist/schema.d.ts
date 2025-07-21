@@ -39,21 +39,26 @@ type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number
 type IsLiteralType<T> = T extends string ? string extends T ? false : true : T extends number ? number extends T ? false : true : T extends boolean ? boolean extends T ? false : true : false;
 export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
     initialState: {
-        <const TResult>(defaultValue: TResult): TResult extends () => infer R ? R extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, R, z.infer<R>, InferSmartClientType<TSql, R>, InferSmartClientType<TSql, R>>> : Prettify<Builder<"new", T, TSql, z.ZodLiteral<R>, R, z.ZodUnion<[TSql, z.ZodLiteral<R>]>, z.ZodUnion<[TSql, z.ZodLiteral<R>]>>> : TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : TResult extends string | number | boolean ? Prettify<Builder<"new", T, TSql, z.ZodLiteral<TResult>, TResult, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TResult>, TResult, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>>>;
         <TNewNext extends z.ZodTypeAny, const TDefaultNext>(schema: ((tools: {
             sql: TSql;
-        }) => TNewNext) | TNewNext, defaultValue: TDefaultNext): Prettify<Builder<"new", T, TSql, z.ZodUnion<[
+        }) => TNewNext) | TNewNext, defaultValue: TDefaultNext | ((tools: {
+            sql: TSql;
+        }) => TDefaultNext)): Prettify<Builder<"new", T, TSql, z.ZodUnion<[
             TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
-        ]>, IsLiteralType<z.infer<TNewNext>> extends true ? TDefaultNext extends () => infer R ? R : TDefaultNext : z.infer<TNewNext>, (TDefaultNext extends () => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
+            z.ZodLiteral<TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext>
+        ]>, IsLiteralType<z.infer<TNewNext>> extends true ? TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext : z.infer<TNewNext>, (TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
             TSql,
             TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
-        ]>, (TDefaultNext extends () => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
+            z.ZodLiteral<TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext>
+        ]>, (TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext) extends z.infer<TNewNext> ? z.ZodUnion<[TSql, TNewNext]> : z.ZodUnion<[
             TSql,
             TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>
+            z.ZodLiteral<TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext>
         ]>>>;
+        <const TResult>(defaultValue: (tools: {
+            sql: TSql;
+        }) => TResult): TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : Prettify<Builder<"new", T, TSql, z.ZodLiteral<TResult>, TResult, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>>>;
+        <const TResult>(defaultValue: TResult): TResult extends () => infer R ? R extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, R, z.infer<R>, InferSmartClientType<TSql, R>, InferSmartClientType<TSql, R>>> : Prettify<Builder<"new", T, TSql, z.ZodLiteral<R>, R, z.ZodUnion<[TSql, z.ZodLiteral<R>]>, z.ZodUnion<[TSql, z.ZodLiteral<R>]>>> : TResult extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TResult, z.infer<TResult>, InferSmartClientType<TSql, TResult>, InferSmartClientType<TSql, TResult>>> : TResult extends string | number | boolean ? Prettify<Builder<"new", T, TSql, z.ZodLiteral<TResult>, TResult, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>, z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TResult>, TResult, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>, InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>>>;
     };
     reference: <TRefSchema extends {
         _tableName: string;

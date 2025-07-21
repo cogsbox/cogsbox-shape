@@ -16,7 +16,9 @@ export const petSchema = schema({
     () => z.string(),
     () => uuidv4()
   ),
-  name: s.sql({ type: "varchar", length: 255 }).initialState(() => z.string()),
+  name: s
+    .sql({ type: "varchar", length: 255 })
+    .initialState(({ sql }) => z.string()),
   fluffynessScale: s
     .sql({ type: "text" })
     .client(({ sql }) => z.array(z.enum(["bald", "fuzzy", "fluffy", "poof"])))
@@ -39,7 +41,10 @@ export const petReferences = schemaRelations(petSchema, (s) => ({
 
 export const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4()),
+  id: s.sql({ type: "int", pk: true }).initialState(
+    ({ sql }) => sql.optional(),
+    () => uuidv4()
+  ),
   firstname: s
     .sql({ type: "varchar", length: 255 })
     .initialState(() => "test")

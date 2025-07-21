@@ -125,12 +125,111 @@ export interface IBuilderMethods<
   TValidation extends z.ZodTypeAny,
 > {
   // PASTE THIS ENTIRE BLOCK. THIS IS THE ONE.
-
   initialState: {
-    // ONE-ARGUMENT OVERLOAD (Correct as-is)
+    // =================================================================================
+    // TWO-ARGUMENT OVERLOAD - Corrected
+    // This signature must come first for correct overload resolution.
+    // =================================================================================
+    <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
+      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
+      // This union provides contextual typing for the (tools) => ... case
+      defaultValue: TDefaultNext | ((tools: { sql: TSql }) => TDefaultNext)
+    ): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        // TNew: Union of the schema and the literal default value.
+        z.ZodUnion<
+          [
+            TNewNext,
+            z.ZodLiteral<
+              // FIX: This generic function check correctly infers the literal return
+              // type from BOTH `() => R` and `(t) => R` without widening it.
+              TDefaultNext extends (...args: any[]) => infer R
+                ? R
+                : TDefaultNext
+            >,
+          ]
+        >,
+        // TInitialValue: The logic for the default value itself.
+        IsLiteralType<z.infer<TNewNext>> extends true
+          ? TDefaultNext extends (...args: any[]) => infer R
+            ? R
+            : TDefaultNext
+          : z.infer<TNewNext>,
+        // TClient / TValidation: Smart logic to check if the default is covered.
+        (
+          TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext
+        ) extends z.infer<TNewNext>
+          ? z.ZodUnion<[TSql, TNewNext]>
+          : z.ZodUnion<
+              [
+                TSql,
+                TNewNext,
+                z.ZodLiteral<
+                  TDefaultNext extends (...args: any[]) => infer R
+                    ? R
+                    : TDefaultNext
+                >,
+              ]
+            >,
+        // Repeat for the validation schema.
+        (
+          TDefaultNext extends (...args: any[]) => infer R ? R : TDefaultNext
+        ) extends z.infer<TNewNext>
+          ? z.ZodUnion<[TSql, TNewNext]>
+          : z.ZodUnion<
+              [
+                TSql,
+                TNewNext,
+                z.ZodLiteral<
+                  TDefaultNext extends (...args: any[]) => infer R
+                    ? R
+                    : TDefaultNext
+                >,
+              ]
+            >
+      >
+    >;
+
+    // =================================================================================
+    // ONE-ARGUMENT OVERLOADS - Corrected
+    // These are now three distinct signatures. TypeScript will pick the most specific match.
+    // =================================================================================
+
+    // SIGNATURE 1: For functions that accept the 'tools' parameter.
+    // This provides the essential contextual typing to prevent `(parameter) sql: any`.
     <const TResult>(
-      defaultValue: TResult
-    ): TResult extends () => infer R
+      defaultValue: (tools: { sql: TSql }) => TResult
+    ): TResult extends z.ZodTypeAny
+      ? Prettify<
+          Builder<
+            "new",
+            T,
+            TSql,
+            TResult,
+            z.infer<TResult>,
+            InferSmartClientType<TSql, TResult>,
+            InferSmartClientType<TSql, TResult>
+          >
+        >
+      : Prettify<
+          Builder<
+            "new",
+            T,
+            TSql,
+            z.ZodLiteral<TResult>,
+            TResult,
+            z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>,
+            z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>
+          >
+        >;
+
+    // SIGNATURE 2: For all other values (primitives, Zod schemas, parameterless functions).
+    // This overload will be chosen for anything that doesn't match the more specific signature above.
+    // It uses a conditional type to handle the different kinds of TResult.
+    <const TResult>(defaultValue: TResult): TResult extends () => infer R // Check for parameterless function first
       ? R extends z.ZodTypeAny
         ? Prettify<
             Builder<
@@ -154,7 +253,7 @@ export interface IBuilderMethods<
               z.ZodUnion<[TSql, z.ZodLiteral<R>]>
             >
           >
-      : TResult extends z.ZodTypeAny
+      : TResult extends z.ZodTypeAny // Check for Zod schema
         ? Prettify<
             Builder<
               "new",
@@ -166,7 +265,7 @@ export interface IBuilderMethods<
               InferSmartClientType<TSql, TResult>
             >
           >
-        : TResult extends string | number | boolean
+        : TResult extends string | number | boolean // Check for primitive
           ? Prettify<
               Builder<
                 "new",
@@ -178,7 +277,8 @@ export interface IBuilderMethods<
                 z.ZodUnion<[TSql, z.ZodLiteral<TResult>]>
               >
             >
-          : Prettify<
+          : // Fallback
+            Prettify<
               Builder<
                 "new",
                 T,
@@ -189,62 +289,6 @@ export interface IBuilderMethods<
                 InferSmartClientType<TSql, ZodTypeFromPrimitive<TResult>>
               >
             >;
-
-    <TNewNext extends z.ZodTypeAny, const TDefaultNext>(
-      schema: ((tools: { sql: TSql }) => TNewNext) | TNewNext,
-      defaultValue: TDefaultNext
-    ): Prettify<
-      Builder<
-        "new",
-        T,
-        TSql,
-        // TNew: The schema for the "new" state is a union of the provided
-        // schema and the literal default, ensuring both are allowed.
-        z.ZodUnion<
-          [
-            TNewNext,
-            z.ZodLiteral<TDefaultNext extends () => infer R ? R : TDefaultNext>,
-          ]
-        >,
-        // TInitialValue: The logic for the default value itself.
-        IsLiteralType<z.infer<TNewNext>> extends true
-          ? TDefaultNext extends () => infer R
-            ? R
-            : TDefaultNext
-          : z.infer<TNewNext>,
-        // TClient / TValidation: *** THIS IS THE SMART LOGIC ***
-        // It checks if the default value's type is already covered by TNewNext.
-        (
-          TDefaultNext extends () => infer R ? R : TDefaultNext
-        ) extends z.infer<TNewNext>
-          ? // If YES, the client schema is a clean union of just the SQL and new types.
-            z.ZodUnion<[TSql, TNewNext]>
-          : // If NO, we create the three-part union because the default is a distinct type.
-            z.ZodUnion<
-              [
-                TSql,
-                TNewNext,
-                z.ZodLiteral<
-                  TDefaultNext extends () => infer R ? R : TDefaultNext
-                >,
-              ]
-            >,
-        // Repeat the same logic for the validation schema.
-        (
-          TDefaultNext extends () => infer R ? R : TDefaultNext
-        ) extends z.infer<TNewNext>
-          ? z.ZodUnion<[TSql, TNewNext]>
-          : z.ZodUnion<
-              [
-                TSql,
-                TNewNext,
-                z.ZodLiteral<
-                  TDefaultNext extends () => infer R ? R : TDefaultNext
-                >,
-              ]
-            >
-      >
-    >;
   };
   reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any
