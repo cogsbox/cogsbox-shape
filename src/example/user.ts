@@ -41,10 +41,7 @@ export const petReferences = schemaRelations(petSchema, (s) => ({
 
 export const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).initialState(
-    () => uuidv4(),
-    (v) => v.optional()
-  ),
+  id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4(), z.string()),
   firstname: s
     .sql({ type: "varchar", length: 255 })
     .initialState(() => "test")

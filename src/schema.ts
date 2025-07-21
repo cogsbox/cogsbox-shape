@@ -131,7 +131,7 @@ export interface IBuilderMethods<
 > {
   // PASTE THIS ENTIRE BLOCK. THIS IS THE ONE.
   initialState: {
-    // Single argument - value or Zod schema
+    // Overload 1: For a single argument (value or schema)
     <const TValue>(
       value: TValue extends (...args: any[]) => void | undefined
         ? never
@@ -147,8 +147,8 @@ export interface IBuilderMethods<
                 TSql,
                 TValue,
                 z.infer<TValue>,
-                CollapsedUnion<TSql, TValue>, // <-- FIX
-                CollapsedUnion<TSql, TValue> // <-- FIX
+                CollapsedUnion<TSql, TValue>,
+                CollapsedUnion<TSql, TValue>
               >
             >
           : R extends string | number | boolean
@@ -159,8 +159,8 @@ export interface IBuilderMethods<
                   TSql,
                   z.ZodLiteral<R>,
                   R,
-                  CollapsedUnion<TSql, z.ZodLiteral<R>>, // <-- FIX
-                  CollapsedUnion<TSql, z.ZodLiteral<R>> // <-- FIX
+                  CollapsedUnion<TSql, z.ZodLiteral<R>>,
+                  CollapsedUnion<TSql, z.ZodLiteral<R>>
                 >
               >
             : Prettify<
@@ -170,8 +170,8 @@ export interface IBuilderMethods<
                   TSql,
                   ZodTypeFromPrimitive<R>,
                   R,
-                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, // <-- FIX
-                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>> // <-- FIX
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
                 >
               >
       : TValue extends z.ZodTypeAny
@@ -182,8 +182,8 @@ export interface IBuilderMethods<
               TSql,
               TValue,
               z.infer<TValue>,
-              CollapsedUnion<TSql, TValue>, // <-- FIX
-              CollapsedUnion<TSql, TValue> // <-- FIX
+              CollapsedUnion<TSql, TValue>,
+              CollapsedUnion<TSql, TValue>
             >
           >
         : TValue extends string | number | boolean
@@ -194,8 +194,8 @@ export interface IBuilderMethods<
                 TSql,
                 z.ZodLiteral<TValue>,
                 TValue,
-                CollapsedUnion<TSql, z.ZodLiteral<TValue>>, // <-- FIX
-                CollapsedUnion<TSql, z.ZodLiteral<TValue>> // <-- FIX
+                CollapsedUnion<TSql, z.ZodLiteral<TValue>>,
+                CollapsedUnion<TSql, z.ZodLiteral<TValue>>
               >
             >
           : Prettify<
@@ -205,12 +205,30 @@ export interface IBuilderMethods<
                 TSql,
                 ZodTypeFromPrimitive<TValue>,
                 TValue,
-                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, // <-- FIX
-                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>> // <-- FIX
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
               >
             >;
 
-    // Two arguments - value + schema modifier
+    // Overload 2: For a value AND an explicit Zod schema.
+    <const TValue, TSchema extends z.ZodTypeAny>(
+      value: TValue extends (...args: any[]) => void | undefined
+        ? never
+        : TValue,
+      schema: TSchema
+    ): Prettify<
+      Builder<
+        "new",
+        T,
+        TSql,
+        TSchema,
+        TValue extends () => infer R ? R : TValue,
+        CollapsedUnion<TSql, TSchema>,
+        CollapsedUnion<TSql, TSchema>
+      >
+    >;
+
+    // Overload 3: For a value AND a schema modifier function.
     <const TValue, TSchema extends z.ZodTypeAny>(
       value: TValue extends (...args: any[]) => void | undefined
         ? never
@@ -231,11 +249,12 @@ export interface IBuilderMethods<
         TSql,
         TSchema,
         TValue extends () => infer R ? R : TValue,
-        CollapsedUnion<TSql, TSchema>, // <-- FIX
-        CollapsedUnion<TSql, TSchema> // <-- FIX
+        CollapsedUnion<TSql, TSchema>,
+        CollapsedUnion<TSql, TSchema>
       >
     >;
   };
+
   reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any
   ) => Builder<
