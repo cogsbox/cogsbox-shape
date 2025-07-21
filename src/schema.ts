@@ -1301,13 +1301,13 @@ export function createSchema<
         let baseClientSchema: z.ZodTypeAny;
 
         if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-          baseClientSchema = z.array(childSchemaResult.clientSchema);
+          baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
           defaultValues[key] = Array.from(
             { length: (sqlConfig as any).defaultCount || 0 },
             () => childSchemaResult.defaultValues
           );
         } else {
-          baseClientSchema = childSchemaResult.clientSchema;
+          baseClientSchema = childSchemaResult.clientSchema.optional();
           defaultValues[key] = childSchemaResult.defaultValues;
         }
 

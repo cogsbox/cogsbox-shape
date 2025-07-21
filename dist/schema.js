@@ -497,11 +497,11 @@ export function createSchema(schema, relations) {
                 const childSchemaResult = createSchema(relatedSchemaFactory());
                 let baseClientSchema;
                 if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-                    baseClientSchema = z.array(childSchemaResult.clientSchema);
+                    baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
                     defaultValues[key] = Array.from({ length: sqlConfig.defaultCount || 0 }, () => childSchemaResult.defaultValues);
                 }
                 else {
-                    baseClientSchema = childSchemaResult.clientSchema;
+                    baseClientSchema = childSchemaResult.clientSchema.optional();
                     defaultValues[key] = childSchemaResult.defaultValues;
                 }
                 clientFields[key] = config.clientTransform
