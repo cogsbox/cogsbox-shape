@@ -114,21 +114,22 @@ const users = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4(), z.string()),
   petId: s.reference(() => pets.id),
-  pets: s.placeholderHasMany(),
+  pets: s.hasMany(),
 });
 const pets = schema({
   _tableName: "pets",
   id: s.sql({ type: "int", pk: true }),
   userId: s.reference(() => users.id),
+  owner: s.hasOne(),
 });
 const posts = schema({
   _tableName: "posts",
   userId: s.reference(() => users.id),
   id: s.sql({ type: "int", pk: true }),
-  aboutPet: s.placeholderHasOne(),
+  aboutPet: s.hasOne(),
 });
 
-const schemas = { users, pets };
+const schemas = { users, pets, posts };
 
 const box2 = createSchemaBoxRegistry(schemas, (s) => ({
   users: {
@@ -136,13 +137,143 @@ const box2 = createSchemaBoxRegistry(schemas, (s) => ({
     pets: { fromKey: "id", toKey: s.pets.userId },
   },
   pets: { owner: { fromKey: "userId", toKey: s.users.id }, userId: s.users.id },
+  posts: {
+    aboutPet: {
+      fromKey: "id",
+      toKey: s.pets.userId,
+    },
+  },
 }));
-const testUser = box2.users;
-const subTEstUser = testUser.zodSchemas;
+
+const usersEndSchema = box2.users;
+const petsEndSchema = box2.pets;
+petsEndSchema.rawSchema;
+const testShape: typeof petsEndSchema.RelationSelection = {
+  owner: { pets: true },
+};
+petsEndSchema.nav.owner.pets.owner.pets.owner;
+
+const resolvedPet = petsEndSchema.test.pets;
+const resolvedPosts = petsEndSchema.test.posts;
+const resolvedUser = petsEndSchema.test.users;
+
+/*const resolvedPet: {
+    _tableName: "pets" & {
+        __meta: {
+            _key: "_tableName";
+            _fieldType: "pets";
+        };
+        __parentTableType: {
+            _tableName: "pets";
+            id: Builder<"sql", {
+                type: "int";
+                pk: true;
+            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
+            userId: Reference<...>;
+            owner: PlaceholderRelation<...>;
+        };
+    };
+    id: EnrichedField<...>;
+    userId: EnrichedField<...>;
+    owner: EnrichedField<...>;
+}
+    const resolvedPosts: {
+    _tableName: "posts" & {
+        __meta: {
+            _key: "_tableName";
+            _fieldType: "posts";
+        };
+        __parentTableType: {
+            _tableName: "posts";
+            userId: Reference<() => EnrichedField<"id", {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: z.ZodNumber;
+                    zodNewSchema: z.ZodString;
+                    initialValue: string;
+                    zodClientSchema: z.ZodUnion<...>;
+                    zodValidationSchema: z.ZodUnion<...>;
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    ...;
+                }) => TClientNext)) => {
+                    ...;
+                };
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    ...;
+                }) => TValidationNext)) => {
+                    ...;
+                };
+                transform: (transforms: {
+                    ...;
+                }) => {
+                    ...;
+                };
+            }, {
+                ...;
+            }>>;
+            id: Builder<...>;
+            aboutPet: PlaceholderRelation<...>;
+        };
+    };
+    userId: EnrichedField<...>;
+    id: EnrichedField<...>;
+    aboutPet: EnrichedField<...>;
+}
+'resolvedUser' is declared but its value is never read.ts(6133)
+const resolvedUser: {
+    _tableName: "users" & {
+        __meta: {
+            _key: "_tableName";
+            _fieldType: "users";
+        };
+        __parentTableType: {
+            _tableName: "users";
+            id: {
+                config: {
+                    sql: {
+                        type: "int";
+                        pk: true;
+                    };
+                    zodSqlSchema: z.ZodNumber;
+                    zodNewSchema: z.ZodString;
+                    initialValue: string;
+                    zodClientSchema: z.ZodUnion<...>;
+                    zodValidationSchema: z.ZodUnion<...>;
+                };
+                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                    ...;
+                }) => TClientNext)) => {
+                    ...;
+                };
+                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
+                    ...;
+                }) => TValidationNext)) => {
+                    ...;
+                };
+                transform: (transforms: {
+                    ...;
+                }) => {
+                    ...;
+                };
+            };
+            petId: Reference<...>;
+            pets: PlaceholderRelation<...>;
+        };
+    };
+    id: EnrichedField<...>;
+    petId: EnrichedField<...>;
+    pets: EnrichedField<...>;
+}
+
+*/
+
+const testPets = petsEndSchema.zodSchemas;
+const clientSChemaP = testPets.clientSchema;
+const subTEstUser = usersEndSchema.zodSchemas;
 const clientSChema = subTEstUser.clientSchema;
+
 type ClientUser = z.infer<typeof clientSChema>;
-/*type ClientUser = {
-    id: string | number;
-    pets: never;
-    petId: number;
-}*/

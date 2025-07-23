@@ -409,13 +409,13 @@ interface ShapeAPI {
     SQLToZodType<T, false>
   >;
   reference: <TGetter extends () => any>(getter: TGetter) => Reference<TGetter>;
-  placeholderReference: () => PlaceholderReference;
-  placeholderHasMany: (config?: {
+
+  hasMany: (config?: {
     defaultCount?: number;
   }) => PlaceholderRelation<"hasMany">;
-  placeholderHasOne: () => PlaceholderRelation<"hasOne">;
+  hasOne: () => PlaceholderRelation<"hasOne">;
 
-  placeholderManyToMany: (config?: {
+  manyToMany: (config?: {
     defaultCount?: number;
   }) => PlaceholderRelation<"manyToMany">;
 }
@@ -477,22 +477,18 @@ export const s: ShapeAPI = {
     getter: getter,
   }),
 
-  placeholderReference: () => ({
-    __type: "placeholder-reference" as const,
-  }),
-
-  placeholderHasMany: (config?: { defaultCount?: number }) => ({
+  hasMany: (config?: { defaultCount?: number }) => ({
     __type: "placeholder-relation" as const,
     relationType: "hasMany" as const,
     defaultCount: config?.defaultCount ?? 0,
   }),
 
-  placeholderHasOne: () => ({
+  hasOne: () => ({
     __type: "placeholder-relation" as const,
     relationType: "hasOne" as const,
   }),
 
-  placeholderManyToMany: (config?: { defaultCount?: number }) => ({
+  manyToMany: (config?: { defaultCount?: number }) => ({
     __type: "placeholder-relation" as const,
     relationType: "manyToMany" as const,
     defaultCount: config?.defaultCount ?? 0,
@@ -778,39 +774,43 @@ export type EnrichedField<
   };
   __parentTableType: TSchema;
 };
-
 export type EnrichFields<T extends ShapeSchema> = {
-  [K in keyof T]: K extends string ? EnrichedField<K, T[K], T> : T[K];
+  [K in keyof T]: K extends "_tableName"
+    ? T[K] // Keep _tableName as is
+    : K extends string
+      ? EnrichedField<K, T[K], T>
+      : T[K];
 };
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
-export function schema<T extends ShapeSchema>(
-  schema: T
-): Prettify<EnrichFields<T> & { _tableName: T["_tableName"] }> {
-  const enrichedSchema: any = {
-    _tableName: schema._tableName,
-  };
+// Update the schema function
+export function schema<T extends string, U extends ShapeSchema<T>>(
+  schema: U
+): Prettify<EnrichFields<U>> {
+  const enrichedSchema: any = {};
 
   for (const key in schema) {
-    if (
-      key !== "_tableName" &&
-      Object.prototype.hasOwnProperty.call(schema, key)
-    ) {
-      enrichedSchema[key] = {
-        ...schema[key],
-        __meta: {
-          _key: key,
-          _fieldType: schema[key],
-        },
-        __parentTableType: schema,
-      };
+    if (Object.prototype.hasOwnProperty.call(schema, key)) {
+      if (key === "_tableName") {
+        // Don't enrich _tableName, keep it as a simple string
+        enrichedSchema[key] = schema[key];
+      } else {
+        // Enrich other fields
+        enrichedSchema[key] = {
+          ...schema[key],
+          __meta: {
+            _key: key,
+            _fieldType: schema[key],
+          },
+          __parentTableType: schema,
+        };
+      }
     }
   }
 
   enrichedSchema[SchemaWrapperBrand] = true;
   return enrichedSchema as any;
 }
-
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";
 // Updated SchemaField to use server/client instead of dbType/toClient/toDb
 type BaseSchemaField<T extends SQLType = SQLType> = {
@@ -843,9 +843,8 @@ export type Schema<
 };
 type ValidShapeField = ReturnType<typeof s.sql>;
 
-// Define the strict shape schema with existing types
-export type ShapeSchema = {
-  _tableName: string;
+export type ShapeSchema<T extends string = string> = {
+  _tableName: T;
   [SchemaWrapperBrand]?: true; // Use symbol as optional property
   [key: string]:
     | string
@@ -1504,25 +1503,10 @@ type ResolvedRegistryWithSchemas<
   };
 };
 
-type ForbiddenType = PlaceholderReference;
-
-type Sanitize<T> = {
-  [K in keyof T]: T[K] extends object
-    ? {
-        [K2 in keyof T[K]]: T[K][K2] extends ForbiddenType ? never : T[K][K2];
-      } & (T[K] extends ForbiddenType ? never : unknown)
-    : T[K] extends ForbiddenType
-      ? never
-      : T[K];
-};
-type Prev = [never, 0, 1, 2, 3, 4];
 export function createSchemaBoxRegistry<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionConfig<S>,
->(
-  schemas: S,
-  resolver: (proxy: SchemaProxy<S>) => Sanitize<R> //ValidateResolver<R> tryign to tdo this results in all other types gettign lsot which is
-): ResolvedRegistryWithSchemas<S, R> {
+>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R) {
   // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
   const schemaProxy = new Proxy({} as SchemaProxy<S>, {
     get(target, tableName: string) {
@@ -1656,8 +1640,7 @@ export function createSchemaBoxRegistry<
       `Could not resolve circular dependencies. The following fields remain unresolved: ${unresolvedList}`
     );
   }
-
-  // Final processing: create the final Zod schemas from the fully resolved structures
+  // Update the createSchemaBoxRegistry function's final section:
   const finalRegistry: any = {};
   for (const tableName in resolvedSchemas) {
     const zodSchemas = createSchema(resolvedSchemas[tableName]);
@@ -1667,7 +1650,113 @@ export function createSchemaBoxRegistry<
     };
   }
 
-  return finalRegistry as ResolvedRegistryWithSchemas<S, R>;
+  // Check if a field is a relation
+  type IsRelationField<Field> = Field extends {
+    config: {
+      sql: {
+        type: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
+        schema: () => any;
+      };
+    };
+  }
+    ? true
+    : false;
+
+  // Get the target table name from a relation field
+  type GetRelationTarget<Field> = Field extends {
+    config: {
+      sql: {
+        schema: () => infer TargetSchema;
+      };
+    };
+  }
+    ? TargetSchema extends { _tableName: infer TableName }
+      ? TableName
+      : never
+    : never;
+
+  type NavigationProxy<
+    CurrentTable extends string,
+    Registry extends Record<string, { rawSchema: any }>,
+  > = CurrentTable extends keyof Registry
+    ? {
+        [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<
+          Registry[CurrentTable]["rawSchema"][K]
+        > extends true
+          ? K
+          : never]: GetRelationTarget<
+          Registry[CurrentTable]["rawSchema"][K]
+        > extends infer TargetTable
+          ? TargetTable extends keyof Registry
+            ? NavigationProxy<TargetTable & string, Registry>
+            : never
+          : never;
+      }
+    : {};
+  // Update your ReCreatedType
+  type NavigationToSelection<Nav> = Nav extends object
+    ? {
+        [K in keyof Nav]?:
+          | boolean // Just include this relation
+          | NavigationToSelection<Nav[K]>; // Or nested selection
+      }
+    : never;
+
+  // Update your ReCreatedType to include RelationSelection
+  type ReCreatedType = {
+    [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
+      rawSchema: ResolvedRegistryWithSchemas<S, R>[key]["rawSchema"];
+      zodSchemas: ResolvedRegistryWithSchemas<S, R>[key]["zodSchemas"];
+      test: S;
+      nav: NavigationProxy<key & string, ResolvedRegistryWithSchemas<S, R>>;
+      // Add this line:
+      RelationSelection: NavigationToSelection<
+        NavigationProxy<key & string, ResolvedRegistryWithSchemas<S, R>>
+      >;
+    };
+  };
+  // Simple navigation proxy creator
+  const createNavProxy = (currentTable: string, registry: any): any => {
+    return new Proxy(
+      {},
+      {
+        get(target, relationName: string) {
+          const schema = registry[currentTable]?.rawSchema;
+          if (!schema) return undefined;
+
+          const field = schema[relationName];
+          if (!field?.config?.sql?.schema) return undefined;
+
+          const targetSchema = field.config.sql.schema();
+          const targetTable = targetSchema?._tableName; // Now just a simple string!
+
+          if (targetTable && registry[targetTable]) {
+            return createNavProxy(targetTable, registry);
+          }
+
+          return undefined;
+        },
+      }
+    );
+  };
+
+  // Build the final registry
+  for (const tableName in resolvedSchemas) {
+    const zodSchemas = createSchema(resolvedSchemas[tableName]);
+    finalRegistry[tableName] = {
+      rawSchema: resolvedSchemas[tableName],
+      zodSchemas: zodSchemas,
+      test: schemas,
+      nav: null, // Will be set after all entries are created
+    };
+  }
+
+  // Now add navigation proxies
+  for (const tableName in finalRegistry) {
+    finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
+  }
+
+  return finalRegistry as ReCreatedType;
 }
 
 // Type for the schema proxy used in resolver
