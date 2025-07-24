@@ -50,6 +50,24 @@ export const s = {
     //     type: "datetime",
     //     ...config,
     //   }),
+    reference: (getter) => ({
+        __type: "reference",
+        getter: getter,
+    }),
+    hasMany: (config) => ({
+        __type: "placeholder-relation",
+        relationType: "hasMany",
+        defaultCount: config?.defaultCount ?? 0,
+    }),
+    hasOne: () => ({
+        __type: "placeholder-relation",
+        relationType: "hasOne",
+    }),
+    manyToMany: (config) => ({
+        __type: "placeholder-relation",
+        relationType: "manyToMany",
+        defaultCount: config?.defaultCount ?? 0,
+    }),
     sql: (sqlConfig) => {
         const sqlZodType = (() => {
             let baseType;
@@ -87,54 +105,6 @@ export const s = {
             initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
             clientZod: sqlZodType,
             validationZod: sqlZodType,
-        });
-    },
-    hasMany: (config) => {
-        const relationConfig = {
-            type: "hasMany",
-            ...config,
-        };
-        const placeholderSchema = z.array(z.any());
-        return createBuilder({
-            stage: "relation",
-            sqlConfig: relationConfig,
-            sqlZod: placeholderSchema,
-            newZod: placeholderSchema,
-            initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-            clientZod: placeholderSchema,
-            validationZod: placeholderSchema,
-        }); // Just cast to any here to satisfy the interface
-    },
-    hasOne: (config) => {
-        const relationConfig = {
-            type: "hasOne",
-            ...config,
-        };
-        const relationZodType = z.any();
-        return createBuilder({
-            stage: "relation",
-            sqlConfig: relationConfig,
-            sqlZod: relationZodType,
-            newZod: relationZodType,
-            initialValue: {},
-            clientZod: relationZodType,
-            validationZod: relationZodType,
-        });
-    },
-    manyToMany: (config) => {
-        const relationConfig = {
-            type: "manyToMany",
-            ...config,
-        };
-        const relationZodType = z.array(z.any()).optional();
-        return createBuilder({
-            stage: "relation",
-            sqlConfig: relationConfig,
-            sqlZod: relationZodType,
-            newZod: relationZodType,
-            initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-            clientZod: relationZodType,
-            validationZod: relationZodType,
         });
     },
 };
@@ -295,23 +265,27 @@ function createBuilder(config) {
     };
     return builderObject;
 }
-// The table function that enriches fields with their key information
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
+// Update the schema function
 export function schema(schema) {
-    const enrichedSchema = {
-        _tableName: schema._tableName,
-    };
+    const enrichedSchema = {};
     for (const key in schema) {
-        if (key !== "_tableName" &&
-            Object.prototype.hasOwnProperty.call(schema, key)) {
-            enrichedSchema[key] = {
-                ...schema[key],
-                __meta: {
-                    _key: key,
-                    _fieldType: schema[key],
-                },
-                __parentTableType: schema,
-            };
+        if (Object.prototype.hasOwnProperty.call(schema, key)) {
+            if (key === "_tableName") {
+                // Don't enrich _tableName, keep it as a simple string
+                enrichedSchema[key] = schema[key];
+            }
+            else {
+                // Enrich other fields
+                enrichedSchema[key] = {
+                    ...schema[key],
+                    __meta: {
+                        _key: key,
+                        _fieldType: schema[key],
+                    },
+                    __parentTableType: schema,
+                };
+            }
         }
     }
     enrichedSchema[SchemaWrapperBrand] = true;
@@ -458,6 +432,10 @@ function isRelation(value) {
         "toKey" in value &&
         "schema" in value);
 }
+// Helper to check if something is a reference
+function isReference(value) {
+    return value && typeof value === "object" && value.__type === "reference";
+}
 export function createSchema(schema, relations) {
     const sqlFields = {};
     const clientFields = {};
@@ -471,28 +449,44 @@ export function createSchema(schema, relations) {
             key === String(SchemaWrapperBrand))
             continue;
         const definition = fullSchema[key];
-        // --- THIS IS THE FIX ---
-        // The condition now correctly checks for EITHER a `reference` type OR a builder with a `.config`.
-        if (!definition ||
-            (definition.type !== "reference" && !definition.config)) {
+        // Handle new-style references
+        if (isReference(definition)) {
+            // Call the getter to get the actual field
+            const targetField = definition.getter();
+            if (targetField && targetField.config) {
+                const config = targetField.config;
+                sqlFields[key] = config.zodSqlSchema;
+                clientFields[key] = config.zodClientSchema;
+                validationFields[key] = config.zodValidationSchema;
+                // For references, typically use undefined as default
+                defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
+                    ...config.sql,
+                    default: undefined,
+                });
+                if (config.transforms) {
+                    fieldTransforms[key] = config.transforms;
+                }
+            }
             continue;
         }
-        if (definition.type === "reference") {
-            // This block now correctly processes `testId`.
+        // Handle old-style references (for backward compatibility)
+        if (definition && definition.type === "reference") {
             const referencedFieldBuilder = definition.to();
             const referencedConfig = referencedFieldBuilder.config;
             sqlFields[key] = referencedConfig.zodSqlSchema;
             clientFields[key] = referencedConfig.zodClientSchema;
             validationFields[key] = referencedConfig.zodValidationSchema;
             defaultValues[key] = inferDefaultFromZod(referencedConfig.zodClientSchema, { ...referencedConfig.sql, default: undefined });
+            continue;
         }
-        else {
-            // This block handles fields with a `.config` property, like `pets`.
+        // Handle fields with a config property (builders)
+        if (definition && definition.config) {
             const config = definition.config;
             const sqlConfig = config.sql;
             if (sqlConfig &&
                 typeof sqlConfig === "object" &&
                 ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
+                // Handle relations
                 const relatedSchemaFactory = sqlConfig.schema;
                 const childSchemaResult = createSchema(relatedSchemaFactory());
                 let baseClientSchema;
@@ -510,6 +504,7 @@ export function createSchema(schema, relations) {
                 validationFields[key] = clientFields[key];
             }
             else {
+                // Handle regular fields
                 sqlFields[key] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 validationFields[key] = config.zodValidationSchema;
@@ -550,85 +545,146 @@ export function createSchema(schema, relations) {
         toDb,
     };
 }
-export function schemaRelations(baseSchema, referencesBuilder) {
-    const rel = {
-        reference: (fieldGetter) => ({
-            type: "reference",
-            to: fieldGetter,
-        }),
-        hasMany: (config) => {
-            const relationConfig = {
-                type: "hasMany",
-                fromKey: config.fromKey,
-                toKey: () => config.toKey.__meta._key,
-                schema: () => config.toKey.__parentTableType,
-                defaultCount: config.defaultCount,
-            };
-            const placeholderSchema = z.array(z.any());
-            return createBuilder({
-                stage: "relation",
-                sqlConfig: relationConfig,
-                sqlZod: placeholderSchema,
-                newZod: placeholderSchema,
-                initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-                clientZod: placeholderSchema,
-                validationZod: placeholderSchema,
-            }); // FIX: This is a hack to get around the circular reference
-        },
-        hasOne: (config) => {
-            const relationConfig = {
-                type: "hasOne",
-                fromKey: config.fromKey,
-                toKey: config.toKey,
-                schema: () => config.toKey.__parentTableType,
-            };
-            const relationZodType = z.any();
-            return createBuilder({
-                stage: "relation",
-                sqlConfig: relationConfig,
-                sqlZod: relationZodType,
-                newZod: relationZodType,
-                initialValue: {},
-                clientZod: relationZodType,
-                validationZod: relationZodType,
-            });
-        },
-        manyToMany: (config) => {
-            const relationConfig = {
-                type: "manyToMany",
-                fromKey: config.fromKey,
-                toKey: config.toKey,
-                schema: config.schema,
-                ...(config.defaultCount !== undefined && {
-                    defaultCount: config.defaultCount,
-                }),
-            };
-            const relationZodType = z.array(z.any()).optional();
-            return createBuilder({
-                stage: "relation",
-                sqlConfig: relationConfig,
-                sqlZod: relationZodType,
-                newZod: relationZodType,
-                initialValue: Array.from({ length: config.defaultCount || 0 }, () => ({})),
-                clientZod: relationZodType,
-                validationZod: relationZodType,
-            });
-        },
-    };
-    const refs = referencesBuilder(rel);
-    const enrichedRefs = {};
-    // Enrich each field in the refs object with __meta and __parentTableType
-    for (const key in refs) {
-        if (Object.prototype.hasOwnProperty.call(refs, key)) {
-            enrichedRefs[key] = {
-                ...refs[key],
-                __meta: {
-                    _key: key,
-                    _fieldType: refs[key],
+export function createSchemaBox(schemas, resolver) {
+    // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
+    const schemaProxy = new Proxy({}, {
+        get(target, tableName) {
+            const schema = schemas[tableName];
+            if (!schema)
+                return undefined;
+            return new Proxy({}, {
+                get(target, fieldName) {
+                    const field = schema[fieldName];
+                    // Enrich the field with metadata when accessed through the proxy.
+                    // This metadata is crucial for resolving relationships later.
+                    if (field && typeof field === "object") {
+                        return {
+                            ...field,
+                            __meta: {
+                                _key: fieldName,
+                                _fieldType: field,
+                            },
+                            __parentTableType: schema,
+                        };
+                    }
+                    return field;
                 },
-                __parentTableType: baseSchema,
-            };
+            });
+        },
+    });
+    // Get the user-defined resolution configuration
+    const resolutionConfig = resolver(schemaProxy);
+    // Start with a deep copy of the initial schemas
+    const resolvedSchemas = { ...schemas };
+    // ===============================================================
+    // FIX: Implement a two-stage resolution process to avoid deadlock
+    // ===============================================================
+    // STAGE 1: Resolve all `s.reference()` fields first.
+    for (const tableName in schemas) {
+        for (const fieldName in schemas[tableName]) {
+            const field = schemas[tableName][fieldName];
+            if (isReference(field)) {
+                // A reference is defined in the base schema, so its getter gives the target
+                const targetField = field.getter();
+                if (targetField && targetField.config) {
+                    // Replace the reference placeholder with the actual field it points to
+                    resolvedSchemas[tableName][fieldName] = targetField;
+                }
+                else {
+                    throw new Error(`Could not resolve reference for ${tableName}.${fieldName}. Ensure it points to a valid schema field.`);
+                }
+            }
         }
     }
-    return enrichedRefs;
+    // STAGE 2: Now, resolve all relation placeholders (`hasMany`, `hasOne`, etc.).
+    for (const tableName in schemas) {
+        const tableConfig = resolutionConfig[tableName];
+        if (!tableConfig)
+            continue;
+        for (const fieldName in tableConfig) {
+            const field = schemas[tableName][fieldName];
+            const resolution = tableConfig[fieldName];
+            // Ensure this is a relation placeholder we are trying to resolve
+            if (field && field.__type === "placeholder-relation") {
+                const targetKey = resolution.toKey;
+                // The target key should now be a fully resolved field from STAGE 1
+                if (!targetKey || !targetKey.__parentTableType) {
+                    throw new Error(`Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`);
+                }
+                const targetSchema = targetKey.__parentTableType;
+                const relationType = field.relationType;
+                const defaultCount = field.defaultCount || resolution.defaultCount;
+                const zodSchema = relationType === "hasMany" || relationType === "manyToMany"
+                    ? z.array(z.any())
+                    : z.any();
+                const initialValue = relationType === "hasMany" || relationType === "manyToMany"
+                    ? Array.from({ length: defaultCount || 0 }, () => ({}))
+                    : {};
+                // Create the full relation builder now that the dependency is available
+                const resolvedBuilder = createBuilder({
+                    stage: "relation",
+                    sqlConfig: {
+                        type: relationType,
+                        fromKey: resolution.fromKey,
+                        toKey: () => targetKey, // The toKey is now a function returning the resolved field
+                        schema: () => targetSchema,
+                        defaultCount: defaultCount,
+                    },
+                    sqlZod: zodSchema,
+                    newZod: zodSchema,
+                    initialValue,
+                    clientZod: zodSchema,
+                    validationZod: zodSchema,
+                });
+                // Replace the placeholder in our schemas object with the final builder
+                if (!resolvedSchemas[tableName]) {
+                    throw new Error(`Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`);
+                }
+                resolvedSchemas[tableName][fieldName] = resolvedBuilder;
+            }
+        }
+    }
+    // Update the createSchemaBoxRegistry function's final section:
+    const finalRegistry = {};
+    for (const tableName in resolvedSchemas) {
+        const zodSchemas = createSchema(resolvedSchemas[tableName]);
+        finalRegistry[tableName] = {
+            rawSchema: resolvedSchemas[tableName],
+            zodSchemas: zodSchemas,
+        };
+    }
+    // Simple navigation proxy creator
+    const createNavProxy = (currentTable, registry) => {
+        return new Proxy({}, {
+            get(target, relationName) {
+                const schema = registry[currentTable]?.rawSchema;
+                if (!schema)
+                    return undefined;
+                const field = schema[relationName];
+                if (!field?.config?.sql?.schema)
+                    return undefined;
+                const targetSchema = field.config.sql.schema();
+                const targetTable = targetSchema?._tableName; // Now just a simple string!
+                if (targetTable && registry[targetTable]) {
+                    return createNavProxy(targetTable, registry);
+                }
+                return undefined;
+            },
+        });
+    };
+    // Build the final registry
+    for (const tableName in resolvedSchemas) {
+        const zodSchemas = createSchema(resolvedSchemas[tableName]);
+        finalRegistry[tableName] = {
+            rawSchema: resolvedSchemas[tableName],
+            zodSchemas: zodSchemas,
+            test: schemas,
+            nav: null, // Will be set after all entries are created
+        };
+    }
+    // Now add navigation proxies
+    for (const tableName in finalRegistry) {
+        finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
+    }
+    return finalRegistry;
 }
