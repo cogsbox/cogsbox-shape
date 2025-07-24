@@ -1097,6 +1097,7 @@ type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
 function isReference<T extends () => any>(value: any): value is Reference<T> {
   return value && typeof value === "object" && value.__type === "reference";
 }
+
 export function createSchema<
   T extends { _tableName: string; [SchemaWrapperBrand]?: true },
   R extends Record<string, any> = {},
@@ -1156,7 +1157,6 @@ export function createSchema<
 
     // Handle new-style references
     if (isReference(definition)) {
-      // Call the getter to get the actual field
       const targetField = definition.getter();
 
       if (targetField && targetField.config) {
@@ -1164,8 +1164,6 @@ export function createSchema<
         sqlFields[key] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         validationFields[key] = config.zodValidationSchema;
-
-        // For references, typically use undefined as default
         defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
           ...config.sql,
           default: undefined,
@@ -1198,61 +1196,29 @@ export function createSchema<
       const config = definition.config;
       const sqlConfig = config.sql;
 
-      if (definition && definition.config) {
-        const config = definition.config;
-        const sqlConfig = config.sql;
+      if (
+        sqlConfig &&
+        typeof sqlConfig === "object" &&
+        ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
+          sqlConfig.type
+        )
+      ) {
+        console.log(`Skipping relation: ${key}`);
+        continue;
+      } else {
+        // Handle regular fields
+        sqlFields[key] = config.zodSqlSchema;
+        clientFields[key] = config.zodClientSchema;
+        validationFields[key] = config.zodValidationSchema;
 
-        if (
-          sqlConfig &&
-          typeof sqlConfig === "object" &&
-          ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
-            sqlConfig.type
-          )
-        ) {
-          // Handle relations
-          const relatedSchemaFactory = sqlConfig.schema as () => T;
-
-          let baseClientSchema: z.ZodTypeAny;
-
-          if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-            baseClientSchema = z.array(z.any()).optional();
-            // Make it a FUNCTION that returns the array
-            defaultValues[key] = () =>
-              Array.from(
-                { length: (sqlConfig as any).defaultCount || 0 },
-                () => {
-                  const childSchema = createSchema(relatedSchemaFactory());
-                  return childSchema.defaultValues;
-                }
-              );
-          } else {
-            baseClientSchema = z.any().optional();
-            // Make it a FUNCTION that returns the object
-            defaultValues[key] = () => {
-              const childSchema = createSchema(relatedSchemaFactory());
-              return childSchema.defaultValues;
-            };
-          }
-
-          clientFields[key] = config.clientTransform
-            ? config.clientTransform(baseClientSchema)
-            : baseClientSchema;
-          validationFields[key] = clientFields[key];
-        } else {
-          // Handle regular fields
-          sqlFields[key] = config.zodSqlSchema;
-          clientFields[key] = config.zodClientSchema;
-          validationFields[key] = config.zodValidationSchema;
-
-          if (config.transforms) {
-            fieldTransforms[key] = config.transforms;
-          }
-
-          const initialValueOrFn = config.initialValue;
-          defaultValues[key] = isFunction(initialValueOrFn)
-            ? initialValueOrFn()
-            : initialValueOrFn;
+        if (config.transforms) {
+          fieldTransforms[key] = config.transforms;
         }
+
+        const initialValueOrFn = config.initialValue;
+        defaultValues[key] = isFunction(initialValueOrFn)
+          ? initialValueOrFn()
+          : initialValueOrFn;
       }
     }
   }
@@ -1537,12 +1503,250 @@ type ResolvedRegistryWithSchemas<
     };
   };
 };
+function createViewObject(
+  tableName: string,
+  selection: Record<string, any>,
+  registry: any
+) {
+  // A recursive helper that builds ONE schema (client or validation) for a view.
+  function buildView(
+    currentTable: string,
+    schemaType: "client" | "validation",
+    subSelection: Record<string, any> | boolean
+  ): z.ZodObject<any> {
+    const registryEntry = registry[currentTable];
+    const rawSchema = registryEntry.rawSchema;
+    const baseSchema = registryEntry.zodSchemas[`${schemaType}Schema`];
 
+    // Get all relation keys
+    const relationsToOmit: Record<string, true> = {};
+    for (const key in rawSchema) {
+      if (rawSchema[key]?.config?.sql?.schema) {
+        relationsToOmit[key] = true;
+      }
+    }
+
+    // Start with primitive fields only
+    const schemaWithPrimitives = baseSchema.omit(relationsToOmit);
+
+    // If selection is just `true`, return primitives only (no nested relations)
+    if (subSelection === true) {
+      return schemaWithPrimitives;
+    }
+
+    // Otherwise, add selected relations
+    const selectedRelationShapes: Record<string, z.ZodTypeAny> = {};
+    if (typeof subSelection === "object") {
+      for (const key in subSelection) {
+        if (subSelection[key] && relationsToOmit[key]) {
+          const relationConfig = rawSchema[key].config.sql;
+          const targetTable = relationConfig.schema()._tableName;
+
+          // Recursively build the sub-schema
+          const subSchema = buildView(
+            targetTable,
+            schemaType,
+            subSelection[key]
+          );
+
+          if (
+            relationConfig.type === "hasMany" ||
+            relationConfig.type === "manyToMany"
+          ) {
+            selectedRelationShapes[key] = z.array(subSchema);
+          } else {
+            selectedRelationShapes[key] = subSchema.optional();
+          }
+        }
+      }
+    }
+
+    return schemaWithPrimitives.extend(selectedRelationShapes);
+  }
+
+  // The main function builds the final object with all three schemas.
+  const sourceRegistryEntry = registry[tableName];
+  return {
+    sqlSchema: sourceRegistryEntry.zodSchemas.sqlSchema, // SQL schema is always the same base schema.
+    clientSchema: buildView(tableName, "client", selection),
+    validationSchema: buildView(tableName, "validation", selection),
+  };
+}
+
+// Move all nested types outside the function
+type IsRelationField<Field> = Field extends {
+  config: {
+    sql: {
+      type: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
+      schema: () => any;
+    };
+  };
+}
+  ? true
+  : false;
+
+type GetRelationTarget<Field> = Field extends {
+  config: {
+    sql: {
+      schema: () => infer TargetSchema;
+    };
+  };
+}
+  ? TargetSchema extends { _tableName: infer TableName }
+    ? TableName
+    : never
+  : never;
+
+type NavigationProxy<
+  CurrentTable extends string,
+  Registry extends RegistryShape,
+> = CurrentTable extends keyof Registry
+  ? {
+      [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<
+        Registry[CurrentTable]["rawSchema"][K]
+      > extends true
+        ? K
+        : never]: GetRelationTarget<
+        Registry[CurrentTable]["rawSchema"][K]
+      > extends infer TargetTable
+        ? TargetTable extends keyof Registry
+          ? NavigationProxy<TargetTable & string, Registry>
+          : never
+        : never;
+    }
+  : {};
+
+type NavigationToSelection<Nav> = Nav extends object
+  ? {
+      [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
+    }
+  : never;
+
+type BuildZodShape<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TKey extends "clientSchema" | "validationSchema",
+  TRegistry extends RegistryShape,
+> =
+  TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer Base>
+    ? TSelection extends Record<string, any>
+      ? Omit<Base, keyof TSelection> & {
+          [K in keyof TSelection &
+            keyof TRegistry[TTableName]["rawSchema"]]: TRegistry[TTableName]["rawSchema"][K] extends {
+            config: { sql: { type: infer RelType; schema: () => infer S } };
+          }
+            ? S extends { _tableName: infer Target }
+              ? Target extends keyof TRegistry
+                ? RelType extends "hasMany" | "manyToMany"
+                  ? TSelection[K] extends true
+                    ? TRegistry[Target]["zodSchemas"][TKey] extends z.ZodObject<
+                        infer Shape extends Record<string, any>
+                      >
+                      ? z.ZodArray<
+                          z.ZodObject<
+                            OmitRelations<Shape, TRegistry[Target]["rawSchema"]>
+                          >
+                        >
+                      : never
+                    : z.ZodArray<
+                        z.ZodObject<
+                          BuildZodShape<Target, TSelection[K], TKey, TRegistry>
+                        >
+                      >
+                  : TSelection[K] extends true
+                    ? TRegistry[Target]["zodSchemas"][TKey] extends z.ZodObject<
+                        infer Shape extends Record<string, any>
+                      >
+                      ? z.ZodOptional<
+                          z.ZodObject<
+                            OmitRelations<Shape, TRegistry[Target]["rawSchema"]>
+                          >
+                        >
+                      : never
+                    : z.ZodOptional<
+                        z.ZodObject<
+                          BuildZodShape<Target, TSelection[K], TKey, TRegistry>
+                        >
+                      >
+                : never
+              : never
+            : never;
+        }
+      : Base
+    : never;
+
+// Helper type to omit relation fields from a shape
+type OmitRelations<Shape, RawSchema> = Omit<
+  Shape,
+  {
+    [K in keyof Shape]: K extends keyof RawSchema
+      ? RawSchema[K] extends { config: { sql: { schema: any } } }
+        ? K
+        : never
+      : never;
+  }[keyof Shape]
+>;
+
+// Helper type to ensure proper shape
+type RegistryShape = Record<
+  string,
+  {
+    rawSchema: any;
+    zodSchemas: {
+      sqlSchema: z.ZodObject<any>;
+      clientSchema: z.ZodObject<any>;
+      validationSchema: z.ZodObject<any>;
+      defaultValues: any;
+      toClient: (dbObject: any) => any;
+      toDb: (clientObject: any) => any;
+    };
+  }
+>;
+
+// The main return type - moved outside and made generic
+type CreateSchemaBoxReturn<
+  S extends Record<string, SchemaWithPlaceholders>,
+  R extends ResolutionMap<S>,
+  Resolved extends RegistryShape = ResolvedRegistryWithSchemas<
+    S,
+    R
+  > extends RegistryShape
+    ? ResolvedRegistryWithSchemas<S, R>
+    : RegistryShape,
+> = {
+  [K in keyof Resolved]: {
+    rawSchema: Resolved[K]["rawSchema"];
+    zodSchemas: Resolved[K]["zodSchemas"];
+    defaultValues: Resolved[K]["zodSchemas"]["defaultValues"];
+    nav: NavigationProxy<K & string, Resolved>;
+    RelationSelection: NavigationToSelection<
+      NavigationProxy<K & string, Resolved>
+    >;
+    createView: <
+      const TSelection extends NavigationToSelection<
+        NavigationProxy<K & string, Resolved>
+      >,
+    >(
+      selection: TSelection
+    ) => {
+      sqlSchema: Resolved[K]["zodSchemas"]["sqlSchema"];
+      clientSchema: z.ZodObject<
+        BuildZodShape<K, TSelection, "clientSchema", Resolved>
+      >;
+      validationSchema: z.ZodObject<
+        BuildZodShape<K, TSelection, "validationSchema", Resolved>
+      >;
+    };
+  };
+};
 export function createSchemaBox<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
->(schemas: S, resolver: (proxy: SchemaProxy<S>) => R) {
-  // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
+>(
+  schemas: S,
+  resolver: (proxy: SchemaProxy<S>) => R
+): CreateSchemaBoxReturn<S, R> {
+  // Your existing implementation stays exactly the same
   const schemaProxy = new Proxy({} as SchemaProxy<S>, {
     get(target, tableName: string) {
       const schema = schemas[tableName as keyof S];
@@ -1553,8 +1757,6 @@ export function createSchemaBox<
         {
           get(target, fieldName: string) {
             const field = schema[fieldName];
-            // Enrich the field with metadata when accessed through the proxy.
-            // This metadata is crucial for resolving relationships later.
             if (field && typeof field === "object") {
               return {
                 ...field,
@@ -1572,36 +1774,27 @@ export function createSchemaBox<
     },
   }) as any;
 
-  // Get the user-defined resolution configuration
   const resolutionConfig = resolver(schemaProxy);
-
-  // Start with a deep copy of the initial schemas
   const resolvedSchemas = { ...schemas };
 
-  // ===============================================================
-  // FIX: Implement a two-stage resolution process to avoid deadlock
-  // ===============================================================
-
-  // STAGE 1: Resolve all `s.reference()` fields first.
+  // STAGE 1: Resolve references
   for (const tableName in schemas) {
     for (const fieldName in schemas[tableName]) {
       const field = schemas[tableName][fieldName];
       if (isReference(field)) {
-        // A reference is defined in the base schema, so its getter gives the target
         const targetField = field.getter();
         if (targetField && targetField.config) {
-          // Replace the reference placeholder with the actual field it points to
           resolvedSchemas[tableName]![fieldName] = targetField;
         } else {
           throw new Error(
-            `Could not resolve reference for ${tableName}.${fieldName}. Ensure it points to a valid schema field.`
+            `Could not resolve reference for ${tableName}.${fieldName}`
           );
         }
       }
     }
   }
 
-  // STAGE 2: Now, resolve all relation placeholders (`hasMany`, `hasOne`, etc.).
+  // STAGE 2: Resolve relations
   for (const tableName in schemas) {
     const tableConfig = resolutionConfig[tableName];
     if (!tableConfig) continue;
@@ -1610,14 +1803,12 @@ export function createSchemaBox<
       const field = schemas[tableName]![fieldName];
       const resolution = (tableConfig as any)[fieldName];
 
-      // Ensure this is a relation placeholder we are trying to resolve
       if (field && field.__type === "placeholder-relation") {
         const targetKey = resolution.toKey;
 
-        // The target key should now be a fully resolved field from STAGE 1
         if (!targetKey || !targetKey.__parentTableType) {
           throw new Error(
-            `Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`
+            `Could not resolve relation for ${tableName}.${fieldName}`
           );
         }
 
@@ -1635,13 +1826,12 @@ export function createSchemaBox<
             ? Array.from({ length: defaultCount || 0 }, () => ({}))
             : {};
 
-        // Create the full relation builder now that the dependency is available
         const resolvedBuilder = createBuilder({
           stage: "relation",
           sqlConfig: {
             type: relationType,
             fromKey: resolution.fromKey,
-            toKey: () => targetKey, // The toKey is now a function returning the resolved field
+            toKey: () => targetKey,
             schema: () => targetSchema,
             defaultCount: defaultCount,
           } as any,
@@ -1652,17 +1842,11 @@ export function createSchemaBox<
           validationZod: zodSchema,
         });
 
-        // Replace the placeholder in our schemas object with the final builder
-        if (!resolvedSchemas[tableName]) {
-          throw new Error(
-            `Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`
-          );
-        }
-        resolvedSchemas[tableName][fieldName] = resolvedBuilder;
+        resolvedSchemas[tableName]![fieldName] = resolvedBuilder as any;
       }
     }
   }
-  // Update the createSchemaBoxRegistry function's final section:
+
   const finalRegistry: any = {};
   for (const tableName in resolvedSchemas) {
     const zodSchemas = createSchema(resolvedSchemas[tableName]!);
@@ -1672,72 +1856,6 @@ export function createSchemaBox<
     };
   }
 
-  // Check if a field is a relation
-  type IsRelationField<Field> = Field extends {
-    config: {
-      sql: {
-        type: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
-        schema: () => any;
-      };
-    };
-  }
-    ? true
-    : false;
-
-  // Get the target table name from a relation field
-  type GetRelationTarget<Field> = Field extends {
-    config: {
-      sql: {
-        schema: () => infer TargetSchema;
-      };
-    };
-  }
-    ? TargetSchema extends { _tableName: infer TableName }
-      ? TableName
-      : never
-    : never;
-
-  type NavigationProxy<
-    CurrentTable extends string,
-    Registry extends Record<string, { rawSchema: any }>,
-  > = CurrentTable extends keyof Registry
-    ? {
-        [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<
-          Registry[CurrentTable]["rawSchema"][K]
-        > extends true
-          ? K
-          : never]: GetRelationTarget<
-          Registry[CurrentTable]["rawSchema"][K]
-        > extends infer TargetTable
-          ? TargetTable extends keyof Registry
-            ? NavigationProxy<TargetTable & string, Registry>
-            : never
-          : never;
-      }
-    : {};
-  // Update your ReCreatedType
-  type NavigationToSelection<Nav> = Nav extends object
-    ? {
-        [K in keyof Nav]?:
-          | boolean // Just include this relation
-          | NavigationToSelection<Nav[K]>; // Or nested selection
-      }
-    : never;
-
-  // Update your ReCreatedType to include RelationSelection
-  type ReCreatedType = {
-    [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
-      rawSchema: ResolvedRegistryWithSchemas<S, R>[key]["rawSchema"];
-      zodSchemas: ResolvedRegistryWithSchemas<S, R>[key]["zodSchemas"];
-      test: S;
-      nav: NavigationProxy<key & string, ResolvedRegistryWithSchemas<S, R>>;
-      // Add this line:
-      RelationSelection: NavigationToSelection<
-        NavigationProxy<key & string, ResolvedRegistryWithSchemas<S, R>>
-      >;
-    };
-  };
-  // Simple navigation proxy creator
   const createNavProxy = (currentTable: string, registry: any): any => {
     return new Proxy(
       {},
@@ -1750,7 +1868,7 @@ export function createSchemaBox<
           if (!field?.config?.sql?.schema) return undefined;
 
           const targetSchema = field.config.sql.schema();
-          const targetTable = targetSchema?._tableName; // Now just a simple string!
+          const targetTable = targetSchema?._tableName;
 
           if (targetTable && registry[targetTable]) {
             return createNavProxy(targetTable, registry);
@@ -1762,23 +1880,17 @@ export function createSchemaBox<
     );
   };
 
-  // Build the final registry
-  for (const tableName in resolvedSchemas) {
-    const zodSchemas = createSchema(resolvedSchemas[tableName]!);
-    finalRegistry[tableName] = {
-      rawSchema: resolvedSchemas[tableName],
-      zodSchemas: zodSchemas,
-      test: schemas,
-      nav: null, // Will be set after all entries are created
+  for (const tableName in finalRegistry) {
+    finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
+    finalRegistry[tableName].defaultValues =
+      finalRegistry[tableName].zodSchemas.defaultValues;
+
+    finalRegistry[tableName].createView = function (selection: any) {
+      return createViewObject(tableName, selection, finalRegistry);
     };
   }
 
-  // Now add navigation proxies
-  for (const tableName in finalRegistry) {
-    finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
-  }
-
-  return finalRegistry as ReCreatedType;
+  return finalRegistry as CreateSchemaBoxReturn<S, R>;
 }
 
 // Type for the schema proxy used in resolver
@@ -1801,6 +1913,7 @@ type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
 // Type derivation now uses the existing patterns from your code
+// Type derivation that excludes relations from base schema
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
@@ -1820,9 +1933,7 @@ type DeriveSchemaByKey<
                     };
                   };
                 }
-              ? Key extends "zodSqlSchema"
-                ? never // Strip relation keys from SQL schema
-                : K // Keep for client/validation schemas
+              ? never // EXCLUDE relation keys from base schema
               : K // Keep non-relation keys
           : never]: T[K] extends Reference<infer TGetter>
         ? ReturnType<TGetter> extends {
@@ -1831,38 +1942,12 @@ type DeriveSchemaByKey<
           ? ZodSchema
           : never
         : T[K] extends {
-              // Case 1: A 'hasMany' or 'manyToMany' relation
               config: {
-                sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
+                [P in Key]: infer ZodSchema extends z.ZodTypeAny;
               };
             }
-          ? S extends { _tableName: string } // Infer the schema `S` from the config
-            ? z.ZodArray<
-                z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-              >
-            : never
-          : // Case 2: A 'hasOne' or 'belongsTo' relation
-            T[K] extends {
-                config: { sql: { schema: () => infer S } };
-              }
-            ? S extends { _tableName: string } // Same logic, infer `S`
-              ? z.ZodObject<Prettify<DeriveSchemaByKey<S, Key, [...Depth, 1]>>>
-              : z.ZodObject<any> // Fallback
-            : // Case 3: A direct reference field (old style)
-              T[K] extends { type: "reference"; to: () => infer RefField }
-              ? RefField extends {
-                  config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
-                }
-                ? ZodSchema
-                : never
-              : // Case 4: A standard column field
-                T[K] extends {
-                    config: {
-                      [P in Key]: infer ZodSchema extends z.ZodTypeAny;
-                    };
-                  }
-                ? ZodSchema
-                : never;
+          ? ZodSchema
+          : never;
     };
 
 // Update DeriveDefaults to handle references
@@ -1872,35 +1957,31 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
     : {
         [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
           ? never
-          : K]: T[K] extends Reference<infer TGetter>
+          : K extends keyof T
+            ? T[K] extends Reference<any>
+              ? K // Keep reference keys
+              : T[K] extends {
+                    config: {
+                      sql: {
+                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                      };
+                    };
+                  }
+                ? never // EXCLUDE relation keys from defaults
+                : K // Keep non-relation keys
+            : never]: T[K] extends Reference<infer TGetter>
           ? ReturnType<TGetter> extends { config: { initialValue: infer D } }
             ? D extends () => infer R
               ? R
               : D
             : never
           : T[K] extends {
-                config: { sql: infer SqlConfig; initialValue: infer D };
+                config: { initialValue: infer D };
               }
-            ? SqlConfig extends {
-                type: "hasMany" | "manyToMany";
-                schema: () => infer S;
-              }
-              ? Array<DeriveDefaults<S, [...Depth, 1]>>
-              : SqlConfig extends {
-                    type: "hasOne" | "belongsTo";
-                    schema: () => infer S;
-                  }
-                ? DeriveDefaults<S, [...Depth, 1]>
-                : D extends () => infer R
-                  ? R
-                  : D
-            : T[K] extends { type: "reference"; to: () => infer RefField }
-              ? RefField extends { config: { initialValue: infer D } }
-                ? D extends () => infer R
-                  ? R
-                  : D
-                : never
-              : never;
+            ? D extends () => infer R
+              ? R
+              : D
+            : never;
       }
 >;
 // Main exportable type. This remains the same but will now work.

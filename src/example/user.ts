@@ -140,15 +140,13 @@ const box2 = createSchemaBox(schemas, (s) => ({
 
 const usersEndSchema = box2.users;
 const petsEndSchema = box2.pets;
-petsEndSchema.rawSchema;
+const test = petsEndSchema.defaultValues;
+const test2 = petsEndSchema.zodSchemas.clientSchema;
+
 const testShape: typeof petsEndSchema.RelationSelection = {
   owner: { pets: true }, //is now broken
 };
 petsEndSchema.nav.owner.pets.owner.pets.owner;
-
-const resolvedPet = petsEndSchema.test.pets;
-const resolvedPosts = petsEndSchema.test.posts;
-const resolvedUser = petsEndSchema.test.users;
 
 const testPets = petsEndSchema.zodSchemas;
 const clientSChemaP = testPets.clientSchema;
@@ -156,3 +154,34 @@ const subTEstUser = usersEndSchema.zodSchemas;
 const clientSChema = subTEstUser.clientSchema;
 
 type ClientUser = z.infer<typeof clientSChema>;
+/*type ClientUser = {
+    id: string | number;
+    petId: number;
+    pets: {
+        id: number;
+        userId: string | number;
+        owner: never;
+    }[];
+}*/
+const clientSChemView = usersEndSchema.createView({
+  pets: { owner: { pets: true } },
+}).clientSchema;
+
+type ClientUserview = z.infer<typeof clientSChemView>;
+/*'type ClientUserview = {
+    id: string | number;
+    petId: number;
+    pets: {
+        id: number;
+        userId: string | number;
+        owner?: {
+            id: string | number;
+            petId: number;
+            pets: {
+                id: number;
+                userId: string | number;
+                owner: never;
+            }[];
+        } | undefined;
+    }[];
+}*/
