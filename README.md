@@ -148,7 +148,6 @@ const schemas = createSchemaBox({ users, posts }, (s) => ({
   users: {
     posts: { fromKey: "id", toKey: s.posts.authorId },
   },
-  posts: {}, // No outgoing relationships
 }));
 
 // Use the schemas

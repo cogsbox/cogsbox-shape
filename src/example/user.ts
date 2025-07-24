@@ -142,127 +142,13 @@ const usersEndSchema = box2.users;
 const petsEndSchema = box2.pets;
 petsEndSchema.rawSchema;
 const testShape: typeof petsEndSchema.RelationSelection = {
-  owner: { pets: true },
+  owner: { pets: true }, //is now broken
 };
 petsEndSchema.nav.owner.pets.owner.pets.owner;
 
 const resolvedPet = petsEndSchema.test.pets;
 const resolvedPosts = petsEndSchema.test.posts;
 const resolvedUser = petsEndSchema.test.users;
-
-/*const resolvedPet: {
-    _tableName: "pets" & {
-        __meta: {
-            _key: "_tableName";
-            _fieldType: "pets";
-        };
-        __parentTableType: {
-            _tableName: "pets";
-            id: Builder<"sql", {
-                type: "int";
-                pk: true;
-            }, z.ZodNumber, z.ZodNumber, number, z.ZodNumber, z.ZodNumber>;
-            userId: Reference<...>;
-            owner: PlaceholderRelation<...>;
-        };
-    };
-    id: EnrichedField<...>;
-    userId: EnrichedField<...>;
-    owner: EnrichedField<...>;
-}
-    const resolvedPosts: {
-    _tableName: "posts" & {
-        __meta: {
-            _key: "_tableName";
-            _fieldType: "posts";
-        };
-        __parentTableType: {
-            _tableName: "posts";
-            userId: Reference<() => EnrichedField<"id", {
-                config: {
-                    sql: {
-                        type: "int";
-                        pk: true;
-                    };
-                    zodSqlSchema: z.ZodNumber;
-                    zodNewSchema: z.ZodString;
-                    initialValue: string;
-                    zodClientSchema: z.ZodUnion<...>;
-                    zodValidationSchema: z.ZodUnion<...>;
-                };
-                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                    ...;
-                }) => TClientNext)) => {
-                    ...;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
-                    ...;
-                }) => TValidationNext)) => {
-                    ...;
-                };
-                transform: (transforms: {
-                    ...;
-                }) => {
-                    ...;
-                };
-            }, {
-                ...;
-            }>>;
-            id: Builder<...>;
-            aboutPet: PlaceholderRelation<...>;
-        };
-    };
-    userId: EnrichedField<...>;
-    id: EnrichedField<...>;
-    aboutPet: EnrichedField<...>;
-}
-'resolvedUser' is declared but its value is never read.ts(6133)
-const resolvedUser: {
-    _tableName: "users" & {
-        __meta: {
-            _key: "_tableName";
-            _fieldType: "users";
-        };
-        __parentTableType: {
-            _tableName: "users";
-            id: {
-                config: {
-                    sql: {
-                        type: "int";
-                        pk: true;
-                    };
-                    zodSqlSchema: z.ZodNumber;
-                    zodNewSchema: z.ZodString;
-                    initialValue: string;
-                    zodClientSchema: z.ZodUnion<...>;
-                    zodValidationSchema: z.ZodUnion<...>;
-                };
-                client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
-                    ...;
-                }) => TClientNext)) => {
-                    ...;
-                };
-                validation: <TValidationNext extends z.ZodTypeAny>(schema: TValidationNext | ((tools: {
-                    ...;
-                }) => TValidationNext)) => {
-                    ...;
-                };
-                transform: (transforms: {
-                    ...;
-                }) => {
-                    ...;
-                };
-            };
-            petId: Reference<...>;
-            pets: PlaceholderRelation<...>;
-        };
-    };
-    id: EnrichedField<...>;
-    petId: EnrichedField<...>;
-    pets: EnrichedField<...>;
-}
-
-*/
 
 const testPets = petsEndSchema.zodSchemas;
 const clientSChemaP = testPets.clientSchema;

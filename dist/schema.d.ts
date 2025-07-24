@@ -193,13 +193,18 @@ type SchemaWithPlaceholders = {
     [key: string]: any | PlaceholderReference | PlaceholderRelation<any>;
 };
 type ResolutionConfig<S extends Record<string, SchemaWithPlaceholders>> = {
-    [TableName in keyof S]: {
-        [FieldName in keyof S[TableName] as S[TableName][FieldName] extends PlaceholderReference | PlaceholderRelation<any> ? FieldName : never]: S[TableName][FieldName] extends PlaceholderReference ? any : S[TableName][FieldName] extends PlaceholderRelation<any> ? {
+    [TableName in keyof S]?: {
+        [FieldName in keyof S[TableName] as S[TableName][FieldName] extends PlaceholderReference | PlaceholderRelation<any> ? FieldName : never]?: S[TableName][FieldName] extends PlaceholderReference ? any : S[TableName][FieldName] extends PlaceholderRelation<any> ? {
             fromKey: string;
             toKey: any;
             defaultCount?: number;
         } : never;
     };
+};
+type ValidateResolution<T, S extends Record<string, SchemaWithPlaceholders>> = {
+    [K in keyof T]: K extends keyof S ? T[K] extends object ? {
+        [F in keyof T[K]]: F extends keyof NonNullable<ResolutionConfig<S>[K]> ? T[K][F] : never;
+    } : never : never;
 };
 type ResolveField<Field, Resolution, AllSchemas extends Record<string, any>> = Field extends PlaceholderReference ? Resolution : Field extends PlaceholderRelation<infer RelType> ? Resolution extends {
     toKey: infer ToKey;
@@ -219,18 +224,18 @@ type ResolveSchema<Schema extends SchemaWithPlaceholders, Resolutions extends Re
 };
 type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionConfig<S>> = {
     [K in keyof S]: {
-        rawSchema: ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>;
+        rawSchema: ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>;
         zodSchemas: {
-            sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>, "zodSqlSchema">>>;
-            clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>, "zodClientSchema">>>;
-            validationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>, "zodValidationSchema">>>;
-            defaultValues: Prettify<DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>>>;
+            sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>, "zodSqlSchema">>>;
+            clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>, "zodClientSchema">>>;
+            validationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>, "zodValidationSchema">>>;
+            defaultValues: Prettify<DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>>>;
             toClient: (dbObject: any) => any;
             toDb: (clientObject: any) => any;
         };
     };
 };
-export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionConfig<S>>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R): { [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
+export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionConfig<S>>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R & ValidateResolution<R, S>): { [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
     rawSchema: ResolvedRegistryWithSchemas<S, R>[key]["rawSchema"];
     zodSchemas: ResolvedRegistryWithSchemas<S, R>[key]["zodSchemas"];
     test: S;

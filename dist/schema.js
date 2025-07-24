@@ -293,10 +293,7 @@ export function schema(schema) {
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
     if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
-        // --- PRIORITY 1: Check for an explicit `default` on the SQL config ---
         if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-            // FIX #1: If the default is CURRENT_TIMESTAMP, it's a DB responsibility.
-            // Return undefined so no client-side default is generated.
             if (sqlConfig.default === "CURRENT_TIMESTAMP") {
                 return undefined;
             }
@@ -347,20 +344,12 @@ function inferDefaultFromZod(zodType, sqlConfig) {
             ? zodType._def.defaultValue()
             : zodType._def.defaultValue;
     }
-    // --- FIX #2: Add intelligent fallback for unrecognized Zod types ---
-    // This handles z.email(), z.url(), etc., by checking the base type.
     if (zodType instanceof z.ZodString) {
         return "";
     }
     // Return undefined if no other default can be determined.
     return undefined;
 }
-// export function reference<TField extends object>(config: TField) {
-//   return {
-//     type: "reference" as const,
-//     to: config,
-//   };
-// }
 export function createMixedValidationSchema(schema, clientSchema, dbSchema) {
     // If schemas are provided, use them (to avoid circular calls)
     if (clientSchema && dbSchema) {

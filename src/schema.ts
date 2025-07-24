@@ -866,10 +866,7 @@ function inferDefaultFromZod(
   sqlConfig?: SQLType | RelationConfig<any>
 ): any {
   if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
-    // --- PRIORITY 1: Check for an explicit `default` on the SQL config ---
     if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-      // FIX #1: If the default is CURRENT_TIMESTAMP, it's a DB responsibility.
-      // Return undefined so no client-side default is generated.
       if (sqlConfig.default === "CURRENT_TIMESTAMP") {
         return undefined;
       }
@@ -934,8 +931,6 @@ function inferDefaultFromZod(
       : zodType._def.defaultValue;
   }
 
-  // --- FIX #2: Add intelligent fallback for unrecognized Zod types ---
-  // This handles z.email(), z.url(), etc., by checking the base type.
   if (zodType instanceof z.ZodString) {
     return "";
   }
@@ -944,12 +939,6 @@ function inferDefaultFromZod(
   return undefined;
 }
 
-// export function reference<TField extends object>(config: TField) {
-//   return {
-//     type: "reference" as const,
-//     to: config,
-//   };
-// }
 export function createMixedValidationSchema<T extends Schema<any>>(
   schema: T,
   clientSchema?: z.ZodObject<any>,
@@ -1375,17 +1364,30 @@ type SchemaWithPlaceholders = {
 };
 
 type ResolutionConfig<S extends Record<string, SchemaWithPlaceholders>> = {
-  [TableName in keyof S]: {
+  [TableName in keyof S]?: {
     [FieldName in keyof S[TableName] as S[TableName][FieldName] extends
       | PlaceholderReference
       | PlaceholderRelation<any>
       ? FieldName
-      : never]: S[TableName][FieldName] extends PlaceholderReference
+      : never]?: S[TableName][FieldName] extends PlaceholderReference
       ? any // Will be a field reference
       : S[TableName][FieldName] extends PlaceholderRelation<any>
         ? { fromKey: string; toKey: any; defaultCount?: number }
         : never;
   };
+};
+
+// Create a type that validates the exact shape
+type ValidateResolution<T, S extends Record<string, SchemaWithPlaceholders>> = {
+  [K in keyof T]: K extends keyof S
+    ? T[K] extends object
+      ? {
+          [F in keyof T[K]]: F extends keyof NonNullable<ResolutionConfig<S>[K]>
+            ? T[K][F]
+            : never;
+        }
+      : never
+    : never;
 };
 
 // ============================================
@@ -1454,12 +1456,20 @@ type ResolvedRegistryWithSchemas<
   R extends ResolutionConfig<S>,
 > = {
   [K in keyof S]: {
-    rawSchema: ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>;
+    rawSchema: ResolveSchema<
+      S[K],
+      K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
+      S
+    >;
     zodSchemas: {
       sqlSchema: z.ZodObject<
         Prettify<
           DeriveSchemaByKey<
-            ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>,
+            ResolveSchema<
+              S[K],
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
+              S
+            >,
             "zodSqlSchema"
           >
         >
@@ -1467,7 +1477,11 @@ type ResolvedRegistryWithSchemas<
       clientSchema: z.ZodObject<
         Prettify<
           DeriveSchemaByKey<
-            ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>,
+            ResolveSchema<
+              S[K],
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
+              S
+            >,
             "zodClientSchema"
           >
         >
@@ -1475,13 +1489,23 @@ type ResolvedRegistryWithSchemas<
       validationSchema: z.ZodObject<
         Prettify<
           DeriveSchemaByKey<
-            ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>,
+            ResolveSchema<
+              S[K],
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
+              S
+            >,
             "zodValidationSchema"
           >
         >
       >;
       defaultValues: Prettify<
-        DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? R[K] : {}, S>>
+        DeriveDefaults<
+          ResolveSchema<
+            S[K],
+            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
+            S
+          >
+        >
       >;
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
@@ -1492,7 +1516,10 @@ type ResolvedRegistryWithSchemas<
 export function createSchemaBox<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionConfig<S>,
->(schemas: S, resolver: (proxy: SchemaProxy<S>) => R) {
+>(
+  schemas: S,
+  resolver: (proxy: SchemaProxy<S>) => R & ValidateResolution<R, S>
+) {
   // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
   const schemaProxy = new Proxy({} as SchemaProxy<S>, {
     get(target, tableName: string) {
@@ -1748,126 +1775,6 @@ type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
       : S[K][F];
   };
 };
-
-// export function schemaRelations<
-//   TSchema extends Schema<any>,
-//   RefObject extends Record<string, any>,
-// >(
-//   baseSchema: TSchema,
-//   referencesBuilder: (rel: RelationBuilders<TSchema>) => RefObject
-// ): {
-//   [K in keyof RefObject]: RefObject[K] & {
-//     __meta: {
-//       _key: K;
-//       _fieldType: RefObject[K];
-//     };
-//     __parentTableType: TSchema & RefObject;
-//   };
-// } {
-//   const rel = {
-//     reference: <TField extends object>(fieldGetter: () => TField) => ({
-//       type: "reference" as const,
-//       to: fieldGetter,
-//     }),
-//     hasMany: <T extends Schema<any>>(config: {
-//       fromKey: keyof TSchema & string;
-//       toKey: any;
-//       defaultCount?: number;
-//     }) => {
-//       const relationConfig = {
-//         type: "hasMany",
-//         fromKey: config.fromKey,
-//         toKey: () => config.toKey.__meta._key,
-//         schema: () => config.toKey.__parentTableType,
-//         defaultCount: config.defaultCount,
-//       };
-
-//       const placeholderSchema = z.array(z.any());
-//       return createBuilder({
-//         stage: "relation",
-//         sqlConfig: relationConfig as any,
-//         sqlZod: placeholderSchema,
-//         newZod: placeholderSchema,
-//         initialValue: Array.from(
-//           { length: config.defaultCount || 0 },
-//           () => ({})
-//         ),
-//         clientZod: placeholderSchema,
-//         validationZod: placeholderSchema,
-//       }) as any; // FIX: This is a hack to get around the circular reference
-//     },
-
-//     hasOne: (config: { fromKey: keyof TSchema & string; toKey: any }) => {
-//       const relationConfig = {
-//         type: "hasOne" as const,
-//         fromKey: config.fromKey,
-//         toKey: () => config.toKey.__meta._key,
-//         schema: () => config.toKey.__parentTableType,
-//       };
-
-//       const relationZodType = z.any();
-
-//       return createBuilder({
-//         stage: "relation",
-//         sqlConfig: relationConfig as any,
-//         sqlZod: relationZodType,
-//         newZod: relationZodType,
-//         initialValue: {},
-//         clientZod: relationZodType,
-//         validationZod: relationZodType,
-//       }) as any;
-//     },
-//     manyToMany: <T extends Schema<any>>(config: {
-//       fromKey: keyof TSchema & string;
-//       toKey: () => any;
-//       schema: () => T;
-//       defaultCount?: number;
-//     }) => {
-//       const relationConfig: RelationConfig<T> = {
-//         type: "manyToMany",
-//         fromKey: config.fromKey,
-//         toKey: config.toKey,
-//         schema: config.schema,
-//         ...(config.defaultCount !== undefined && {
-//           defaultCount: config.defaultCount,
-//         }),
-//       };
-
-//       const relationZodType = z.array(z.any()).optional();
-
-//       return createBuilder({
-//         stage: "relation",
-//         sqlConfig: relationConfig,
-//         sqlZod: relationZodType,
-//         newZod: relationZodType,
-//         initialValue: Array.from(
-//           { length: config.defaultCount || 0 },
-//           () => ({})
-//         ),
-//         clientZod: relationZodType,
-//         validationZod: relationZodType,
-//       });
-//     },
-//   };
-//   const refs = referencesBuilder(rel);
-//   const enrichedRefs: any = {};
-
-//   // Enrich each field in the refs object with __meta and __parentTableType
-//   for (const key in refs) {
-//     if (Object.prototype.hasOwnProperty.call(refs, key)) {
-//       enrichedRefs[key] = {
-//         ...refs[key],
-//         __meta: {
-//           _key: key,
-//           _fieldType: refs[key],
-//         },
-//         __parentTableType: baseSchema,
-//       };
-//     }
-//   }
-
-//   return enrichedRefs;
-// }
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
 
