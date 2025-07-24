@@ -621,7 +621,7 @@ function createBuilder<
       }
 
       // Apply schema modifier if provided
-      const newSchema = schemaModifier
+      const newSchema = isFunction(schemaModifier)
         ? schemaModifier(baseSchema)
         : baseSchema;
 
