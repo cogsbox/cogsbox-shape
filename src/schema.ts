@@ -1198,48 +1198,71 @@ export function createSchema<
       const config = definition.config;
       const sqlConfig = config.sql;
 
-      if (
-        sqlConfig &&
-        typeof sqlConfig === "object" &&
-        ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
-          sqlConfig.type
-        )
-      ) {
-        // Handle relations
-        const relatedSchemaFactory = sqlConfig.schema as () => T;
-        const childSchemaResult = createSchema(relatedSchemaFactory());
+      if (definition && definition.config) {
+        const config = definition.config;
+        const sqlConfig = config.sql;
 
-        let baseClientSchema: z.ZodTypeAny;
+        if (
+          sqlConfig &&
+          typeof sqlConfig === "object" &&
+          ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
+            sqlConfig.type
+          )
+        ) {
+          // Handle relations - create a lazy-evaluated schema
+          const relatedSchemaFactory = sqlConfig.schema as () => T;
 
-        if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-          baseClientSchema = z.array(childSchemaResult.clientSchema).optional();
-          defaultValues[key] = Array.from(
-            { length: (sqlConfig as any).defaultCount || 0 },
-            () => childSchemaResult.defaultValues
-          );
+          // Create a lazy getter for the child schema
+          let cachedChildSchema: ReturnType<typeof createSchema> | null = null;
+          const getChildSchema = () => {
+            if (!cachedChildSchema) {
+              cachedChildSchema = createSchema(relatedSchemaFactory()) as any;
+            }
+            return cachedChildSchema;
+          };
+
+          let baseClientSchema: z.ZodTypeAny;
+
+          if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+            // Create a custom Zod type that validates lazily
+            baseClientSchema = z
+              .array(z.lazy(() => getChildSchema()!.clientSchema))
+              .optional();
+
+            // Default values use a getter function
+            defaultValues[key] = Array.from(
+              { length: (sqlConfig as any).defaultCount || 0 },
+              () => getChildSchema()!.defaultValues
+            );
+          } else {
+            // Create a custom Zod type that validates lazily
+            baseClientSchema = z
+              .lazy(() => getChildSchema()!.clientSchema)
+              .optional();
+
+            // Default value uses a getter function
+            defaultValues[key] = () => getChildSchema()!.defaultValues;
+          }
+
+          clientFields[key] = config.clientTransform
+            ? config.clientTransform(baseClientSchema)
+            : baseClientSchema;
+          validationFields[key] = clientFields[key];
         } else {
-          baseClientSchema = childSchemaResult.clientSchema.optional();
-          defaultValues[key] = childSchemaResult.defaultValues;
+          // Handle regular fields
+          sqlFields[key] = config.zodSqlSchema;
+          clientFields[key] = config.zodClientSchema;
+          validationFields[key] = config.zodValidationSchema;
+
+          if (config.transforms) {
+            fieldTransforms[key] = config.transforms;
+          }
+
+          const initialValueOrFn = config.initialValue;
+          defaultValues[key] = isFunction(initialValueOrFn)
+            ? initialValueOrFn()
+            : initialValueOrFn;
         }
-
-        clientFields[key] = config.clientTransform
-          ? config.clientTransform(baseClientSchema)
-          : baseClientSchema;
-        validationFields[key] = clientFields[key];
-      } else {
-        // Handle regular fields
-        sqlFields[key] = config.zodSqlSchema;
-        clientFields[key] = config.zodClientSchema;
-        validationFields[key] = config.zodValidationSchema;
-
-        if (config.transforms) {
-          fieldTransforms[key] = config.transforms;
-        }
-
-        const initialValueOrFn = config.initialValue;
-        defaultValues[key] = isFunction(initialValueOrFn)
-          ? initialValueOrFn()
-          : initialValueOrFn;
       }
     }
   }
