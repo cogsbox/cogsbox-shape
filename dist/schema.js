@@ -478,32 +478,24 @@ export function createSchema(schema, relations) {
                 if (sqlConfig &&
                     typeof sqlConfig === "object" &&
                     ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-                    // Handle relations - create a lazy-evaluated schema
+                    // Handle relations
                     const relatedSchemaFactory = sqlConfig.schema;
-                    // Create a lazy getter for the child schema
-                    let cachedChildSchema = null;
-                    const getChildSchema = () => {
-                        if (!cachedChildSchema) {
-                            cachedChildSchema = createSchema(relatedSchemaFactory());
-                        }
-                        return cachedChildSchema;
-                    };
                     let baseClientSchema;
                     if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-                        // Create a custom Zod type that validates lazily
-                        baseClientSchema = z
-                            .array(z.lazy(() => getChildSchema().clientSchema))
-                            .optional();
-                        // Default values use a getter function
-                        defaultValues[key] = Array.from({ length: sqlConfig.defaultCount || 0 }, () => getChildSchema().defaultValues);
+                        baseClientSchema = z.array(z.any()).optional();
+                        // Make it a FUNCTION that returns the array
+                        defaultValues[key] = () => Array.from({ length: sqlConfig.defaultCount || 0 }, () => {
+                            const childSchema = createSchema(relatedSchemaFactory());
+                            return childSchema.defaultValues;
+                        });
                     }
                     else {
-                        // Create a custom Zod type that validates lazily
-                        baseClientSchema = z
-                            .lazy(() => getChildSchema().clientSchema)
-                            .optional();
-                        // Default value uses a getter function
-                        defaultValues[key] = () => getChildSchema().defaultValues;
+                        baseClientSchema = z.any().optional();
+                        // Make it a FUNCTION that returns the object
+                        defaultValues[key] = () => {
+                            const childSchema = createSchema(relatedSchemaFactory());
+                            return childSchema.defaultValues;
+                        };
                     }
                     clientFields[key] = config.clientTransform
                         ? config.clientTransform(baseClientSchema)
