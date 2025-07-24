@@ -856,7 +856,7 @@ export type ShapeSchema<T extends string = string> = {
 
 type Relation<U extends Schema<any>> = {
   type: RelationType;
-  fromKey: string;
+  fromKey: keyof U;
   toKey: () => SchemaField;
   schema: U;
   defaultCount?: number;
@@ -1306,7 +1306,7 @@ type RelationBuilders<TSchema> = {
     K extends keyof T & string,
     TField extends EnrichedField<K, T[K], T>,
   >(config: {
-    fromKey: keyof TSchema & string;
+    fromKey: keyof TSchema;
     toKey: () => TField;
     defaultCount?: number;
   }) => Builder<
@@ -1325,7 +1325,7 @@ type RelationBuilders<TSchema> = {
     K extends keyof T & string,
     TField extends EnrichedField<K, T[K], T>,
   >(config: {
-    fromKey: keyof TSchema & string;
+    fromKey: keyof TSchema;
     toKey: () => TField;
   }) => Builder<
     "relation",
@@ -1338,7 +1338,7 @@ type RelationBuilders<TSchema> = {
   >;
 
   manyToMany: <T extends Schema<any>>(config: {
-    fromKey: keyof TSchema & string;
+    fromKey: keyof TSchema;
     toKey: () => T[keyof T];
     schema: () => T;
     defaultCount?: number;
@@ -1375,32 +1375,44 @@ type SchemaWithPlaceholders = {
   _tableName: string;
   [key: string]: any | PlaceholderReference | PlaceholderRelation<any>;
 };
+// This helper remains useful.
+type KnownKeys<T> = keyof {
+  [K in keyof T as string extends K ? never : K]: T[K];
+};
 
-type ResolutionConfig<S extends Record<string, SchemaWithPlaceholders>> = {
+/**
+ * This is the new, core type. It is NOT a validator. It is a strict TEMPLATE
+ * that defines the exact shape the resolver's return object must have.
+ * It provides the structure for autocompletion and error checking.
+ */
+type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
+  // Level 1: Table Names. IntelliSense will suggest `users`, `pets`, etc.
   [TableName in keyof S]?: {
+    // Level 2: Field Names. Only suggests fields that are placeholders.
     [FieldName in keyof S[TableName] as S[TableName][FieldName] extends
       | PlaceholderReference
       | PlaceholderRelation<any>
       ? FieldName
-      : never]?: S[TableName][FieldName] extends PlaceholderReference
-      ? any // Will be a field reference
-      : S[TableName][FieldName] extends PlaceholderRelation<any>
-        ? { fromKey: string; toKey: any; defaultCount?: number }
+      : never]?: S[TableName][FieldName] extends PlaceholderRelation<any>
+      ? // If it's a relation (hasMany, etc.)
+        {
+          /**
+           * The key on the current table (`users`) to join from.
+           * Autocompletes with: 'id', 'name', etc.
+           */
+          fromKey: KnownKeys<S[TableName]>;
+          /**
+           * The target key on the related table.
+           * Must be a field reference from the proxy, e.g., `s.pets.userId`
+           */
+          toKey: { __meta: any; __parentTableType: any }; // Expecting an enriched field from the proxy
+          defaultCount?: number;
+        }
+      : S[TableName][FieldName] extends PlaceholderReference
+        ? // If it's a direct reference
+          { __meta: any; __parentTableType: any } // Expecting an enriched field from the proxy
         : never;
   };
-};
-
-// Create a type that validates the exact shape
-type ValidateResolution<T, S extends Record<string, SchemaWithPlaceholders>> = {
-  [K in keyof T]: K extends keyof S
-    ? T[K] extends object
-      ? {
-          [F in keyof T[K]]: F extends keyof NonNullable<ResolutionConfig<S>[K]>
-            ? T[K][F]
-            : never;
-        }
-      : never
-    : never;
 };
 
 // ============================================
@@ -1466,7 +1478,7 @@ type ResolveSchema<
 // Type for the final resolved registry
 type ResolvedRegistryWithSchemas<
   S extends Record<string, SchemaWithPlaceholders>,
-  R extends ResolutionConfig<S>,
+  R extends ResolutionMap<S>,
 > = {
   [K in keyof S]: {
     rawSchema: ResolveSchema<
@@ -1528,11 +1540,8 @@ type ResolvedRegistryWithSchemas<
 
 export function createSchemaBox<
   S extends Record<string, SchemaWithPlaceholders>,
-  R extends ResolutionConfig<S>,
->(
-  schemas: S,
-  resolver: (proxy: SchemaProxy<S>) => R & ValidateResolution<R, S>
-) {
+  R extends ResolutionMap<S>,
+>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R) {
   // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
   const schemaProxy = new Proxy({} as SchemaProxy<S>, {
     get(target, tableName: string) {

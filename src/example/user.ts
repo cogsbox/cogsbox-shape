@@ -129,7 +129,7 @@ const box2 = createSchemaBox(schemas, (s) => ({
   users: {
     pets: { fromKey: "id", toKey: s.pets.userId },
   },
-  pets: { owner: { fromKey: "userId", toKey: s.users.id } },
+  pets: { owner: { toKey: s.users.id, fromKey: "userId" } },
   posts: {
     aboutPet: {
       fromKey: "id",

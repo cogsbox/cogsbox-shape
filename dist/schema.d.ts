@@ -163,7 +163,7 @@ export type ShapeSchema<T extends string = string> = {
 };
 type Relation<U extends Schema<any>> = {
     type: RelationType;
-    fromKey: string;
+    fromKey: keyof U;
     toKey: () => SchemaField;
     schema: U;
     defaultCount?: number;
@@ -192,19 +192,36 @@ type SchemaWithPlaceholders = {
     _tableName: string;
     [key: string]: any | PlaceholderReference | PlaceholderRelation<any>;
 };
-type ResolutionConfig<S extends Record<string, SchemaWithPlaceholders>> = {
+type KnownKeys<T> = keyof {
+    [K in keyof T as string extends K ? never : K]: T[K];
+};
+/**
+ * This is the new, core type. It is NOT a validator. It is a strict TEMPLATE
+ * that defines the exact shape the resolver's return object must have.
+ * It provides the structure for autocompletion and error checking.
+ */
+type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
     [TableName in keyof S]?: {
-        [FieldName in keyof S[TableName] as S[TableName][FieldName] extends PlaceholderReference | PlaceholderRelation<any> ? FieldName : never]?: S[TableName][FieldName] extends PlaceholderReference ? any : S[TableName][FieldName] extends PlaceholderRelation<any> ? {
-            fromKey: string;
-            toKey: any;
+        [FieldName in keyof S[TableName] as S[TableName][FieldName] extends PlaceholderReference | PlaceholderRelation<any> ? FieldName : never]?: S[TableName][FieldName] extends PlaceholderRelation<any> ? {
+            /**
+             * The key on the current table (`users`) to join from.
+             * Autocompletes with: 'id', 'name', etc.
+             */
+            fromKey: KnownKeys<S[TableName]>;
+            /**
+             * The target key on the related table.
+             * Must be a field reference from the proxy, e.g., `s.pets.userId`
+             */
+            toKey: {
+                __meta: any;
+                __parentTableType: any;
+            };
             defaultCount?: number;
+        } : S[TableName][FieldName] extends PlaceholderReference ? {
+            __meta: any;
+            __parentTableType: any;
         } : never;
     };
-};
-type ValidateResolution<T, S extends Record<string, SchemaWithPlaceholders>> = {
-    [K in keyof T]: K extends keyof S ? T[K] extends object ? {
-        [F in keyof T[K]]: F extends keyof NonNullable<ResolutionConfig<S>[K]> ? T[K][F] : never;
-    } : never : never;
 };
 type ResolveField<Field, Resolution, AllSchemas extends Record<string, any>> = Field extends PlaceholderReference ? Resolution : Field extends PlaceholderRelation<infer RelType> ? Resolution extends {
     toKey: infer ToKey;
@@ -222,7 +239,7 @@ type ResolveField<Field, Resolution, AllSchemas extends Record<string, any>> = F
 type ResolveSchema<Schema extends SchemaWithPlaceholders, Resolutions extends Record<string, any>, AllSchemas extends Record<string, any>> = {
     [K in keyof Schema]: K extends keyof Resolutions ? ResolveField<Schema[K], Resolutions[K], AllSchemas> : Schema[K];
 };
-type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionConfig<S>> = {
+type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>> = {
     [K in keyof S]: {
         rawSchema: ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}, S>;
         zodSchemas: {
@@ -235,7 +252,7 @@ type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders
         };
     };
 };
-export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionConfig<S>>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R & ValidateResolution<R, S>): { [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
+export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R): { [key in keyof ResolvedRegistryWithSchemas<S, R>]: {
     rawSchema: ResolvedRegistryWithSchemas<S, R>[key]["rawSchema"];
     zodSchemas: ResolvedRegistryWithSchemas<S, R>[key]["zodSchemas"];
     test: S;
