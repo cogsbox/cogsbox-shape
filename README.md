@@ -121,9 +121,11 @@ const userSchema = schema({
 });
 ```
 
-## Relationships with Schema Box Registry
+## Relationships and Views
 
-Define relationships between schemas using the Schema Box Registry pattern:
+Define relationships between schemas and create specific data views using the `createSchemaBox`.
+
+### 1. Define Schemas with Placeholders
 
 ```typescript
 import { s, schema, createSchemaBox } from "cogsbox-shape";
@@ -133,31 +135,71 @@ const users = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }),
   name: s.sql({ type: "varchar" }),
-  posts: s.hasMany(), // Placeholder for relationship
+  posts: s.hasMany(), // Placeholder for a one-to-many relationship
 });
 
 const posts = schema({
   _tableName: "posts",
   id: s.sql({ type: "int", pk: true }),
   title: s.sql({ type: "varchar" }),
-  authorId: s.reference(() => users.id), // Reference to user
+  authorId: s.reference(() => users.id), // Foreign key reference
 });
+```
 
-// Create registry and resolve relationships
-const schemas = createSchemaBox({ users, posts }, (s) => ({
+### 2. Create the Registry (The "Box")
+
+The `createSchemaBox` function processes your raw schemas, resolves the relationships, and gives you a powerful, type-safe API for accessing them.
+
+```typescript
+const box = createSchemaBox({ users, posts }, (s) => ({
   users: {
+    // Resolve the 'posts' relation on the 'users' schema
     posts: { fromKey: "id", toKey: s.posts.authorId },
   },
 }));
+```
 
-// Use the schemas
-const { zodSchemas } = schemas.users;
-const { clientSchema, defaultValues, toClient, toDb } = zodSchemas;
+### 3. Access Base Schemas and Defaults
+
+Once the box is created, you can access the base schemas (without relations) and their default values.
+
+```typescript
+// Access the processed schemas for the 'users' table
+const userSchemas = box.users.schemas;
+const userDefaults = box.users.defaults;
 
 // Type-safe operations
-const newUser = defaultValues; // Fully typed with defaults
-const dbUser = toDb(clientData); // Transform for database
-const apiUser = toClient(dbData); // Transform for API
+const newUser = userDefaults; // { id: 0, name: '' }
+
+// The base schema does NOT include the 'posts' relation
+type UserClient = z.infer<typeof userSchemas.client>; // { id: number; name: string; }
+```
+
+### 4. Create Views to Include Relations
+
+The real power is in creating views to select exactly which relationships to include for a given operation.
+
+```typescript
+// Create a view that includes the 'posts' for a user
+const userWithPostsView = box.users.createView({
+  posts: true, // Select the 'posts' relation
+});
+
+// The type of this view now includes the nested posts
+type UserWithPosts = z.infer<typeof userWithPostsView.client>;
+// {
+//   id: number;
+//   name: string;
+//   posts: {
+//     id: number;
+//     title: string;
+//     authorId: number;
+//   }[];
+// }
+
+// You can also get default values for the view
+const newUserWithPosts = userWithPostsView.defaults;
+// { id: 0, name: '', posts: [] }
 ```
 
 ## Real-World Example
@@ -179,10 +221,7 @@ const users = schema({
 
   metadata: s
     .sql({ type: "text" })
-    .initialState(() => ({
-      preferences: { theme: "light", notifications: true },
-    }))
-    .client(() =>
+    .client(
       z.object({
         preferences: z.object({
           theme: z.enum(["light", "dark"]),
@@ -195,7 +234,7 @@ const users = schema({
       toDb: (obj) => JSON.stringify(obj),
     }),
 
-  posts: s.hasMany({ defaultCount: 0 }),
+  posts: s.hasMany({ defaultCount: 0 }), // Default to an empty array
 });
 
 const posts = schema({
@@ -212,65 +251,75 @@ const posts = schema({
   authorId: s.reference(() => users.id),
 });
 
-const schemas = createSchemaBox({ users, posts }, (s) => ({
+const box = createSchemaBox({ users, posts }, (s) => ({
   users: {
     posts: { fromKey: "id", toKey: s.posts.authorId },
   },
 }));
 
-// Use in your app
-const userSchemas = schemas.users.zodSchemas;
-type User = z.infer<typeof userSchemas.clientSchema>;
+// Use a view for our API response
+const userApiView = box.users.createView({ posts: true });
+
+// Use the schemas from the view
+const { clientSchema, validationSchema, defaults, toClient, toDb } =
+  userApiView;
+type UserApiResponse = z.infer<typeof clientSchema>;
 // {
 //   id: string | number;
 //   email: string;
-//   metadata: { preferences: { theme: "light" | "dark"; notifications: boolean } };
-//   posts: Array<Post>;
+//   metadata: { preferences: { theme: 'light' | 'dark'; notifications: boolean; } };
+//   posts: { id: number; title: string; published: boolean; authorId: number | string; }[];
 // }
 
-// Create new user with defaults
-const newUser = userSchemas.defaultValues;
+// Create a new user with view-aware defaults
+const newUser = defaults;
+// newUser.posts is now guaranteed to be an empty array.
 
-// Validate user input
-const validated = userSchemas.validationSchema.parse(userInput);
+// Validate user input against the view's validation schema
+const validated = validationSchema.parse(userInput);
 
 // Transform for database
-const dbUser = userSchemas.toDb(validated);
+const dbUser = toDb(validated);
 
 // Transform for API response
-const apiUser = userSchemas.toClient(dbUser);
+const apiUser = toClient(dbUser);
 ```
 
 ## Why This Approach?
 
-1. **Type Safety**: Full TypeScript support with inferred types at every layer
-2. **Single Source of Truth**: Define your schema once, use it everywhere
-3. **Transformation Co-location**: Keep data transformations next to field definitions
-4. **Progressive Enhancement**: Start simple, add complexity as needed
-5. **Framework Agnostic**: Works with any TypeScript project
+1.  **Type Safety**: Full TypeScript support with inferred types at every layer.
+2.  **Single Source of Truth**: Define your schema once, use it everywhere.
+3.  **Explicit Data Loading**: Views encourage explicitly defining the data shape you need, preventing over-fetching.
+4.  **Transformation Co-location**: Keep data transformations next to field definitions.
+5.  **Progressive Enhancement**: Start simple, add complexity as needed.
+6.  **Framework Agnostic**: Works with any TypeScript project.
 
 ## API Reference
 
 ### Schema Definition
 
-- `s.sql(config)`: Define SQL column type
-- `.initialState(value)`: Set default value for new records
-- `.client(schema)`: Define client-side schema
-- `.validation(schema)`: Add validation rules
-- `.transform(transforms)`: Define bidirectional transformations
+- `s.sql(config)`: Define SQL column type.
+- `.initialState(value)`: Set default value for new records.
+- `.client(schema)`: Define client-side schema.
+- `.validation(schema)`: Add validation rules.
+- `.transform(transforms)`: Define bidirectional transformations.
 
 ### Relationships
 
-- `s.reference(getter)`: Create a foreign key reference
-- `s.hasMany(config)`: Define one-to-many relationship
-- `s.hasOne()`: Define one-to-one relationship
-- `s.manyToMany(config)`: Define many-to-many relationship
+- `s.reference(getter)`: Create a foreign key reference.
+- `s.hasMany(config)`: Define one-to-many relationship placeholder.
+- `s.hasOne()`: Define one-to-one relationship placeholder.
+- `s.manyToMany(config)`: Define many-to-many relationship placeholder.
 
 ### Schema Processing
 
-- `schema(definition)`: Create a schema definition
-- `createSchemaBox(schemas, resolver)`: Create and resolve schema relationships
-- `createSchema(schema, relations?)`: Generate Zod schemas (legacy API)
+- `schema(definition)`: Create a schema definition.
+- `createSchemaBox(schemas, resolver)`: The main function to create and resolve a schema registry.
+- From the box entry (e.g., `box.users`):
+  - `.schemas`: Access base Zod schemas (sql, client, validation).
+  - `.defaults`: Access base default values.
+  - `.transforms`: Access `toClient` and `toDb` functions for the base schema.
+  - `.createView(selection)`: Creates a new set of schemas and transforms including the selected relations.
 
 ## License
 

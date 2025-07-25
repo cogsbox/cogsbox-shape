@@ -22,6 +22,7 @@
       "noErrorTruncation": true,
       "noUncheckedIndexedAccess": true,
       "lib": ["dom", "dom.iterable", "esnext"]
+      
     },
    "include": ["src/**/*.ts", "src/**/*.tsx"],
     "exclude": ["node_modules", "dist","src/vitest","src/example"]

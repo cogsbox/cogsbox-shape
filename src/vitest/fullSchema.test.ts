@@ -1,10 +1,10 @@
 // Imports at the top - added 'expect' for runtime tests
 import { expect, describe, it } from "vitest";
 import { expectTypeOf } from "expect-type";
-import { z } from "zod";
 
 // Import the new primary method for schema creation
 import { s, schema, createSchemaBox } from "../schema";
+import z from "zod";
 
 /*
 ================================================================

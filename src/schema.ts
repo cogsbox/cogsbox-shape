@@ -1,4 +1,4 @@
-import { z, type ZodTypeAny } from "zod";
+import { z, ZodType, type ZodTypeAny } from "zod";
 import { ca } from "zod/v4/locales";
 
 type CurrentTimestampConfig = {
@@ -879,8 +879,9 @@ type Relation<U extends Schema<any>> = {
   schema: U;
   defaultCount?: number;
 };
+
 function inferDefaultFromZod(
-  zodType: z.ZodType<any>,
+  zodType: z.ZodTypeAny,
   sqlConfig?: SQLType | RelationConfig<any>
 ): any {
   if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
@@ -888,11 +889,9 @@ function inferDefaultFromZod(
       if (sqlConfig.default === "CURRENT_TIMESTAMP") {
         return undefined;
       }
-      // Otherwise, use the provided SQL default.
       return sqlConfig.default;
     }
 
-    // --- PRESERVED LOGIC: Handle relation types (NO CHANGES HERE) ---
     if (
       typeof sqlConfig.type === "string" &&
       ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)
@@ -908,6 +907,7 @@ function inferDefaultFromZod(
           () => ({})
         );
       }
+
       if (
         relationConfig.type === "hasOne" ||
         relationConfig.type === "belongsTo"
@@ -916,7 +916,6 @@ function inferDefaultFromZod(
       }
     }
 
-    // --- PRESERVED LOGIC: Handle basic SQL types as a fallback (NO CHANGES HERE) ---
     const sqlTypeConfig = sqlConfig as SQLType;
     if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
       switch (sqlTypeConfig.type) {
@@ -939,21 +938,18 @@ function inferDefaultFromZod(
     }
   }
 
-  // --- PRESERVED LOGIC: Fall back to Zod-based inference ---
-  if (zodType instanceof z.ZodOptional) {
-    return undefined;
-  }
-  if (zodType instanceof z.ZodDefault && zodType._def?.defaultValue) {
-    return typeof zodType._def.defaultValue === "function"
-      ? zodType._def.defaultValue()
-      : zodType._def.defaultValue;
+  if ("_def" in zodType && "defaultValue" in zodType._def) {
+    const def = zodType._def as { defaultValue?: (() => unknown) | unknown };
+    const val = def.defaultValue;
+    if (val !== undefined) {
+      return typeof val === "function" ? (val as () => unknown)() : val;
+    }
   }
 
   if (zodType instanceof z.ZodString) {
     return "";
   }
 
-  // Return undefined if no other default can be determined.
   return undefined;
 }
 
@@ -1449,6 +1445,7 @@ type ResolvedRegistryWithSchemas<
     };
   };
 };
+
 function createViewObject(
   tableName: string,
   selection: Record<string, any>,
@@ -1464,41 +1461,35 @@ function createViewObject(
     const rawSchema = registryEntry.rawSchema;
     const baseSchema = registryEntry.zodSchemas[`${schemaType}Schema`];
 
-    // Get all relation keys
-    const relationsToOmit: Record<string, true> = {};
-    for (const key in rawSchema) {
-      if (rawSchema[key]?.config?.sql?.schema) {
-        relationsToOmit[key] = true;
-      }
-    }
+    // --- START OF THE FIX ---
 
-    // Start with primitive fields only
-    const schemaWithPrimitives = baseSchema.omit(relationsToOmit);
+    // 1. Get the shape of the base schema (e.g., { id: z.ZodNumber, name: z.ZodString })
+    // The base schema correctly contains only primitive/referenced fields.
+    const primitiveShape = baseSchema.shape;
 
-    // If selection is just `true`, return primitives only (no nested relations)
+    // 2. If the selection is just `true`, we don't need to add any relations.
     if (subSelection === true) {
-      return schemaWithPrimitives;
+      return z.object(primitiveShape);
     }
 
-    // Otherwise, add selected relations
+    // 3. Build a new shape object for the selected relations.
     const selectedRelationShapes: Record<string, z.ZodTypeAny> = {};
     if (typeof subSelection === "object") {
       for (const key in subSelection) {
-        if (subSelection[key] && relationsToOmit[key]) {
+        // We only care about keys that are actual relations in the raw schema.
+        if (subSelection[key] && rawSchema[key]?.config?.sql?.schema) {
           const relationConfig = rawSchema[key].config.sql;
           const targetTable = relationConfig.schema()._tableName;
 
-          // Recursively build the sub-schema
+          // Recursively build the sub-schema for the relation.
           const subSchema = buildView(
             targetTable,
             schemaType,
             subSelection[key]
           );
 
-          if (
-            relationConfig.type === "hasMany" ||
-            relationConfig.type === "manyToMany"
-          ) {
+          // Wrap it in an array or optional as needed.
+          if (["hasMany", "manyToMany"].includes(relationConfig.type)) {
             selectedRelationShapes[key] = z.array(subSchema);
           } else {
             selectedRelationShapes[key] = subSchema.optional();
@@ -1507,15 +1498,21 @@ function createViewObject(
       }
     }
 
-    return schemaWithPrimitives.extend(selectedRelationShapes);
+    // 4. Combine the primitive shape and the new relation shapes into one final shape.
+    const finalShape = { ...primitiveShape, ...selectedRelationShapes };
+
+    // 5. Return a brand new, clean Zod object from the final shape.
+    return z.object(finalShape);
+
+    // --- END OF THE FIX ---
   }
 
-  // The main function builds the final object with all three schemas.
+  // The main function builds the final object with both schemas.
   const sourceRegistryEntry = registry[tableName];
   return {
-    sql: sourceRegistryEntry.zodSchemas.sqlSchema, // Changed from sqlSchema
-    client: buildView(tableName, "client", selection), // Changed from clientSchema
-    validation: buildView(tableName, "validation", selection), // Changed from validationSchema
+    sql: sourceRegistryEntry.zodSchemas.sqlSchema,
+    client: buildView(tableName, "client", selection),
+    validation: buildView(tableName, "validation", selection),
   };
 }
 
