@@ -573,12 +573,12 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
       // posts with count: 2
       expect(defaults.posts).toHaveLength(2);
-      expect(defaults.posts[0]).toEqual({
+      expect(defaults.posts?.[0]).toEqual({
         id: 0,
         title: "Default Post",
         authorId: "user-123",
       });
-      expect(defaults.posts[1]).toEqual({
+      expect(defaults.posts?.[1]).toEqual({
         id: 0,
         title: "Default Post",
         authorId: "user-123",
@@ -611,7 +611,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       const defaults = nestedView.defaults;
 
       expect(defaults.posts).toHaveLength(2);
-      expect(defaults.posts[0]).not.toHaveProperty("author"); // Relation not selected
+      expect(defaults.posts?.[0]).not.toHaveProperty("author"); // Relation not selected
     });
 
     it("should handle true for relation defaults", () => {
@@ -638,7 +638,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
       // Should generate 3 items based on resolver's defaultCount
       expect(defaults.items).toHaveLength(3);
-      expect(defaults.items[0]).toEqual({ id: 0, name: "Item" });
+      expect(defaults.items?.[0]).toEqual({ id: 0, name: "Item" });
     });
   });
 });

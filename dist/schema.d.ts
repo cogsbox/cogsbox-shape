@@ -306,6 +306,25 @@ type RegistryShape = Record<string, {
         toDb: (clientObject: any) => any;
     };
 }>;
+type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Depth["length"] extends 10 ? any : // 1. Start with the base defaults for the table (id, name, etc.)
+DeriveDefaults<TRegistry[TTableName]["rawSchema"]> & (TSelection extends Record<string, any> ? {
+    -readonly [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+        config: {
+            sql: {
+                type: infer RelType;
+                schema: () => infer S;
+            };
+        };
+    } ? S extends {
+        _tableName: infer Target;
+    } ? Target extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? DeriveViewDefaults<Target, TSelection[K], TRegistry, [
+        ...Depth,
+        1
+    ]>[] : DeriveViewDefaults<Target, TSelection[K], TRegistry, [
+        ...Depth,
+        1
+    ]> | null | undefined : never : never : never;
+} : {});
 type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>, Resolved extends RegistryShape = ResolvedRegistryWithSchemas<S, R> extends RegistryShape ? ResolvedRegistryWithSchemas<S, R> : RegistryShape> = {
     [K in keyof Resolved]: {
         definition: Resolved[K]["rawSchema"];
@@ -325,7 +344,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
             sql: Resolved[K]["zodSchemas"]["sqlSchema"];
             client: z.ZodObject<BuildZodShape<K, TSelection, "clientSchema", Resolved>>;
             validation: z.ZodObject<BuildZodShape<K, TSelection, "validationSchema", Resolved>>;
-            defaults: any;
+            defaults: Prettify<DeriveViewDefaults<K & string, TSelection, Resolved>>;
         };
     };
 };

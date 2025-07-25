@@ -152,7 +152,7 @@ petsEndSchema.nav.owner.pets.owner.pets.owner;
 const testPets = petsEndSchema.schemas;
 const clientSChemaP = testPets.client;
 
-const clientSChema = usersEndSchema.createView({ pets: true }).client;
+const clientSChema = usersEndSchema.createView({ pets: true }).defaults;
 
 type ClientUser = z.infer<typeof clientSChema>;
 

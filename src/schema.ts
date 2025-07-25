@@ -1645,7 +1645,46 @@ type RegistryShape = Record<
     };
   }
 >;
-
+type DeriveViewDefaults<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends RegistryShape,
+  Depth extends any[] = [],
+> = Depth["length"] extends 10 // Recursion guard
+  ? any
+  : // 1. Start with the base defaults for the table (id, name, etc.)
+    DeriveDefaults<TRegistry[TTableName]["rawSchema"]> &
+      // 2. Add the selected relations as optional properties
+      (TSelection extends Record<string, any>
+        ? {
+            -readonly [K in keyof TSelection &
+              keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+              config: { sql: { type: infer RelType; schema: () => infer S } };
+            }
+              ? S extends { _tableName: infer Target }
+                ? Target extends keyof TRegistry
+                  ? RelType extends "hasMany" | "manyToMany"
+                    ? // It's an array of the recursively derived default type
+                      DeriveViewDefaults<
+                        Target,
+                        TSelection[K],
+                        TRegistry,
+                        [...Depth, 1]
+                      >[]
+                    : // It's the recursively derived default type, possibly null/undefined
+                      | DeriveViewDefaults<
+                            Target,
+                            TSelection[K],
+                            TRegistry,
+                            [...Depth, 1]
+                          >
+                        | null
+                        | undefined
+                  : never
+                : never
+              : never;
+          }
+        : {});
 // The main return type - moved outside and made generic
 type CreateSchemaBoxReturn<
   S extends Record<string, SchemaWithPlaceholders>,
@@ -1692,7 +1731,7 @@ type CreateSchemaBoxReturn<
       validation: z.ZodObject<
         BuildZodShape<K, TSelection, "validationSchema", Resolved>
       >;
-      defaults: any; // Add this for view defaults
+      defaults: Prettify<DeriveViewDefaults<K & string, TSelection, Resolved>>;
     };
   };
 };
