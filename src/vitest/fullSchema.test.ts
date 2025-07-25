@@ -79,11 +79,11 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
       },
     }));
 
-    const finalUserResult = box.users.zodSchemas;
-    const finalPostResult = box.posts.zodSchemas;
+    const finalUserResult = box.users.schemas;
+    const finalPostResult = box.posts.schemas;
 
     it("should correctly handle reference types", () => {
-      type PostClient = z.infer<typeof finalPostResult.clientSchema>;
+      type PostClient = z.infer<typeof finalPostResult.client>;
       // The authorId should be a union of the DB type (number) and the initial state of the referenced field
       expectTypeOf<PostClient["authorId"]>().toEqualTypeOf<
         "new-user" | number
@@ -114,22 +114,22 @@ describe("Schema Builder Runtime Behavior", () => {
     const box = createSchemaBox({ defaults: defaultsSchema }, () => ({
       defaults: {},
     }));
-    const { defaultValues } = box.defaults.zodSchemas;
+    const defaults = box.defaults.defaults;
 
     it("should get default from .initialState()", () => {
-      expect(defaultValues.fromInitialState).toBe("from-initial-state");
+      expect(defaults.fromInitialState).toBe("from-initial-state");
     });
 
     it("should get default from SQL config", () => {
-      expect(defaultValues.fromSqlDefault).toBe(99);
+      expect(defaults.fromSqlDefault).toBe(99);
     });
 
     it("should default a nullable field to null", () => {
-      expect(defaultValues.isNullable).toBeNull();
+      expect(defaults.isNullable).toBeNull();
     });
 
     it("should use the generated default (e.g., 0 for int) when none is provided", () => {
-      expect(defaultValues.hasNoDefault).toBe(0);
+      expect(defaults.hasNoDefault).toBe(0);
     });
   });
 
@@ -153,26 +153,25 @@ describe("Schema Builder Runtime Behavior", () => {
     const box = createSchemaBox({ complex: complexSchemaDef }, () => ({
       complex: {}, // No relations to resolve
     }));
-    const { clientSchema, sqlSchema, validationSchema, toClient, toDb } =
-      box.complex.zodSchemas;
-
+    const { client, sql, validation } = box.complex.schemas;
+    const { toClient, toDb } = box.complex.transforms;
     it("should correctly transform a DB object to a Client object", () => {
       const dbData = { id: 1, status: 1, name: "Test" };
       const clientResult = toClient(dbData);
       expect(clientResult.status).toBe("active");
-      expect(() => clientSchema.parse(clientResult)).not.toThrow();
+      expect(() => client.parse(clientResult)).not.toThrow();
     });
 
     it("should correctly transform a Client object to a DB object", () => {
       const clientData = { id: 1, status: "inactive", name: "Test" } as const;
       const dbResult = toDb(clientData);
       expect(dbResult.status).toBe(0);
-      expect(() => sqlSchema.parse(dbResult)).not.toThrow();
+      expect(() => sql.parse(dbResult)).not.toThrow();
     });
 
     it("should still use the validationSchema for pure validation", () => {
       const invalidClientData = { id: 1, status: "inactive", name: "ab" };
-      const result = validationSchema.safeParse(invalidClientData);
+      const result = validation.safeParse(invalidClientData);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe("Name is too short");
@@ -208,7 +207,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
   describe("Base Schema Excludes Relations", () => {
     it("should exclude relations from base client schema", () => {
-      type UserClient = z.infer<typeof box.users.zodSchemas.clientSchema>;
+      type UserClient = z.infer<typeof box.users.schemas.client>;
       type ExpectedUser = {
         id: string | number;
         petId: number;
@@ -216,14 +215,14 @@ describe("New Session Features - Base Schema Without Relations", () => {
       expectTypeOf<UserClient>().toEqualTypeOf<ExpectedUser>();
 
       // Runtime check - the schema shape should not include 'pets'
-      const clientShape = box.users.zodSchemas.clientSchema.shape;
+      const clientShape = box.users.schemas.client.shape;
       expect(clientShape).not.toHaveProperty("pets");
       expect(clientShape).toHaveProperty("id");
       expect(clientShape).toHaveProperty("petId");
     });
 
     it("should exclude relations from default values", () => {
-      const defaults = box.pets.defaultValues;
+      const defaults = box.pets.defaults;
       expectTypeOf(defaults).toEqualTypeOf<{
         id: number;
         userId: string;
@@ -242,7 +241,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         pets: true,
       });
 
-      type ViewClient = z.infer<typeof userView.clientSchema>;
+      type ViewClient = z.infer<typeof userView.client>;
       expectTypeOf<ViewClient>().toEqualTypeOf<{
         id: string | number;
         petId: number;
@@ -253,7 +252,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       }>();
 
       // Runtime check
-      const viewShape = userView.clientSchema.shape;
+      const viewShape = userView.client.shape;
       expect(viewShape).toHaveProperty("pets");
       expect(viewShape.pets).toBeInstanceOf(z.ZodArray);
     });
@@ -263,7 +262,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         pets: { owner: true },
       });
 
-      type ViewClientNested = z.infer<typeof userViewNested.clientSchema>;
+      type ViewClientNested = z.infer<typeof userViewNested.client>;
       expectTypeOf<ViewClientNested>().toEqualTypeOf<{
         id: string | number;
         petId: number;
@@ -280,7 +279,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       }>();
 
       // Runtime check - owner should not have pets
-      const shape = userViewNested.clientSchema.shape;
+      const shape = userViewNested.client.shape;
       if (shape.pets instanceof z.ZodArray) {
         const petSchema = shape.pets.element;
         if (petSchema instanceof z.ZodObject) {
@@ -315,10 +314,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
   describe("Default Values Accessibility", () => {
     it("should expose default values at top level", () => {
-      expect(box.users.defaultValues).toBeDefined();
-      expect(box.users.defaultValues.id).toBe("user-123");
-      expect(box.pets.defaultValues.id).toBe(0);
-      expect(box.pets.defaultValues.userId).toBe("user-123");
+      expect(box.users.defaults).toBeDefined();
+      expect(box.users.defaults.id).toBe("user-123");
+      expect(box.pets.defaults.id).toBe(0);
+      expect(box.pets.defaults.userId).toBe("user-123");
     });
   });
 
@@ -327,8 +326,8 @@ describe("New Session Features - Base Schema Without Relations", () => {
       // petId references pets.id (number)
       // but userId references users.id (string | number due to initialState)
 
-      type UserClient = z.infer<typeof box.users.zodSchemas.clientSchema>;
-      type PetClient = z.infer<typeof box.pets.zodSchemas.clientSchema>;
+      type UserClient = z.infer<typeof box.users.schemas.client>;
+      type PetClient = z.infer<typeof box.pets.schemas.client>;
 
       expectTypeOf<UserClient["petId"]>().toEqualTypeOf<number>();
       expectTypeOf<PetClient["userId"]>().toEqualTypeOf<string | number>();
@@ -363,7 +362,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
     describe("Base Schema Excludes Relations", () => {
       it("should exclude relations from base client schema", () => {
-        type UserClient = z.infer<typeof box.users.zodSchemas.clientSchema>;
+        type UserClient = z.infer<typeof box.users.schemas.client>;
         type ExpectedUser = {
           id: string | number;
           petId: number;
@@ -371,7 +370,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         expectTypeOf<UserClient>().toEqualTypeOf<ExpectedUser>();
 
         // Runtime check - the schema shape should not include 'pets'
-        const clientShape = box.users.zodSchemas.clientSchema.shape;
+        const clientShape = box.users.schemas.client.shape;
         expect(clientShape).not.toHaveProperty("pets");
         expect(clientShape).toHaveProperty("id");
         expect(clientShape).toHaveProperty("petId");
@@ -379,7 +378,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
       it("should exclude relations from default values", () => {
         // First check if defaultValues exists at the expected location
-        const defaults = box.pets.zodSchemas.defaultValues;
+        const defaults = box.pets.defaults;
 
         // Type check
         expectTypeOf(defaults).toEqualTypeOf<{
@@ -393,7 +392,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
           expect(defaults).toHaveProperty("id");
           expect(defaults).toHaveProperty("userId");
         } else {
-          // If not at zodSchemas.defaultValues, check if it's at top level
+          // If not at schemas.defaultValues, check if it's at top level
           const topLevelDefaults = (box.pets as any).defaultValues;
           expect(topLevelDefaults).toBeDefined();
         }
@@ -406,7 +405,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
           pets: true,
         });
 
-        type ViewClient = z.infer<typeof userView.clientSchema>;
+        type ViewClient = z.infer<typeof userView.client>;
         expectTypeOf<ViewClient>().toEqualTypeOf<{
           id: string | number;
           petId: number;
@@ -417,7 +416,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         }>();
 
         // Runtime check
-        const viewShape = userView.clientSchema.shape;
+        const viewShape = userView.client.shape;
         expect(viewShape).toHaveProperty("pets");
         expect(viewShape.pets).toBeInstanceOf(z.ZodArray);
       });
@@ -427,7 +426,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
           pets: { owner: true },
         });
 
-        type ViewClientNested = z.infer<typeof userViewNested.clientSchema>;
+        type ViewClientNested = z.infer<typeof userViewNested.client>;
         expectTypeOf<ViewClientNested>().toEqualTypeOf<{
           id: string | number;
           petId: number;
@@ -444,7 +443,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         }>();
 
         // Runtime check - owner should not have pets
-        const shape = userViewNested.clientSchema.shape;
+        const shape = userViewNested.client.shape;
         if (shape.pets instanceof z.ZodArray) {
           const petSchema = shape.pets.element;
           if (petSchema instanceof z.ZodObject) {
@@ -482,11 +481,11 @@ describe("New Session Features - Base Schema Without Relations", () => {
     describe("Default Values Accessibility", () => {
       it("should check where default values are exposed", () => {
         // Check both possible locations
-        const atZodSchemas = box.users.zodSchemas.defaultValues;
+        const atschemas = box.users.defaults;
         const atTopLevel = (box.users as any).defaultValues;
 
         // At least one should be defined
-        const defaults = atTopLevel || atZodSchemas;
+        const defaults = atTopLevel || atschemas;
         expect(defaults).toBeDefined();
 
         if (atTopLevel) {
@@ -494,9 +493,9 @@ describe("New Session Features - Base Schema Without Relations", () => {
           expect((box.pets as any).defaultValues.id).toBe(0);
           expect((box.pets as any).defaultValues.userId).toBe("user-123");
         } else {
-          expect(atZodSchemas.id).toBe("user-123");
-          expect(box.pets.zodSchemas.defaultValues.id).toBe(0);
-          expect(box.pets.zodSchemas.defaultValues.userId).toBe("user-123");
+          expect(atschemas.id).toBe("user-123");
+          expect(box.pets.defaults.id).toBe(0);
+          expect(box.pets.defaults.userId).toBe("user-123");
         }
       });
     });
@@ -506,12 +505,140 @@ describe("New Session Features - Base Schema Without Relations", () => {
         // petId references pets.id (number)
         // but userId references users.id (string | number due to initialState)
 
-        type UserClient = z.infer<typeof box.users.zodSchemas.clientSchema>;
-        type PetClient = z.infer<typeof box.pets.zodSchemas.clientSchema>;
+        type UserClient = z.infer<typeof box.users.schemas.client>;
+        type PetClient = z.infer<typeof box.pets.schemas.client>;
 
         expectTypeOf<UserClient["petId"]>().toEqualTypeOf<number>();
         expectTypeOf<PetClient["userId"]>().toEqualTypeOf<string | number>();
       });
+    });
+  });
+  describe("Relation Defaults in Views", () => {
+    const users = schema({
+      _tableName: "users",
+      id: s.sql({ type: "int", pk: true }).initialState(() => "user-123"),
+      name: s.sql({ type: "varchar" }).initialState("John"),
+      posts: s.hasMany({ count: 2 }), // Should generate 2 posts
+      comments: s.hasMany([]), // Should be empty array
+      profile: s.hasOne(true), // Changed from {} to true
+      settings: s.hasOne(null), // Should be null
+      followers: s.hasMany(undefined), // Should not be included
+    });
+
+    const posts = schema({
+      _tableName: "posts",
+      id: s.sql({ type: "int", pk: true }),
+      title: s.sql({ type: "varchar" }).initialState("Default Post"),
+      authorId: s.reference(() => users.id),
+    });
+
+    const comments = schema({
+      _tableName: "comments",
+      id: s.sql({ type: "int", pk: true }),
+      text: s.sql({ type: "varchar" }).initialState("Default Comment"),
+      userId: s.reference(() => users.id),
+    });
+
+    const profiles = schema({
+      _tableName: "profiles",
+      id: s.sql({ type: "int", pk: true }),
+      bio: s.sql({ type: "varchar" }).initialState("Default Bio"),
+      userId: s.reference(() => users.id),
+    });
+
+    const box = createSchemaBox({ users, posts, comments, profiles }, (s) => ({
+      users: {
+        posts: { fromKey: "id", toKey: s.posts.authorId },
+        comments: { fromKey: "id", toKey: s.comments.userId },
+        profile: { fromKey: "id", toKey: s.profiles.userId },
+        settings: { fromKey: "id", toKey: s.profiles.userId },
+        followers: { fromKey: "id", toKey: s.users.id },
+      },
+    }));
+
+    it("should generate correct defaults based on relation config", () => {
+      const view = box.users.createView({
+        posts: true,
+        comments: true,
+        profile: true,
+        settings: true,
+        followers: true,
+      });
+
+      const defaults = view.defaults;
+
+      // Base fields
+      expect(defaults.id).toBe("user-123");
+      expect(defaults.name).toBe("John");
+
+      // posts with count: 2
+      expect(defaults.posts).toHaveLength(2);
+      expect(defaults.posts[0]).toEqual({
+        id: 0,
+        title: "Default Post",
+        authorId: "user-123",
+      });
+      expect(defaults.posts[1]).toEqual({
+        id: 0,
+        title: "Default Post",
+        authorId: "user-123",
+      });
+
+      // comments with []
+      expect(defaults.comments).toEqual([]);
+
+      // profile with {}
+      expect(defaults.profile).toEqual({
+        id: 0,
+        bio: "Default Bio",
+        userId: "user-123",
+      });
+
+      // settings with null
+      expect(defaults.settings).toBeNull();
+
+      // followers with undefined - should not exist
+      expect(defaults).not.toHaveProperty("followers");
+    });
+
+    it("should handle nested relation defaults", () => {
+      const nestedView = box.users.createView({
+        posts: {
+          // Even though posts has count: 2, we can check nested behavior
+        },
+      });
+
+      const defaults = nestedView.defaults;
+
+      expect(defaults.posts).toHaveLength(2);
+      expect(defaults.posts[0]).not.toHaveProperty("author"); // Relation not selected
+    });
+
+    it("should handle true for relation defaults", () => {
+      const trueUsers = schema({
+        _tableName: "trueUsers",
+        id: s.sql({ type: "int", pk: true }),
+        items: s.hasMany(true), // Should use target schema's defaults
+      });
+
+      const items = schema({
+        _tableName: "items",
+        id: s.sql({ type: "int", pk: true }),
+        name: s.sql({ type: "varchar" }).initialState("Item"),
+      });
+
+      const trueBox = createSchemaBox({ trueUsers, items }, (s) => ({
+        trueUsers: {
+          items: { fromKey: "id", toKey: s.items.id, defaultCount: 3 },
+        },
+      }));
+
+      const view = trueBox.trueUsers.createView({ items: true });
+      const defaults = view.defaults;
+
+      // Should generate 3 items based on resolver's defaultCount
+      expect(defaults.items).toHaveLength(3);
+      expect(defaults.items[0]).toEqual({ id: 0, name: "Item" });
     });
   });
 });

@@ -57,11 +57,15 @@ export const s = {
     hasMany: (config) => ({
         __type: "placeholder-relation",
         relationType: "hasMany",
-        defaultCount: config?.defaultCount ?? 0,
+        defaultCount: config && typeof config === "object" && "count" in config
+            ? config.count
+            : 0,
+        defaultConfig: config,
     }),
-    hasOne: () => ({
+    hasOne: (config) => ({
         __type: "placeholder-relation",
         relationType: "hasOne",
+        defaultConfig: config, // This line is the crucial fix
     }),
     manyToMany: (config) => ({
         __type: "placeholder-relation",
@@ -440,14 +444,12 @@ export function createSchema(schema, relations) {
         const definition = fullSchema[key];
         // Handle new-style references
         if (isReference(definition)) {
-            // Call the getter to get the actual field
             const targetField = definition.getter();
             if (targetField && targetField.config) {
                 const config = targetField.config;
                 sqlFields[key] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 validationFields[key] = config.zodValidationSchema;
-                // For references, typically use undefined as default
                 defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
                     ...config.sql,
                     default: undefined,
@@ -472,49 +474,24 @@ export function createSchema(schema, relations) {
         if (definition && definition.config) {
             const config = definition.config;
             const sqlConfig = config.sql;
-            if (definition && definition.config) {
-                const config = definition.config;
-                const sqlConfig = config.sql;
-                if (sqlConfig &&
-                    typeof sqlConfig === "object" &&
-                    ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-                    // Handle relations
-                    const relatedSchemaFactory = sqlConfig.schema;
-                    let baseClientSchema;
-                    if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
-                        baseClientSchema = z.array(z.any()).optional();
-                        // Make it a FUNCTION that returns the array
-                        defaultValues[key] = () => Array.from({ length: sqlConfig.defaultCount || 0 }, () => {
-                            const childSchema = createSchema(relatedSchemaFactory());
-                            return childSchema.defaultValues;
-                        });
-                    }
-                    else {
-                        baseClientSchema = z.any().optional();
-                        // Make it a FUNCTION that returns the object
-                        defaultValues[key] = () => {
-                            const childSchema = createSchema(relatedSchemaFactory());
-                            return childSchema.defaultValues;
-                        };
-                    }
-                    clientFields[key] = config.clientTransform
-                        ? config.clientTransform(baseClientSchema)
-                        : baseClientSchema;
-                    validationFields[key] = clientFields[key];
+            if (sqlConfig &&
+                typeof sqlConfig === "object" &&
+                ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
+                console.log(`Skipping relation: ${key}`);
+                continue;
+            }
+            else {
+                // Handle regular fields
+                sqlFields[key] = config.zodSqlSchema;
+                clientFields[key] = config.zodClientSchema;
+                validationFields[key] = config.zodValidationSchema;
+                if (config.transforms) {
+                    fieldTransforms[key] = config.transforms;
                 }
-                else {
-                    // Handle regular fields
-                    sqlFields[key] = config.zodSqlSchema;
-                    clientFields[key] = config.zodClientSchema;
-                    validationFields[key] = config.zodValidationSchema;
-                    if (config.transforms) {
-                        fieldTransforms[key] = config.transforms;
-                    }
-                    const initialValueOrFn = config.initialValue;
-                    defaultValues[key] = isFunction(initialValueOrFn)
-                        ? initialValueOrFn()
-                        : initialValueOrFn;
-                }
+                const initialValueOrFn = config.initialValue;
+                defaultValues[key] = isFunction(initialValueOrFn)
+                    ? initialValueOrFn()
+                    : initialValueOrFn;
             }
         }
     }
@@ -545,8 +522,56 @@ export function createSchema(schema, relations) {
         toDb,
     };
 }
+function createViewObject(tableName, selection, registry) {
+    // A recursive helper that builds ONE schema (client or validation) for a view.
+    function buildView(currentTable, schemaType, subSelection) {
+        const registryEntry = registry[currentTable];
+        const rawSchema = registryEntry.rawSchema;
+        const baseSchema = registryEntry.zodSchemas[`${schemaType}Schema`];
+        // Get all relation keys
+        const relationsToOmit = {};
+        for (const key in rawSchema) {
+            if (rawSchema[key]?.config?.sql?.schema) {
+                relationsToOmit[key] = true;
+            }
+        }
+        // Start with primitive fields only
+        const schemaWithPrimitives = baseSchema.omit(relationsToOmit);
+        // If selection is just `true`, return primitives only (no nested relations)
+        if (subSelection === true) {
+            return schemaWithPrimitives;
+        }
+        // Otherwise, add selected relations
+        const selectedRelationShapes = {};
+        if (typeof subSelection === "object") {
+            for (const key in subSelection) {
+                if (subSelection[key] && relationsToOmit[key]) {
+                    const relationConfig = rawSchema[key].config.sql;
+                    const targetTable = relationConfig.schema()._tableName;
+                    // Recursively build the sub-schema
+                    const subSchema = buildView(targetTable, schemaType, subSelection[key]);
+                    if (relationConfig.type === "hasMany" ||
+                        relationConfig.type === "manyToMany") {
+                        selectedRelationShapes[key] = z.array(subSchema);
+                    }
+                    else {
+                        selectedRelationShapes[key] = subSchema.optional();
+                    }
+                }
+            }
+        }
+        return schemaWithPrimitives.extend(selectedRelationShapes);
+    }
+    // The main function builds the final object with all three schemas.
+    const sourceRegistryEntry = registry[tableName];
+    return {
+        sql: sourceRegistryEntry.zodSchemas.sqlSchema, // Changed from sqlSchema
+        client: buildView(tableName, "client", selection), // Changed from clientSchema
+        validation: buildView(tableName, "validation", selection), // Changed from validationSchema
+    };
+}
 export function createSchemaBox(schemas, resolver) {
-    // Create a proxy to allow for a clean syntax in the resolver function (e.g., s.users.id)
+    // Your existing implementation stays exactly the same
     const schemaProxy = new Proxy({}, {
         get(target, tableName) {
             const schema = schemas[tableName];
@@ -555,8 +580,6 @@ export function createSchemaBox(schemas, resolver) {
             return new Proxy({}, {
                 get(target, fieldName) {
                     const field = schema[fieldName];
-                    // Enrich the field with metadata when accessed through the proxy.
-                    // This metadata is crucial for resolving relationships later.
                     if (field && typeof field === "object") {
                         return {
                             ...field,
@@ -572,31 +595,24 @@ export function createSchemaBox(schemas, resolver) {
             });
         },
     });
-    // Get the user-defined resolution configuration
     const resolutionConfig = resolver(schemaProxy);
-    // Start with a deep copy of the initial schemas
     const resolvedSchemas = { ...schemas };
-    // ===============================================================
-    // FIX: Implement a two-stage resolution process to avoid deadlock
-    // ===============================================================
-    // STAGE 1: Resolve all `s.reference()` fields first.
+    // STAGE 1: Resolve references
     for (const tableName in schemas) {
         for (const fieldName in schemas[tableName]) {
             const field = schemas[tableName][fieldName];
             if (isReference(field)) {
-                // A reference is defined in the base schema, so its getter gives the target
                 const targetField = field.getter();
                 if (targetField && targetField.config) {
-                    // Replace the reference placeholder with the actual field it points to
                     resolvedSchemas[tableName][fieldName] = targetField;
                 }
                 else {
-                    throw new Error(`Could not resolve reference for ${tableName}.${fieldName}. Ensure it points to a valid schema field.`);
+                    throw new Error(`Could not resolve reference for ${tableName}.${fieldName}`);
                 }
             }
         }
     }
-    // STAGE 2: Now, resolve all relation placeholders (`hasMany`, `hasOne`, etc.).
+    // STAGE 2: Resolve relations
     for (const tableName in schemas) {
         const tableConfig = resolutionConfig[tableName];
         if (!tableConfig)
@@ -604,12 +620,10 @@ export function createSchemaBox(schemas, resolver) {
         for (const fieldName in tableConfig) {
             const field = schemas[tableName][fieldName];
             const resolution = tableConfig[fieldName];
-            // Ensure this is a relation placeholder we are trying to resolve
             if (field && field.__type === "placeholder-relation") {
                 const targetKey = resolution.toKey;
-                // The target key should now be a fully resolved field from STAGE 1
                 if (!targetKey || !targetKey.__parentTableType) {
-                    throw new Error(`Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`);
+                    throw new Error(`Could not resolve relation for ${tableName}.${fieldName}`);
                 }
                 const targetSchema = targetKey.__parentTableType;
                 const relationType = field.relationType;
@@ -620,15 +634,15 @@ export function createSchemaBox(schemas, resolver) {
                 const initialValue = relationType === "hasMany" || relationType === "manyToMany"
                     ? Array.from({ length: defaultCount || 0 }, () => ({}))
                     : {};
-                // Create the full relation builder now that the dependency is available
                 const resolvedBuilder = createBuilder({
                     stage: "relation",
                     sqlConfig: {
                         type: relationType,
                         fromKey: resolution.fromKey,
-                        toKey: () => targetKey, // The toKey is now a function returning the resolved field
+                        toKey: () => targetKey,
                         schema: () => targetSchema,
                         defaultCount: defaultCount,
+                        defaultConfig: field.defaultConfig,
                     },
                     sqlZod: zodSchema,
                     newZod: zodSchema,
@@ -636,15 +650,10 @@ export function createSchemaBox(schemas, resolver) {
                     clientZod: zodSchema,
                     validationZod: zodSchema,
                 });
-                // Replace the placeholder in our schemas object with the final builder
-                if (!resolvedSchemas[tableName]) {
-                    throw new Error(`Could not resolve relation for ${tableName}.${fieldName}. The 'toKey' (${targetKey}) is invalid.`);
-                }
                 resolvedSchemas[tableName][fieldName] = resolvedBuilder;
             }
         }
     }
-    // Update the createSchemaBoxRegistry function's final section:
     const finalRegistry = {};
     for (const tableName in resolvedSchemas) {
         const zodSchemas = createSchema(resolvedSchemas[tableName]);
@@ -653,7 +662,6 @@ export function createSchemaBox(schemas, resolver) {
             zodSchemas: zodSchemas,
         };
     }
-    // Simple navigation proxy creator
     const createNavProxy = (currentTable, registry) => {
         return new Proxy({}, {
             get(target, relationName) {
@@ -664,7 +672,7 @@ export function createSchemaBox(schemas, resolver) {
                 if (!field?.config?.sql?.schema)
                     return undefined;
                 const targetSchema = field.config.sql.schema();
-                const targetTable = targetSchema?._tableName; // Now just a simple string!
+                const targetTable = targetSchema?._tableName;
                 if (targetTable && registry[targetTable]) {
                     return createNavProxy(targetTable, registry);
                 }
@@ -672,19 +680,88 @@ export function createSchemaBox(schemas, resolver) {
             },
         });
     };
-    // Build the final registry
-    for (const tableName in resolvedSchemas) {
-        const zodSchemas = createSchema(resolvedSchemas[tableName]);
-        finalRegistry[tableName] = {
-            rawSchema: resolvedSchemas[tableName],
-            zodSchemas: zodSchemas,
-            test: schemas,
-            nav: null, // Will be set after all entries are created
+    const cleanerRegistry = {};
+    for (const tableName in finalRegistry) {
+        const entry = finalRegistry[tableName];
+        cleanerRegistry[tableName] = {
+            definition: entry.rawSchema,
+            schemas: {
+                sql: entry.zodSchemas.sqlSchema,
+                client: entry.zodSchemas.clientSchema,
+                validation: entry.zodSchemas.validationSchema,
+            },
+            transforms: {
+                toClient: entry.zodSchemas.toClient,
+                toDb: entry.zodSchemas.toDb,
+            },
+            defaults: entry.zodSchemas.defaultValues,
+            nav: createNavProxy(tableName, finalRegistry),
+            // Add this
+            RelationSelection: {},
+            createView: function (selection) {
+                const view = createViewObject(tableName, selection, finalRegistry);
+                const defaults = computeViewDefaults(tableName, selection, finalRegistry);
+                console.log("View defaults:", defaults); // ADD THIS
+                return {
+                    ...view,
+                    defaults: defaults,
+                };
+            },
         };
     }
-    // Now add navigation proxies
-    for (const tableName in finalRegistry) {
-        finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
+    return cleanerRegistry;
+}
+function computeViewDefaults(tableName, selection, registry, visited = new Set()) {
+    if (visited.has(tableName)) {
+        return undefined; // Prevent circular references
     }
-    return finalRegistry;
+    visited.add(tableName);
+    const entry = registry[tableName];
+    const rawSchema = entry.rawSchema;
+    const baseDefaults = { ...entry.zodSchemas.defaultValues };
+    if (selection === true || typeof selection !== "object") {
+        return baseDefaults;
+    }
+    // Add relation defaults based on selection
+    for (const key in selection) {
+        if (!selection[key])
+            continue;
+        const field = rawSchema[key];
+        if (!field?.config?.sql?.schema)
+            continue;
+        const relationConfig = field.config.sql;
+        const targetTable = relationConfig.schema()._tableName;
+        // ----- FIX IS HERE -----
+        // Look for the defaultConfig on the nested relationConfig object.
+        const defaultConfig = relationConfig.defaultConfig;
+        // Handle different default configurations
+        if (defaultConfig === undefined) {
+            // Don't include in defaults
+            delete baseDefaults[key];
+        }
+        else if (defaultConfig === null) {
+            baseDefaults[key] = null;
+        }
+        else if (Array.isArray(defaultConfig)) {
+            baseDefaults[key] = [];
+        }
+        else if (defaultConfig === true) {
+            // Generate based on nested selection
+            if (relationConfig.type === "hasMany" ||
+                relationConfig.type === "manyToMany") {
+                const count = relationConfig.defaultCount || 1;
+                baseDefaults[key] = Array.from({ length: count }, () => computeViewDefaults(targetTable, selection[key], registry, new Set(visited)));
+            }
+            else {
+                baseDefaults[key] = computeViewDefaults(targetTable, selection[key], registry, new Set(visited));
+            }
+        }
+        else if (typeof defaultConfig === "object" && "count" in defaultConfig) {
+            baseDefaults[key] = Array.from({ length: defaultConfig.count }, () => computeViewDefaults(targetTable, selection[key], registry, new Set(visited)));
+        }
+    }
+    // NOTE: This was in the original code but is not needed for the recursive logic.
+    // It's safe to remove, but also safe to keep.
+    // visited.delete(tableName);
+    return baseDefaults;
 }

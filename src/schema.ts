@@ -372,6 +372,18 @@ export type Builder<
   IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
   StageMethods[TStage]
 >;
+type HasManyDefault =
+  | true
+  | undefined // Don't include in defaults at all
+  | [] // Include as empty array
+  | { count: number }; // Generate N items
+
+// For hasOne/belongsTo
+type HasOneDefault =
+  | true
+  | undefined // Don't include in defaults at all
+  | null; // Include as null
+
 export type Reference<TGetter extends () => any> = {
   __type: "reference";
   getter: TGetter;
@@ -410,13 +422,14 @@ interface ShapeAPI {
   >;
   reference: <TGetter extends () => any>(getter: TGetter) => Reference<TGetter>;
 
-  hasMany: (config?: {
-    defaultCount?: number;
-  }) => PlaceholderRelation<"hasMany">;
-  hasOne: () => PlaceholderRelation<"hasOne">;
+  hasMany: <T extends HasManyDefault>(
+    config?: T
+  ) => PlaceholderRelation<"hasMany">;
+  hasOne: (config?: HasOneDefault) => PlaceholderRelation<"hasOne">;
 
   manyToMany: (config?: {
     defaultCount?: number;
+    defaultConfig?: HasManyDefault;
   }) => PlaceholderRelation<"manyToMany">;
 }
 
@@ -477,15 +490,20 @@ export const s: ShapeAPI = {
     getter: getter,
   }),
 
-  hasMany: (config?: { defaultCount?: number }) => ({
+  hasMany: (config?: HasManyDefault) => ({
     __type: "placeholder-relation" as const,
     relationType: "hasMany" as const,
-    defaultCount: config?.defaultCount ?? 0,
+    defaultCount:
+      config && typeof config === "object" && "count" in config
+        ? config.count
+        : 0,
+    defaultConfig: config,
   }),
 
-  hasOne: () => ({
+  hasOne: (config?: HasOneDefault) => ({
     __type: "placeholder-relation" as const,
     relationType: "hasOne" as const,
+    defaultConfig: config, // This line is the crucial fix
   }),
 
   manyToMany: (config?: { defaultCount?: number }) => ({
@@ -1259,98 +1277,26 @@ export function createSchema<
   };
 }
 
-type RelationBuilders<TSchema> = {
-  reference: <TField extends object>(
-    fieldGetter: () => TField
-  ) => {
-    type: "reference";
-    to: () => TField;
-  };
-
-  hasMany: <
-    T extends Schema<any>,
-    K extends keyof T & string,
-    TField extends EnrichedField<K, T[K], T>,
-  >(config: {
-    fromKey: keyof TSchema;
-    toKey: () => TField;
-    defaultCount?: number;
-  }) => Builder<
-    "relation",
-    // This is now specific: a BaseRelationConfig intersected with the literal type.
-    BaseRelationConfig<TField["__parentTableType"]> & { type: "hasMany" },
-    z.ZodArray<z.ZodObject<InferSqlSchema<TField["__parentTableType"]>>>,
-    z.ZodArray<z.ZodObject<InferClientSchema<TField["__parentTableType"]>>>,
-    any[],
-    z.ZodArray<z.ZodObject<InferClientSchema<TField["__parentTableType"]>>>,
-    z.ZodArray<z.ZodObject<InferValidationSchema<TField["__parentTableType"]>>>
-  >;
-
-  hasOne: <
-    T extends Schema<any>,
-    K extends keyof T & string,
-    TField extends EnrichedField<K, T[K], T>,
-  >(config: {
-    fromKey: keyof TSchema;
-    toKey: () => TField;
-  }) => Builder<
-    "relation",
-    BaseRelationConfig<TField["__parentTableType"]> & { type: "hasOne" },
-    z.ZodObject<InferSqlSchema<TField["__parentTableType"]>>,
-    z.ZodObject<InferClientSchema<TField["__parentTableType"]>>,
-    any,
-    z.ZodObject<InferClientSchema<TField["__parentTableType"]>>,
-    z.ZodObject<InferValidationSchema<TField["__parentTableType"]>>
-  >;
-
-  manyToMany: <T extends Schema<any>>(config: {
-    fromKey: keyof TSchema;
-    toKey: () => T[keyof T];
-    schema: () => T;
-    defaultCount?: number;
-  }) => Builder<
-    "relation",
-    // And here.
-    BaseRelationConfig<T> & { type: "manyToMany" },
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
-    any[],
-    z.ZodOptional<z.ZodArray<z.ZodAny>>,
-    z.ZodOptional<z.ZodArray<z.ZodAny>>
-  >;
-};
-
-// Add these types and functions to your original code
-
-// ============================================
-// Placeholder Types
-// ============================================
-
 export type PlaceholderReference = {
   __type: "placeholder-reference";
 };
 
 export type PlaceholderRelation<T extends RelationType> = {
   __type: "placeholder-relation";
-
   relationType: T;
   defaultCount?: number;
+  defaultConfig?: HasManyDefault | HasOneDefault;
 };
 
 type SchemaWithPlaceholders = {
   _tableName: string;
   [key: string]: any | PlaceholderReference | PlaceholderRelation<any>;
 };
-// This helper remains useful.
+
 type KnownKeys<T> = keyof {
   [K in keyof T as string extends K ? never : K]: T[K];
 };
 
-/**
- * This is the new, core type. It is NOT a validator. It is a strict TEMPLATE
- * that defines the exact shape the resolver's return object must have.
- * It provides the structure for autocompletion and error checking.
- */
 type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
   // Level 1: Table Names. IntelliSense will suggest `users`, `pets`, etc.
   [TableName in keyof S]?: {
@@ -1567,9 +1513,9 @@ function createViewObject(
   // The main function builds the final object with all three schemas.
   const sourceRegistryEntry = registry[tableName];
   return {
-    sqlSchema: sourceRegistryEntry.zodSchemas.sqlSchema, // SQL schema is always the same base schema.
-    clientSchema: buildView(tableName, "client", selection),
-    validationSchema: buildView(tableName, "validation", selection),
+    sql: sourceRegistryEntry.zodSchemas.sqlSchema, // Changed from sqlSchema
+    client: buildView(tableName, "client", selection), // Changed from clientSchema
+    validation: buildView(tableName, "validation", selection), // Changed from validationSchema
   };
 }
 
@@ -1715,10 +1661,23 @@ type CreateSchemaBoxReturn<
     : RegistryShape,
 > = {
   [K in keyof Resolved]: {
-    rawSchema: Resolved[K]["rawSchema"];
-    zodSchemas: Resolved[K]["zodSchemas"];
-    defaultValues: Resolved[K]["zodSchemas"]["defaultValues"];
+    definition: Resolved[K]["rawSchema"];
+
+    schemas: {
+      sql: Resolved[K]["zodSchemas"]["sqlSchema"];
+      client: Resolved[K]["zodSchemas"]["clientSchema"];
+      validation: Resolved[K]["zodSchemas"]["validationSchema"];
+    };
+
+    transforms: {
+      toClient: Resolved[K]["zodSchemas"]["toClient"];
+      toDb: Resolved[K]["zodSchemas"]["toDb"];
+    };
+
+    defaults: Resolved[K]["zodSchemas"]["defaultValues"];
+
     nav: NavigationProxy<K & string, Resolved>;
+    // ADD THIS BACK
     RelationSelection: NavigationToSelection<
       NavigationProxy<K & string, Resolved>
     >;
@@ -1729,16 +1688,18 @@ type CreateSchemaBoxReturn<
     >(
       selection: TSelection
     ) => {
-      sqlSchema: Resolved[K]["zodSchemas"]["sqlSchema"];
-      clientSchema: z.ZodObject<
+      sql: Resolved[K]["zodSchemas"]["sqlSchema"];
+      client: z.ZodObject<
         BuildZodShape<K, TSelection, "clientSchema", Resolved>
       >;
-      validationSchema: z.ZodObject<
+      validation: z.ZodObject<
         BuildZodShape<K, TSelection, "validationSchema", Resolved>
       >;
+      defaults: any; // Add this for view defaults
     };
   };
 };
+
 export function createSchemaBox<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
@@ -1834,6 +1795,7 @@ export function createSchemaBox<
             toKey: () => targetKey,
             schema: () => targetSchema,
             defaultCount: defaultCount,
+            defaultConfig: field.defaultConfig,
           } as any,
           sqlZod: zodSchema,
           newZod: zodSchema,
@@ -1880,19 +1842,132 @@ export function createSchemaBox<
     );
   };
 
-  for (const tableName in finalRegistry) {
-    finalRegistry[tableName].nav = createNavProxy(tableName, finalRegistry);
-    finalRegistry[tableName].defaultValues =
-      finalRegistry[tableName].zodSchemas.defaultValues;
+  const cleanerRegistry: any = {};
 
-    finalRegistry[tableName].createView = function (selection: any) {
-      return createViewObject(tableName, selection, finalRegistry);
+  for (const tableName in finalRegistry) {
+    const entry = finalRegistry[tableName];
+
+    cleanerRegistry[tableName] = {
+      definition: entry.rawSchema,
+
+      schemas: {
+        sql: entry.zodSchemas.sqlSchema,
+        client: entry.zodSchemas.clientSchema,
+        validation: entry.zodSchemas.validationSchema,
+      },
+
+      transforms: {
+        toClient: entry.zodSchemas.toClient,
+        toDb: entry.zodSchemas.toDb,
+      },
+
+      defaults: entry.zodSchemas.defaultValues,
+
+      nav: createNavProxy(tableName, finalRegistry),
+
+      // Add this
+      RelationSelection: {} as NavigationToSelection<any>,
+
+      createView: function (selection: any) {
+        const view = createViewObject(tableName, selection, finalRegistry);
+        const defaults = computeViewDefaults(
+          tableName,
+          selection,
+          finalRegistry
+        );
+        console.log("View defaults:", defaults); // ADD THIS
+        return {
+          ...view,
+          defaults: defaults,
+        };
+      },
     };
   }
 
-  return finalRegistry as CreateSchemaBoxReturn<S, R>;
+  return cleanerRegistry as CreateSchemaBoxReturn<S, R>;
 }
 
+function computeViewDefaults(
+  tableName: string,
+  selection: Record<string, any> | boolean,
+  registry: any,
+  visited = new Set<string>()
+): any {
+  if (visited.has(tableName)) {
+    return undefined; // Prevent circular references
+  }
+  visited.add(tableName);
+
+  const entry = registry[tableName];
+  const rawSchema = entry.rawSchema;
+  const baseDefaults = { ...entry.zodSchemas.defaultValues };
+
+  if (selection === true || typeof selection !== "object") {
+    return baseDefaults;
+  }
+
+  // Add relation defaults based on selection
+  for (const key in selection) {
+    if (!selection[key]) continue;
+
+    const field = rawSchema[key];
+    if (!field?.config?.sql?.schema) continue;
+
+    const relationConfig = field.config.sql;
+    const targetTable = relationConfig.schema()._tableName;
+
+    // ----- FIX IS HERE -----
+    // Look for the defaultConfig on the nested relationConfig object.
+    const defaultConfig = relationConfig.defaultConfig;
+
+    // Handle different default configurations
+    if (defaultConfig === undefined) {
+      // Don't include in defaults
+      delete baseDefaults[key];
+    } else if (defaultConfig === null) {
+      baseDefaults[key] = null;
+    } else if (Array.isArray(defaultConfig)) {
+      baseDefaults[key] = [];
+    } else if (defaultConfig === true) {
+      // Generate based on nested selection
+      if (
+        relationConfig.type === "hasMany" ||
+        relationConfig.type === "manyToMany"
+      ) {
+        const count = relationConfig.defaultCount || 1;
+        baseDefaults[key] = Array.from({ length: count }, () =>
+          computeViewDefaults(
+            targetTable,
+            selection[key],
+            registry,
+            new Set(visited)
+          )
+        );
+      } else {
+        baseDefaults[key] = computeViewDefaults(
+          targetTable,
+          selection[key],
+          registry,
+          new Set(visited)
+        );
+      }
+    } else if (typeof defaultConfig === "object" && "count" in defaultConfig) {
+      baseDefaults[key] = Array.from({ length: defaultConfig.count }, () =>
+        computeViewDefaults(
+          targetTable,
+          selection[key],
+          registry,
+          new Set(visited)
+        )
+      );
+    }
+  }
+
+  // NOTE: This was in the original code but is not needed for the recursive logic.
+  // It's safe to remove, but also safe to keep.
+  // visited.delete(tableName);
+  return baseDefaults;
+}
 // Type for the schema proxy used in resolver
 type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
   [K in keyof S]: {

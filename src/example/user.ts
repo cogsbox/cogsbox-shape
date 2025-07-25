@@ -107,7 +107,7 @@ const users = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4(), z.string()),
   petId: s.reference(() => pets.id),
-  pets: s.hasMany(),
+  pets: s.hasMany([]),
 });
 const pets = schema({
   _tableName: "pets",
@@ -140,48 +140,24 @@ const box2 = createSchemaBox(schemas, (s) => ({
 
 const usersEndSchema = box2.users;
 const petsEndSchema = box2.pets;
-const test = petsEndSchema.defaultValues;
-const test2 = petsEndSchema.zodSchemas.clientSchema;
+const test = petsEndSchema.defaults;
+const test2 = petsEndSchema.schemas.client;
 
 const testShape: typeof petsEndSchema.RelationSelection = {
   owner: { pets: true }, //is now broken
 };
+
 petsEndSchema.nav.owner.pets.owner.pets.owner;
 
-const testPets = petsEndSchema.zodSchemas;
-const clientSChemaP = testPets.clientSchema;
-const subTEstUser = usersEndSchema.zodSchemas;
-const clientSChema = subTEstUser.clientSchema;
+const testPets = petsEndSchema.schemas;
+const clientSChemaP = testPets.client;
+
+const clientSChema = usersEndSchema.createView({ pets: true }).client;
 
 type ClientUser = z.infer<typeof clientSChema>;
-/*type ClientUser = {
-    id: string | number;
-    petId: number;
-    pets: {
-        id: number;
-        userId: string | number;
-        owner: never;
-    }[];
-}*/
+
 const clientSChemView = usersEndSchema.createView({
   pets: { owner: { pets: true } },
-}).clientSchema;
+}).client;
 
 type ClientUserview = z.infer<typeof clientSChemView>;
-/*'type ClientUserview = {
-    id: string | number;
-    petId: number;
-    pets: {
-        id: number;
-        userId: string | number;
-        owner?: {
-            id: string | number;
-            petId: number;
-            pets: {
-                id: number;
-                userId: string | number;
-                owner: never;
-            }[];
-        } | undefined;
-    }[];
-}*/
