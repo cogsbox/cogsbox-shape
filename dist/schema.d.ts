@@ -308,25 +308,23 @@ type RegistryShape = Record<string, {
         toDb: (clientObject: any) => any;
     };
 }>;
-type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Depth["length"] extends 10 ? any : // 1. Start with the base defaults for the table (id, name, etc.)
-DeriveDefaults<TRegistry[TTableName]["rawSchema"]> & (TSelection extends Record<string, any> ? {
+type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Depth["length"] extends 10 ? any : Prettify<DeriveDefaults<TRegistry[TTableName]["rawSchema"]> & (TSelection extends Record<string, any> ? {
     -readonly [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
                 type: infer RelType;
-                schema: () => infer S;
+                schema: any;
             };
         };
-    } ? S extends {
-        _tableName: infer Target;
-    } ? Target extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? DeriveViewDefaults<Target, TSelection[K], TRegistry, [
+    } ? GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
         ...Depth,
         1
-    ]>[] : DeriveViewDefaults<Target, TSelection[K], TRegistry, [
+    ]>[] : // Recursively call with the CORRECT key (TargetKey)
+    DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
         ...Depth,
         1
-    ]> | null | undefined : never : never : never;
-} : {});
+    ]> | null : never : never : never;
+} : {})>;
 type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>, Resolved extends RegistryShape = ResolvedRegistryWithSchemas<S, R> extends RegistryShape ? ResolvedRegistryWithSchemas<S, R> : RegistryShape> = {
     [K in keyof Resolved]: {
         definition: Resolved[K]["rawSchema"];

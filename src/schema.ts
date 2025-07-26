@@ -1690,39 +1690,44 @@ type DeriveViewDefaults<
   Depth extends any[] = [],
 > = Depth["length"] extends 10 // Recursion guard
   ? any
-  : // 1. Start with the base defaults for the table (id, name, etc.)
-    DeriveDefaults<TRegistry[TTableName]["rawSchema"]> &
-      // 2. Add the selected relations as optional properties
-      (TSelection extends Record<string, any>
-        ? {
-            -readonly [K in keyof TSelection &
-              keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
-              config: { sql: { type: infer RelType; schema: () => infer S } };
+  : Prettify<
+      // 1. Start with the defaults for the base primitive fields.
+      DeriveDefaults<TRegistry[TTableName]["rawSchema"]> &
+        // 2. Add the selected relations.
+        (TSelection extends Record<string, any>
+          ? {
+              // Iterate over selected fields that are also in the raw schema
+              -readonly [K in keyof TSelection &
+                keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+                config: { sql: { type: infer RelType; schema: any } }; // Check if it's a relation
+              }
+                ? // THE FIX IS HERE: Find the correct registry key for the related schema.
+                  GetRelationRegistryKey<
+                    TRegistry[TTableName]["rawSchema"][K],
+                    TRegistry
+                  > extends infer TargetKey // Store it in TargetKey
+                  ? TargetKey extends keyof TRegistry // Check if the key exists in the registry
+                    ? RelType extends "hasMany" | "manyToMany"
+                      ? // Recursively call with the CORRECT key (TargetKey)
+                        DeriveViewDefaults<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          [...Depth, 1]
+                        >[]
+                      : // Recursively call with the CORRECT key (TargetKey)
+                        DeriveViewDefaults<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          [...Depth, 1]
+                        > | null
+                    : never // The key wasn't found in the registry
+                  : never // Could not determine the relation key
+                : never; // Not a relation field
             }
-              ? S extends { _tableName: infer Target }
-                ? Target extends keyof TRegistry
-                  ? RelType extends "hasMany" | "manyToMany"
-                    ? // It's an array of the recursively derived default type
-                      DeriveViewDefaults<
-                        Target,
-                        TSelection[K],
-                        TRegistry,
-                        [...Depth, 1]
-                      >[]
-                    : // It's the recursively derived default type, possibly null/undefined
-                      | DeriveViewDefaults<
-                            Target,
-                            TSelection[K],
-                            TRegistry,
-                            [...Depth, 1]
-                          >
-                        | null
-                        | undefined
-                  : never
-                : never
-              : never;
-          }
-        : {});
+          : {})
+    >;
 // The main return type - moved outside and made generic
 type CreateSchemaBoxReturn<
   S extends Record<string, SchemaWithPlaceholders>,
