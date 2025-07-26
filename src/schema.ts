@@ -1814,7 +1814,7 @@ export function createSchemaBox<
   }) as any;
 
   const resolutionConfig = resolver(schemaProxy);
-  const resolvedSchemas = { ...schemas };
+  const resolvedSchemas = schemas;
 
   // STAGE 1: Resolve references
   for (const tableName in schemas) {
@@ -1946,7 +1946,7 @@ export function createSchemaBox<
       // Add this
       RelationSelection: {} as NavigationToSelection<any>,
 
-      createView: function (selection: any) {
+      createView: (selection: any) => {
         const view = createViewObject(tableName, selection, finalRegistry);
         const defaults = computeViewDefaults(
           tableName,

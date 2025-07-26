@@ -590,7 +590,7 @@ export function createSchemaBox(schemas, resolver) {
         },
     });
     const resolutionConfig = resolver(schemaProxy);
-    const resolvedSchemas = { ...schemas };
+    const resolvedSchemas = schemas;
     // STAGE 1: Resolve references
     for (const tableName in schemas) {
         for (const fieldName in schemas[tableName]) {
@@ -692,7 +692,7 @@ export function createSchemaBox(schemas, resolver) {
             nav: createNavProxy(tableName, finalRegistry),
             // Add this
             RelationSelection: {},
-            createView: function (selection) {
+            createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry);
                 const defaults = computeViewDefaults(tableName, selection, finalRegistry);
                 console.log("View defaults:", defaults); // ADD THIS
