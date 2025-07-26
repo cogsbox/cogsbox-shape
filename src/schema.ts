@@ -598,9 +598,10 @@ function createBuilder<
       clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
       validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
     },
+
     initialState: <const TValue, TSchema extends z.ZodTypeAny>(
       value: TValue | (() => TValue),
-      schemaModifier?: (baseSchema: z.ZodTypeAny) => TSchema
+      schemaOrModifier?: TSchema | ((baseSchema: z.ZodTypeAny) => TSchema)
     ) => {
       if (completedStages.has("new")) {
         throw new Error("initialState() can only be called once in the chain");
@@ -608,50 +609,77 @@ function createBuilder<
 
       let actualValue: any;
       let baseSchema: z.ZodTypeAny;
+      let finalSchema: z.ZodTypeAny;
 
-      // Check if value is a Zod schema
+      // Check if value is a Zod schema (single argument case)
       if (value && typeof value === "object" && "_def" in value) {
         // It's a Zod schema - infer the default value
         baseSchema = value as any;
         actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
+        finalSchema = baseSchema;
       } else {
         // Get the actual value
         actualValue = isFunction(value) ? (value as any)() : value;
 
-        // Create base Zod schema from the value type
-        // Check if it's a literal value (string, number, boolean)
+        // If second parameter is provided and is a Zod schema, use it directly
         if (
-          typeof actualValue === "string" ||
-          typeof actualValue === "number" ||
-          typeof actualValue === "boolean"
+          schemaOrModifier &&
+          typeof schemaOrModifier === "object" &&
+          "_def" in schemaOrModifier
         ) {
-          baseSchema = z.literal(actualValue);
-        } else if (actualValue instanceof Date) {
-          baseSchema = z.date();
-        } else if (actualValue === null) {
-          baseSchema = z.null();
-        } else if (actualValue === undefined) {
-          baseSchema = z.undefined();
+          finalSchema = schemaOrModifier as z.ZodTypeAny;
+        } else if (isFunction(schemaOrModifier)) {
+          // It's a schema modifier function
+          // Create base Zod schema from the value type
+          if (
+            typeof actualValue === "string" ||
+            typeof actualValue === "number" ||
+            typeof actualValue === "boolean"
+          ) {
+            baseSchema = z.literal(actualValue);
+          } else if (actualValue instanceof Date) {
+            baseSchema = z.date();
+          } else if (actualValue === null) {
+            baseSchema = z.null();
+          } else if (actualValue === undefined) {
+            baseSchema = z.undefined();
+          } else {
+            baseSchema = z.any();
+          }
+
+          // Apply the modifier
+          finalSchema = schemaOrModifier(baseSchema);
         } else {
-          baseSchema = z.any();
+          // No schema provided, create from value type
+          if (
+            typeof actualValue === "string" ||
+            typeof actualValue === "number" ||
+            typeof actualValue === "boolean"
+          ) {
+            baseSchema = z.literal(actualValue);
+          } else if (actualValue instanceof Date) {
+            baseSchema = z.date();
+          } else if (actualValue === null) {
+            baseSchema = z.null();
+          } else if (actualValue === undefined) {
+            baseSchema = z.undefined();
+          } else {
+            baseSchema = z.any();
+          }
+          finalSchema = baseSchema;
         }
       }
-
-      // Apply schema modifier if provided
-      const newSchema = isFunction(schemaModifier)
-        ? schemaModifier(baseSchema)
-        : baseSchema;
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("new");
 
       // Create union for client/validation
-      const clientValidationSchema = z.union([config.sqlZod, newSchema]);
+      const clientValidationSchema = z.union([config.sqlZod, finalSchema]);
 
       return createBuilder({
         ...config,
         stage: "new",
-        newZod: newSchema,
+        newZod: finalSchema,
         initialValue: actualValue,
         clientZod: clientValidationSchema,
         validationZod: clientValidationSchema,
