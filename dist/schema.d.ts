@@ -274,7 +274,16 @@ type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape
 type NavigationToSelection<Nav> = Nav extends object ? {
     [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
 } : never;
-type BuildZodShape<TTableName extends keyof TRegistry, TSelection, TKey extends "clientSchema" | "validationSchema", TRegistry extends RegistryShape> = TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer Base> ? TSelection extends Record<string, any> ? Omit<Base, keyof TSelection> & {
+type BuildZodShape<TTableName extends keyof TRegistry, TSelection, TKey extends "clientSchema" | "validationSchema", TRegistry extends RegistryShape> = TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer Base> ? TSelection extends Record<string, any> ? // First get the base fields without relations
+{
+    [K in keyof Base as K extends keyof TRegistry[TTableName]["rawSchema"] ? TRegistry[TTableName]["rawSchema"][K] extends {
+        config: {
+            sql: {
+                schema: any;
+            };
+        };
+    } ? never : K : K]: Base[K];
+} & {
     [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]: TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
@@ -398,16 +407,5 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<Depth["length"] exte
             initialValue: infer D;
         };
     } ? D extends () => infer R ? R : D : never;
-}>;
-export type InferFromSchema<T extends {
-    _tableName: string;
-}> = Prettify<{
-    SqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>;
-    ClientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>;
-    ValidationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>;
-    Sql: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>;
-    Client: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>;
-    Validation: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>>;
-    Defaults: DeriveDefaults<T>;
 }>;
 export {};

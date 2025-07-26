@@ -1553,7 +1553,7 @@ type NavigationProxy<
         Registry[CurrentTable]["rawSchema"][K]
       > extends infer TargetTable
         ? TargetTable extends keyof Registry
-          ? NavigationProxy<TargetTable & string, Registry>
+          ? NavigationProxy<TargetTable & string, Registry> // <-- The infinite recursion happens here
           : never
         : never;
     }
@@ -1564,7 +1564,6 @@ type NavigationToSelection<Nav> = Nav extends object
       [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
     }
   : never;
-
 type BuildZodShape<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -1573,7 +1572,16 @@ type BuildZodShape<
 > =
   TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer Base>
     ? TSelection extends Record<string, any>
-      ? Omit<Base, keyof TSelection> & {
+      ? // First get the base fields without relations
+        {
+          [K in keyof Base as K extends keyof TRegistry[TTableName]["rawSchema"]
+            ? TRegistry[TTableName]["rawSchema"][K] extends {
+                config: { sql: { schema: any } };
+              }
+              ? never
+              : K
+            : K]: Base[K];
+        } & { // Then add the selected relations
           [K in keyof TSelection &
             keyof TRegistry[TTableName]["rawSchema"]]: TRegistry[TTableName]["rawSchema"][K] extends {
             config: { sql: { type: infer RelType; schema: () => infer S } };
@@ -2095,44 +2103,3 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
             : never;
       }
 >;
-// Main exportable type. This remains the same but will now work.
-export type InferFromSchema<T extends { _tableName: string }> = Prettify<{
-  SqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>;
-  ClientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>;
-  ValidationSchema: z.ZodObject<
-    Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>
-  >;
-  Sql: z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>;
-  Client: z.infer<
-    z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>
-  >;
-  Validation: z.infer<
-    z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>
-  >;
-  Defaults: DeriveDefaults<T>;
-}>;
-
-type ExtractRelations<T> = {
-  [K in keyof T as T[K] extends {
-    config: {
-      sql: {
-        type: "hasMany" | "hasOne" | "manyToMany";
-        schema: () => any;
-      };
-    };
-  }
-    ? K
-    : never]: T[K] extends {
-    config: {
-      sql: {
-        schema: () => infer S;
-      };
-    };
-  }
-    ? SchemaProxyBasic<S>
-    : never;
-};
-
-type SchemaProxyBasic<T> = T extends { _tableName: string }
-  ? ExtractRelations<T>
-  : {};

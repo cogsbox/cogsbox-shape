@@ -107,7 +107,7 @@ const users = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4(), z.string()),
   petId: s.reference(() => pets.id),
-  pets: s.hasMany([]),
+  pets: s.hasMany(true),
 });
 const pets = schema({
   _tableName: "pets",
@@ -151,10 +151,33 @@ petsEndSchema.nav.owner.pets.owner.pets.owner;
 
 const testPets = petsEndSchema.schemas;
 const clientSChemaP = testPets.client;
+/*const clientSChemaP: z.ZodObject<{
+    id: z.ZodNumber;
+    userId: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+}, z.core.$strip>*/
+const clientSChema = usersEndSchema.createView({ pets: true });
+/*const clientSChema: {
+    sql: z.ZodObject<{
+        id: z.ZodNumber;
+        petId: z.ZodNumber;
+    }, z.core.$strip>;
+    client: z.ZodObject<{
+        id: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+        petId: z.ZodNumber;
+    } & {
+        ...;
+    }, z.core.$strip>;
+    validation: z.ZodObject<...>;
+    defaults: {
+        ...;
+    };
+}*/ // the defautls beign any is wring as well
+const defaults = clientSChema.defaults;
+type ClientUser = z.infer<typeof clientSChema.client>;
+//type ClientUser = unknown obviously not right
 
-const clientSChema = usersEndSchema.createView({ pets: true }).defaults;
-
-type ClientUser = z.infer<typeof clientSChema>;
+const clientSChema2 = usersEndSchema.schemas.client;
+type ClientUser3 = z.infer<typeof clientSChema2>;
 
 const clientSChemView = usersEndSchema.createView({
   pets: { owner: { pets: true } },
