@@ -1581,7 +1581,8 @@ type BuildZodShape<
               ? never
               : K
             : K]: Base[K];
-        } & { // Then add the selected relations
+        } & {
+          // Then add the selected relations
           [K in keyof TSelection &
             keyof TRegistry[TTableName]["rawSchema"]]: TRegistry[TTableName]["rawSchema"][K] extends {
             config: { sql: { type: infer RelType; schema: () => infer S } };
@@ -1721,7 +1722,6 @@ type CreateSchemaBoxReturn<
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
 
     nav: NavigationProxy<K & string, Resolved>;
-    // ADD THIS BACK
     RelationSelection: NavigationToSelection<
       NavigationProxy<K & string, Resolved>
     >;
