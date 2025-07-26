@@ -1,5 +1,4 @@
-import { z, ZodType } from "zod";
-import { ca } from "zod/v4/locales";
+import { z } from "zod";
 export const isFunction = (fn) => typeof fn === "function";
 // Function to create a properly typed current timestamp config
 export function currentTimeStamp() {
@@ -516,52 +515,70 @@ export function createSchema(schema, relations) {
         toDb,
     };
 }
-function createViewObject(tableName, selection, registry) {
-    // A recursive helper that builds ONE schema (client or validation) for a view.
-    function buildView(currentTable, schemaType, subSelection) {
-        const registryEntry = registry[currentTable];
-        const rawSchema = registryEntry.rawSchema;
+function createViewObject(initialRegistryKey, // The key for the starting schema, e.g., "users"
+selection, registry, tableNameToRegistryKeyMap // The lookup map
+) {
+    /**
+     * A recursive helper function that builds a Zod schema for a given schema and its selected relations.
+     * It is defined inside createViewObject to have access to the `registry` and `tableNameToRegistryKeyMap` via a closure.
+     *
+     * @param currentRegistryKey - The user-defined key for the current schema being processed (e.g., "users", then "posts").
+     * @param subSelection - The part of the selection object for the current schema (e.g., { comments: true } or just `true`).
+     * @param schemaType - Whether to build the 'client' or 'validation' schema.
+     * @returns A ZodObject representing the composed schema.
+     */
+    function buildView(currentRegistryKey, subSelection, schemaType) {
+        // 1. Find the current schema's definition in the registry using its KEY.
+        const registryEntry = registry[currentRegistryKey];
+        if (!registryEntry) {
+            throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
+        }
+        // 2. Get the base Zod schema (primitives and references only) for the current level.
         const baseSchema = registryEntry.zodSchemas[`${schemaType}Schema`];
-        // --- START OF THE FIX ---
-        // 1. Get the shape of the base schema (e.g., { id: z.ZodNumber, name: z.ZodString })
-        // The base schema correctly contains only primitive/referenced fields.
         const primitiveShape = baseSchema.shape;
-        // 2. If the selection is just `true`, we don't need to add any relations.
+        // 3. If the selection is just `true`, we are done at this level. Return the base primitive schema.
         if (subSelection === true) {
             return z.object(primitiveShape);
         }
-        // 3. Build a new shape object for the selected relations.
+        // 4. If the selection is an object, we need to process its relations.
         const selectedRelationShapes = {};
         if (typeof subSelection === "object") {
-            for (const key in subSelection) {
-                // We only care about keys that are actual relations in the raw schema.
-                if (subSelection[key] && rawSchema[key]?.config?.sql?.schema) {
-                    const relationConfig = rawSchema[key].config.sql;
-                    const targetTable = relationConfig.schema()._tableName;
-                    // Recursively build the sub-schema for the relation.
-                    const subSchema = buildView(targetTable, schemaType, subSelection[key]);
-                    // Wrap it in an array or optional as needed.
+            // Iterate over the keys in the selection object (e.g., "posts", "profile").
+            for (const relationKey in subSelection) {
+                // Check if this key corresponds to a valid relation in the raw schema definition.
+                const relationBuilder = registryEntry.rawSchema[relationKey];
+                const isRelation = relationBuilder?.config?.sql?.schema;
+                if (subSelection[relationKey] && isRelation) {
+                    const relationConfig = relationBuilder.config.sql;
+                    // 5. KEY STEP: Get the internal `_tableName` of the TARGET schema (e.g., "post_table").
+                    const targetTableName = relationConfig.schema()._tableName;
+                    // 6. KEY STEP: Use the map to find the REGISTRY KEY for that target schema (e.g., "posts").
+                    const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
+                    if (!nextRegistryKey) {
+                        throw new Error(`Could not resolve registry key for table "${targetTableName}"`);
+                    }
+                    // 7. RECURSIVE CALL: Call `buildView` for the related schema, passing the
+                    //    CORRECT registry key and the sub-selection for that relation.
+                    const relationSchema = buildView(nextRegistryKey, subSelection[relationKey], schemaType);
+                    // 8. Wrap the resulting schema in an array or optional based on the relation type.
                     if (["hasMany", "manyToMany"].includes(relationConfig.type)) {
-                        selectedRelationShapes[key] = z.array(subSchema);
+                        selectedRelationShapes[relationKey] = z.array(relationSchema);
                     }
                     else {
-                        selectedRelationShapes[key] = subSchema.optional();
+                        selectedRelationShapes[relationKey] = relationSchema.optional();
                     }
                 }
             }
         }
-        // 4. Combine the primitive shape and the new relation shapes into one final shape.
+        // 9. Combine the base primitive fields with the newly built relational schemas.
         const finalShape = { ...primitiveShape, ...selectedRelationShapes };
-        // 5. Return a brand new, clean Zod object from the final shape.
         return z.object(finalShape);
-        // --- END OF THE FIX ---
     }
-    // The main function builds the final object with both schemas.
-    const sourceRegistryEntry = registry[tableName];
+    // The main function's return value. It kicks off the recursive process for both client and validation schemas.
     return {
-        sql: sourceRegistryEntry.zodSchemas.sqlSchema,
-        client: buildView(tableName, "client", selection),
-        validation: buildView(tableName, "validation", selection),
+        sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
+        client: buildView(initialRegistryKey, selection, "client"),
+        validation: buildView(initialRegistryKey, selection, "validation"),
     };
 }
 export function createSchemaBox(schemas, resolver) {
@@ -675,6 +692,11 @@ export function createSchemaBox(schemas, resolver) {
         });
     };
     const cleanerRegistry = {};
+    const tableNameToRegistryKeyMap = {};
+    for (const key in finalRegistry) {
+        const tableName = finalRegistry[key].rawSchema._tableName;
+        tableNameToRegistryKeyMap[tableName] = key;
+    }
     for (const tableName in finalRegistry) {
         const entry = finalRegistry[tableName];
         cleanerRegistry[tableName] = {
@@ -691,26 +713,35 @@ export function createSchemaBox(schemas, resolver) {
             defaults: entry.zodSchemas.defaultValues,
             nav: createNavProxy(tableName, finalRegistry),
             // Add this
-            RelationSelection: {},
             createView: (selection) => {
-                const view = createViewObject(tableName, selection, finalRegistry);
-                const defaults = computeViewDefaults(tableName, selection, finalRegistry);
+                const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
+                const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 console.log("View defaults:", defaults); // ADD THIS
                 return {
                     ...view,
                     defaults: defaults,
                 };
             },
+            RelationSelection: {},
         };
     }
     return cleanerRegistry;
 }
-function computeViewDefaults(tableName, selection, registry, visited = new Set()) {
-    if (visited.has(tableName)) {
+function computeViewDefaults(currentRegistryKey, // Renamed for clarity, e.g., "users"
+selection, registry, tableNameToRegistryKeyMap, // Accept the map
+visited = new Set()) {
+    if (visited.has(currentRegistryKey)) {
         return undefined; // Prevent circular references
     }
-    visited.add(tableName);
-    const entry = registry[tableName];
+    visited.add(currentRegistryKey);
+    // This lookup now uses the correct key every time.
+    const entry = registry[currentRegistryKey];
+    // This check prevents the crash.
+    if (!entry) {
+        // This case should ideally not be hit if the map is correct, but it's safe to have.
+        console.warn(`Could not find entry for key "${currentRegistryKey}" in registry while computing defaults.`);
+        return {};
+    }
     const rawSchema = entry.rawSchema;
     const baseDefaults = { ...entry.zodSchemas.defaultValues };
     if (selection === true || typeof selection !== "object") {
@@ -724,13 +755,16 @@ function computeViewDefaults(tableName, selection, registry, visited = new Set()
         if (!field?.config?.sql?.schema)
             continue;
         const relationConfig = field.config.sql;
-        const targetTable = relationConfig.schema()._tableName;
-        // ----- FIX IS HERE -----
-        // Look for the defaultConfig on the nested relationConfig object.
-        const defaultConfig = relationConfig.defaultConfig;
+        // --- THE CORE FIX ---
+        // 1. Get the internal _tableName of the related schema (e.g., "post_table")
+        const targetTableName = relationConfig.schema()._tableName;
+        // 2. Use the map to find the correct registry key for it (e.g., "posts")
+        const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
+        if (!nextRegistryKey)
+            continue; // Could not resolve, skip this relation
         // Handle different default configurations
+        const defaultConfig = relationConfig.defaultConfig;
         if (defaultConfig === undefined) {
-            // Don't include in defaults
             delete baseDefaults[key];
         }
         else if (defaultConfig === null) {
@@ -739,23 +773,21 @@ function computeViewDefaults(tableName, selection, registry, visited = new Set()
         else if (Array.isArray(defaultConfig)) {
             baseDefaults[key] = [];
         }
-        else if (defaultConfig === true) {
-            // Generate based on nested selection
-            if (relationConfig.type === "hasMany" ||
-                relationConfig.type === "manyToMany") {
-                const count = relationConfig.defaultCount || 1;
-                baseDefaults[key] = Array.from({ length: count }, () => computeViewDefaults(targetTable, selection[key], registry, new Set(visited)));
-            }
-            else {
-                baseDefaults[key] = computeViewDefaults(targetTable, selection[key], registry, new Set(visited));
-            }
+        else if (relationConfig.type === "hasMany" ||
+            relationConfig.type === "manyToMany") {
+            const count = defaultConfig?.count || relationConfig.defaultCount || 1;
+            baseDefaults[key] = Array.from({ length: count }, () => 
+            // 3. Make the recursive call with the CORRECT key
+            computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, // Pass the map along
+            new Set(visited)));
         }
-        else if (typeof defaultConfig === "object" && "count" in defaultConfig) {
-            baseDefaults[key] = Array.from({ length: defaultConfig.count }, () => computeViewDefaults(targetTable, selection[key], registry, new Set(visited)));
+        else {
+            // hasOne or belongsTo
+            baseDefaults[key] =
+                // 3. Make the recursive call with the CORRECT key
+                computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, // Pass the map along
+                new Set(visited));
         }
     }
-    // NOTE: This was in the original code but is not needed for the recursive logic.
-    // It's safe to remove, but also safe to keep.
-    // visited.delete(tableName);
     return baseDefaults;
 }

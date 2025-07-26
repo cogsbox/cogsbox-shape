@@ -5,6 +5,7 @@ import { expectTypeOf } from "expect-type";
 // Import the new primary method for schema creation
 import { s, schema, createSchemaBox } from "../schema";
 import z from "zod";
+import { testChatMEssages } from "../example/schema copy";
 
 /*
 ================================================================
@@ -530,6 +531,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       id: s.sql({ type: "int", pk: true }),
       title: s.sql({ type: "varchar" }).initialState("Default Post"),
       authorId: s.reference(() => users.id),
+      user: s.hasOne(true),
     });
 
     const comments = schema({
@@ -537,6 +539,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       id: s.sql({ type: "int", pk: true }),
       text: s.sql({ type: "varchar" }).initialState("Default Comment"),
       userId: s.reference(() => users.id),
+      user: s.hasOne(true),
     });
 
     const profiles = schema({
@@ -544,6 +547,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       id: s.sql({ type: "int", pk: true }),
       bio: s.sql({ type: "varchar" }).initialState("Default Bio"),
       userId: s.reference(() => users.id),
+      user: s.hasOne(true),
     });
 
     const box = createSchemaBox({ users, posts, comments, profiles }, (s) => ({
@@ -553,6 +557,15 @@ describe("New Session Features - Base Schema Without Relations", () => {
         profile: { fromKey: "id", toKey: s.profiles.userId },
         settings: { fromKey: "id", toKey: s.profiles.userId },
         followers: { fromKey: "id", toKey: s.users.id },
+      },
+      posts: {
+        user: { fromKey: "id", toKey: s.users.id },
+      },
+      comments: {
+        user: { fromKey: "id", toKey: s.users.id },
+      },
+      profiles: {
+        user: { fromKey: "id", toKey: s.users.id },
       },
     }));
 
