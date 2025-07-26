@@ -222,7 +222,7 @@ type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
         } : never;
     };
 };
-type ResolveField<Field, Resolution, AllSchemas extends Record<string, any>> = Field extends PlaceholderReference ? Resolution : Field extends PlaceholderRelation<infer RelType> ? Resolution extends {
+type ResolveField<Field, Resolution, AllSchemas extends Record<string, any>> = Field extends PlaceholderReference ? Resolution : Field extends Reference<any> ? Resolution : Field extends PlaceholderRelation<infer RelType> ? Resolution extends {
     toKey: infer ToKey;
 } ? ToKey extends {
     __parentTableType: infer TargetSchema extends Schema<any>;
@@ -259,7 +259,7 @@ type IsRelationField<Field> = Field extends {
         };
     };
 } ? true : false;
-type GetRelationTarget<Field> = Field extends {
+type GetRelationRegistryKey<Field, TRegistry extends RegistryShape> = Field extends {
     config: {
         sql: {
             schema: () => infer TargetSchema;
@@ -267,35 +267,28 @@ type GetRelationTarget<Field> = Field extends {
     };
 } ? TargetSchema extends {
     _tableName: infer TableName;
-} ? TableName : never : never;
+} ? {
+    [K in keyof TRegistry]: TRegistry[K]["rawSchema"]["_tableName"] extends TableName ? K : never;
+}[keyof TRegistry] : never : never;
 type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
-    [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationTarget<Registry[CurrentTable]["rawSchema"][K]> extends infer TargetTable ? TargetTable extends keyof Registry ? NavigationProxy<TargetTable & string, Registry> : never : never;
+    [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
 } : {};
 type NavigationToSelection<Nav> = Nav extends object ? {
     [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
 } : never;
 type BuildZodShape<TTableName extends keyof TRegistry, TSelection, TKey extends "clientSchema" | "validationSchema", TRegistry extends RegistryShape> = TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer Base> ? TSelection extends Record<string, any> ? // First get the base fields without relations
 {
-    [K in keyof Base as K extends keyof TRegistry[TTableName]["rawSchema"] ? TRegistry[TTableName]["rawSchema"][K] extends {
-        config: {
-            sql: {
-                schema: any;
-            };
-        };
-    } ? never : K : K]: Base[K];
+    [K in keyof Base as K extends keyof TRegistry[TTableName]["rawSchema"] ? IsRelationField<TRegistry[TTableName]["rawSchema"][K]> extends true ? never : K : K]: Base[K];
 } & {
-    [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]: TRegistry[TTableName]["rawSchema"][K] extends {
+    [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<TRegistry[TTableName]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
                 type: infer RelType;
-                schema: () => infer S;
             };
         };
-    } ? S extends {
-        _tableName: infer Target;
-    } ? Target extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? TSelection[K] extends true ? TRegistry[Target]["zodSchemas"][TKey] extends z.ZodObject<infer Shape extends Record<string, any>> ? z.ZodArray<z.ZodObject<OmitRelations<Shape, TRegistry[Target]["rawSchema"]>>> : never : z.ZodArray<z.ZodObject<BuildZodShape<Target, TSelection[K], TKey, TRegistry>>> : TSelection[K] extends true ? TRegistry[Target]["zodSchemas"][TKey] extends z.ZodObject<infer Shape extends Record<string, any>> ? z.ZodOptional<z.ZodObject<OmitRelations<Shape, TRegistry[Target]["rawSchema"]>>> : never : z.ZodOptional<z.ZodObject<BuildZodShape<Target, TSelection[K], TKey, TRegistry>>> : never : never : never;
+    } ? RelType extends "hasMany" | "manyToMany" ? z.ZodArray<z.ZodObject<TSelection[K] extends true ? OmitRelations<TRegistry[TargetKey]["zodSchemas"][TKey] extends z.ZodObject<infer Shape> ? Shape : never, TRegistry[TargetKey]["rawSchema"]> : BuildZodShape<TargetKey, TSelection[K], TKey, TRegistry>>> : z.ZodOptional<z.ZodObject<TSelection[K] extends true ? OmitRelations<TRegistry[TargetKey]["zodSchemas"][TKey] extends z.ZodObject<infer Shape> ? Shape : never, TRegistry[TargetKey]["rawSchema"]> : BuildZodShape<TargetKey, TSelection[K], TKey, TRegistry>>> : never : never : never;
 } : Base : never;
-type OmitRelations<Shape, RawSchema> = Omit<Shape, {
+export type OmitRelations<Shape, RawSchema> = Omit<Shape, {
     [K in keyof Shape]: K extends keyof RawSchema ? RawSchema[K] extends {
         config: {
             sql: {
