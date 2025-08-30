@@ -156,10 +156,10 @@ export interface IBuilderMethods<
                   "new",
                   T,
                   TSql,
-                  z.ZodLiteral<R>,
+                  ZodTypeFromPrimitive<R>,
                   R,
-                  CollapsedUnion<TSql, z.ZodLiteral<R>>,
-                  CollapsedUnion<TSql, z.ZodLiteral<R>>
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
                 >
               >
             : Prettify<
@@ -191,10 +191,10 @@ export interface IBuilderMethods<
                 "new",
                 T,
                 TSql,
-                z.ZodLiteral<TValue>,
+                ZodTypeFromPrimitive<TValue>,
                 TValue,
-                CollapsedUnion<TSql, z.ZodLiteral<TValue>>,
-                CollapsedUnion<TSql, z.ZodLiteral<TValue>>
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
               >
             >
           : Prettify<

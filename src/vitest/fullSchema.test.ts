@@ -36,7 +36,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     it("should create a union type when .initialState provides a different type", () => {
       const idField = s
         .sql({ type: "int", pk: true })
-        .initialState(() => "temp-uuid-123" as const);
+        .initialState(() => "temp-uuid-123", z.literal("temp-uuid-123"));
       type InferredClient = z.infer<typeof idField.config.zodClientSchema>;
       expectTypeOf<InferredClient>().toEqualTypeOf<number | "temp-uuid-123">();
     });
@@ -62,7 +62,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
       _tableName: "users",
       id: s
         .sql({ type: "int", pk: true })
-        .initialState(() => "new-user" as const),
+        .initialState(() => "new-user" as const, z.literal("new-user")),
       posts: s.hasMany(),
     });
 
