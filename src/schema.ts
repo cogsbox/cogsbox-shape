@@ -1777,7 +1777,7 @@ type CreateSchemaBoxReturn<
 > = {
   [K in keyof Resolved]: {
     definition: Resolved[K]["rawSchema"];
-
+    schemaKey: K;
     schemas: {
       sql: Resolved[K]["zodSchemas"]["sqlSchema"];
       client: Resolved[K]["zodSchemas"]["clientSchema"];
