@@ -288,15 +288,8 @@ type _DeriveViewShape<TTableName extends keyof TRegistry, TSelection, TRegistry 
         1
     ]>>> : never : never : never;
 }> : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> : never;
-type SQLTypeToTS<T extends SQLType> = T["pk"] extends true ? number : T["type"] extends "varchar" | "char" | "text" | "longtext" ? string : T["type"] extends "int" ? number : T["type"] extends "boolean" ? boolean : T["type"] extends "date" | "datetime" | "timestamp" ? Date : never;
-type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Prettify<{
-    [K in keyof TRegistry[TTableName]["rawSchema"] as K extends "_tableName" ? never : K]: TRegistry[TTableName]["rawSchema"][K] extends {
-        config: {
-            sql: infer TSql extends SQLType;
-        };
-    } ? TSql["nullable"] extends true ? SQLTypeToTS<TSql> | null : SQLTypeToTS<TSql> : never;
-} & (TSelection extends Record<string, any> ? {
-    [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Prettify<TRegistry[TTableName]["zodSchemas"]["defaultValues"] & (TSelection extends Record<string, any> ? {
+    -readonly [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
                 type: infer RelType;
