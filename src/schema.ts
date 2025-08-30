@@ -115,13 +115,7 @@ type IsLiteralType<T> = T extends string
         ? false
         : true
       : false;
-type NonLiteral<T> = T extends string
-  ? string
-  : T extends number
-    ? number
-    : T extends boolean
-      ? boolean
-      : T;
+
 type CollapsedUnion<
   A extends z.ZodTypeAny,
   B extends z.ZodTypeAny,
@@ -137,7 +131,7 @@ export interface IBuilderMethods<
   // PASTE THIS ENTIRE BLOCK. THIS IS THE ONE.
   initialState: {
     // Overload 1: For a single argument (value or schema)
-    <TValue>(
+    <const TValue>(
       value: TValue extends (...args: any[]) => void | undefined
         ? never
         : TValue
@@ -156,17 +150,29 @@ export interface IBuilderMethods<
                 CollapsedUnion<TSql, TValue>
               >
             >
-          : Prettify<
-              Builder<
-                "new",
-                T,
-                TSql,
-                ZodTypeFromPrimitive<R>,
-                NonLiteral<R>,
-                CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
-                CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
+          : R extends string | number | boolean
+            ? Prettify<
+                Builder<
+                  "new",
+                  T,
+                  TSql,
+                  ZodTypeFromPrimitive<R>,
+                  R,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
+                >
               >
-            >
+            : Prettify<
+                Builder<
+                  "new",
+                  T,
+                  TSql,
+                  ZodTypeFromPrimitive<R>,
+                  R,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
+                  CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
+                >
+              >
       : TValue extends z.ZodTypeAny
         ? Prettify<
             Builder<
@@ -179,17 +185,29 @@ export interface IBuilderMethods<
               CollapsedUnion<TSql, TValue>
             >
           >
-        : Prettify<
-            Builder<
-              "new",
-              T,
-              TSql,
-              ZodTypeFromPrimitive<TValue>,
-              NonLiteral<TValue>,
-              CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
-              CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
+        : TValue extends string | number | boolean
+          ? Prettify<
+              Builder<
+                "new",
+                T,
+                TSql,
+                ZodTypeFromPrimitive<TValue>,
+                TValue,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
+              >
             >
-          >;
+          : Prettify<
+              Builder<
+                "new",
+                T,
+                TSql,
+                ZodTypeFromPrimitive<TValue>,
+                TValue,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
+                CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
+              >
+            >;
 
     // Overload 2: For a value AND an explicit Zod schema.
     <const TValue, TSchema extends z.ZodTypeAny>(
@@ -595,10 +613,12 @@ function createBuilder<
 
       // Check if value is a Zod schema (single argument case)
       if (value && typeof value === "object" && "_def" in value) {
+        // It's a Zod schema - infer the default value
         baseSchema = value as any;
         actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
         finalSchema = baseSchema;
       } else {
+        // Get the actual value
         actualValue = isFunction(value) ? (value as any)() : value;
 
         // If second parameter is provided and is a Zod schema, use it directly
@@ -609,12 +629,44 @@ function createBuilder<
         ) {
           finalSchema = schemaOrModifier as z.ZodTypeAny;
         } else if (isFunction(schemaOrModifier)) {
-          // Create base Zod schema from SQLType instead of value type
-          baseSchema = config.sqlZod;
+          // It's a schema modifier function
+          // Create base Zod schema from the value type
+          if (typeof actualValue === "string") {
+            baseSchema = z.string();
+          } else if (typeof actualValue === "number") {
+            baseSchema = z.number();
+          } else if (typeof actualValue === "boolean") {
+            baseSchema = z.boolean();
+          } else if (actualValue instanceof Date) {
+            baseSchema = z.date();
+          } else if (actualValue === null) {
+            baseSchema = z.null();
+          } else if (actualValue === undefined) {
+            baseSchema = z.undefined();
+          } else {
+            baseSchema = z.any();
+          }
+
+          // Apply the modifier
           finalSchema = schemaOrModifier(baseSchema);
         } else {
-          // No schema provided, use the SQL type's schema
-          finalSchema = config.sqlZod;
+          // No schema provided, create from value type
+          if (typeof actualValue === "string") {
+            baseSchema = z.string();
+          } else if (typeof actualValue === "number") {
+            baseSchema = z.number();
+          } else if (typeof actualValue === "boolean") {
+            baseSchema = z.boolean();
+          } else if (actualValue instanceof Date) {
+            baseSchema = z.date();
+          } else if (actualValue === null) {
+            baseSchema = z.null();
+          } else if (actualValue === undefined) {
+            baseSchema = z.undefined();
+          } else {
+            baseSchema = z.any();
+          }
+          finalSchema = baseSchema;
         }
       }
 

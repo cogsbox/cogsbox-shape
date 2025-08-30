@@ -135,11 +135,13 @@ function createBuilder(config) {
             let finalSchema;
             // Check if value is a Zod schema (single argument case)
             if (value && typeof value === "object" && "_def" in value) {
+                // It's a Zod schema - infer the default value
                 baseSchema = value;
                 actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
                 finalSchema = baseSchema;
             }
             else {
+                // Get the actual value
                 actualValue = isFunction(value) ? value() : value;
                 // If second parameter is provided and is a Zod schema, use it directly
                 if (schemaOrModifier &&
@@ -148,13 +150,56 @@ function createBuilder(config) {
                     finalSchema = schemaOrModifier;
                 }
                 else if (isFunction(schemaOrModifier)) {
-                    // Create base Zod schema from SQLType instead of value type
-                    baseSchema = config.sqlZod;
+                    // It's a schema modifier function
+                    // Create base Zod schema from the value type
+                    if (typeof actualValue === "string") {
+                        baseSchema = z.string();
+                    }
+                    else if (typeof actualValue === "number") {
+                        baseSchema = z.number();
+                    }
+                    else if (typeof actualValue === "boolean") {
+                        baseSchema = z.boolean();
+                    }
+                    else if (actualValue instanceof Date) {
+                        baseSchema = z.date();
+                    }
+                    else if (actualValue === null) {
+                        baseSchema = z.null();
+                    }
+                    else if (actualValue === undefined) {
+                        baseSchema = z.undefined();
+                    }
+                    else {
+                        baseSchema = z.any();
+                    }
+                    // Apply the modifier
                     finalSchema = schemaOrModifier(baseSchema);
                 }
                 else {
-                    // No schema provided, use the SQL type's schema
-                    finalSchema = config.sqlZod;
+                    // No schema provided, create from value type
+                    if (typeof actualValue === "string") {
+                        baseSchema = z.string();
+                    }
+                    else if (typeof actualValue === "number") {
+                        baseSchema = z.number();
+                    }
+                    else if (typeof actualValue === "boolean") {
+                        baseSchema = z.boolean();
+                    }
+                    else if (actualValue instanceof Date) {
+                        baseSchema = z.date();
+                    }
+                    else if (actualValue === null) {
+                        baseSchema = z.null();
+                    }
+                    else if (actualValue === undefined) {
+                        baseSchema = z.undefined();
+                    }
+                    else {
+                        baseSchema = z.any();
+                    }
+                    finalSchema = baseSchema;
                 }
             }
             const newCompletedStages = new Set(completedStages);
