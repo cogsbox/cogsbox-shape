@@ -1,4 +1,4 @@
-import { schema, s, createSchemaBox } from "../schema.js";
+import { schema, s, createSchemaBox, DeriveViewResult } from "../schema.js";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
@@ -69,6 +69,7 @@ export const schemaBox = createSchemaBox(
     },
   })
 );
+
 const testChatMEssages = schemaBox.messages.createView({
   sender: true,
   recipient: true,
@@ -99,4 +100,39 @@ type clientInfer2 = z.infer<typeof clientUsers>;
     settings?: undefined;
     messages?: undefined;
 }*/
-const defaultClinet = schemaBox.users.defaults;
+const messageSelection = {
+  sender: true,
+  recipient: true,
+} as const;
+
+// We use the utility type to generate the Zod shape and infer the result.
+
+type TestResult1 = DeriveViewResult<
+  "messages",
+  typeof messageSelection,
+  typeof schemaBox ///is htis the correct ytype to fuckign pass in
+>;
+/*ype TestResult1 = {
+    sql: z.ZodObject<{
+        message_id: z.ZodNumber;
+        content: z.ZodString;
+        timestamp: z.ZodDate;
+        sender_id: z.ZodNumber;
+        recipient_id: z.ZodNumber;
+    }, z.core.$strip>;
+    client: z.ZodObject<{
+        timestamp: z.ZodString;
+        message_id: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+        content: z.ZodString;
+        sender_id: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+        recipient_id: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+        sender: z.ZodOptional<z.ZodObject<OmitRelationFields<{
+            user_id: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+            username: z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>;
+            age: z.ZodNumber;
+            email: z.ZodUnion<...>;
+            created_at: z.ZodDate;
+        }, ResolveSchema<...>>, z.core.$strip>>;
+        recipient: z.ZodOptional<...>;
+    }, z.core.$strip>;
+    validation: z.ZodObject<...>;}*/

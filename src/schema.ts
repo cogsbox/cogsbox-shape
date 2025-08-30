@@ -1360,11 +1360,7 @@ type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
 // ============================================
 
 // Helper type to resolve a placeholder field
-type ResolveField<
-  Field,
-  Resolution,
-  AllSchemas extends Record<string, any>,
-> = Field extends PlaceholderReference
+type ResolveField<Field, Resolution> = Field extends PlaceholderReference
   ? Resolution // The resolved reference (like s.pets.id)
   : Field extends Reference<any> // ADD THIS
     ? Resolution
@@ -1407,10 +1403,9 @@ type ResolveField<
 type ResolveSchema<
   Schema extends SchemaWithPlaceholders,
   Resolutions extends Record<string, any>,
-  AllSchemas extends Record<string, any>,
 > = {
   [K in keyof Schema]: K extends keyof Resolutions
-    ? ResolveField<Schema[K], Resolutions[K], AllSchemas>
+    ? ResolveField<Schema[K], Resolutions[K]>
     : Schema[K];
 };
 
@@ -1422,8 +1417,7 @@ type ResolvedRegistryWithSchemas<
   [K in keyof S]: {
     rawSchema: ResolveSchema<
       S[K],
-      K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
-      S
+      K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
     >;
     zodSchemas: {
       sqlSchema: z.ZodObject<
@@ -1431,8 +1425,7 @@ type ResolvedRegistryWithSchemas<
           DeriveSchemaByKey<
             ResolveSchema<
               S[K],
-              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
-              S
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
             >,
             "zodSqlSchema"
           >
@@ -1443,8 +1436,7 @@ type ResolvedRegistryWithSchemas<
           DeriveSchemaByKey<
             ResolveSchema<
               S[K],
-              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
-              S
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
             >,
             "zodClientSchema"
           >
@@ -1455,8 +1447,7 @@ type ResolvedRegistryWithSchemas<
           DeriveSchemaByKey<
             ResolveSchema<
               S[K],
-              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
-              S
+              K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
             >,
             "zodValidationSchema"
           >
@@ -1466,8 +1457,7 @@ type ResolvedRegistryWithSchemas<
         DeriveDefaults<
           ResolveSchema<
             S[K],
-            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {},
-            S
+            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
           >
         >
       >;
@@ -1579,26 +1569,205 @@ type IsRelationField<Field> = Field extends {
   ? true
   : false;
 
-//I think the above needs udpaitng oto use this then teh types that use it need updting
-type GetRelationRegistryKey<
-  Field,
-  TRegistry extends RegistryShape,
-> = Field extends {
-  config: {
-    sql: {
-      schema: () => infer TargetSchema;
-    };
-  };
+//======== THE CORRECTED TYPES (REPLACEMENT BLOCK) ========
+
+// Helper to find the registry key from the final, clean registry shape.
+// CORRECTED: It now works with the public shape by looking for `definition`.
+type GetRelationRegistryKey<Field, TRegistry> = Field extends {
+  config: { sql: { schema: () => infer S } };
 }
-  ? TargetSchema extends { _tableName: infer TableName }
+  ? S extends { _tableName: infer T }
     ? {
-        [K in keyof TRegistry]: TRegistry[K]["rawSchema"]["_tableName"] extends TableName
+        [K in keyof TRegistry]: TRegistry[K] extends {
+          definition: { _tableName: T };
+        }
           ? K
           : never;
       }[keyof TRegistry]
     : never
   : never;
 
+// This helper was already correct but is included for completeness.
+type OmitRelationFields<Shape, RawSchema> = Omit<
+  Shape,
+  {
+    [K in keyof Shape]: K extends keyof RawSchema
+      ? IsRelationField<RawSchema[K]> extends true
+        ? K
+        : never
+      : never;
+  }[keyof Shape]
+>;
+
+// Internal helper for building the Zod SHAPE.
+// CORRECTED: It now uses the correct public shape (`definition`, `schemas.client`, etc.).
+type _DeriveViewShape<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends Record<
+    string,
+    {
+      definition: Record<string, any>;
+      schemas: { client: z.ZodObject<any>; validation: z.ZodObject<any> };
+    }
+  >,
+  TKey extends "client" | "validation",
+  Depth extends any[] = [],
+> = Depth["length"] extends 10
+  ? any
+  : TRegistry[TTableName]["schemas"][TKey] extends z.ZodObject<infer BaseShape>
+    ? TSelection extends Record<string, any>
+      ? Prettify<
+          OmitRelationFields<BaseShape, TRegistry[TTableName]["definition"]> & {
+            [K in keyof TSelection &
+              keyof TRegistry[TTableName]["definition"] as IsRelationField<
+              TRegistry[TTableName]["definition"][K]
+            > extends true
+              ? K
+              : never]: GetRelationRegistryKey<
+              TRegistry[TTableName]["definition"][K],
+              TRegistry
+            > extends infer TargetKey
+              ? TargetKey extends keyof TRegistry
+                ? TRegistry[TTableName]["definition"][K] extends {
+                    config: { sql: { type: infer RelType } };
+                  }
+                  ? RelType extends "hasMany" | "manyToMany"
+                    ? z.ZodArray<
+                        z.ZodObject<
+                          _DeriveViewShape<
+                            TargetKey,
+                            TSelection[K],
+                            TRegistry,
+                            TKey,
+                            [...Depth, 1]
+                          >
+                        >
+                      >
+                    : z.ZodOptional<
+                        z.ZodObject<
+                          _DeriveViewShape<
+                            TargetKey,
+                            TSelection[K],
+                            TRegistry,
+                            TKey,
+                            [...Depth, 1]
+                          >
+                        >
+                      >
+                  : never
+                : never
+              : never;
+          }
+        >
+      : OmitRelationFields<BaseShape, TRegistry[TTableName]["definition"]>
+    : never;
+type DeriveViewDefaults<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends Record<
+    string,
+    {
+      definition: Record<string, any>;
+      defaults: Record<string, any>;
+    }
+  >,
+  Depth extends any[] = [],
+> = Prettify<
+  TRegistry[TTableName]["defaults"] &
+    (TSelection extends Record<string, any>
+      ? {
+          -readonly [K in keyof TSelection &
+            keyof TRegistry[TTableName]["definition"]]?: TRegistry[TTableName]["definition"][K] extends {
+            config: { sql: { type: infer RelType; schema: any } };
+          }
+            ? GetRelationRegistryKey<
+                TRegistry[TTableName]["definition"][K],
+                TRegistry
+              > extends infer TargetKey
+              ? TargetKey extends keyof TRegistry
+                ? RelType extends "hasMany" | "manyToMany"
+                  ? DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    >[]
+                  : DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    > | null
+                : never
+              : never
+            : never;
+        }
+      : {})
+>;
+type _Internal_DeriveViewDefaults<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends RegistryShape,
+  Depth extends any[] = [],
+> = Prettify<
+  TRegistry[TTableName]["zodSchemas"]["defaultValues"] &
+    (TSelection extends Record<string, any>
+      ? {
+          -readonly [K in keyof TSelection &
+            keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+            config: { sql: { type: infer RelType; schema: any } };
+          }
+            ? GetRelationRegistryKey<
+                TRegistry[TTableName]["rawSchema"][K],
+                TRegistry
+              > extends infer TargetKey
+              ? TargetKey extends keyof TRegistry
+                ? RelType extends "hasMany" | "manyToMany"
+                  ? _Internal_DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    >[]
+                  : _Internal_DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    > | null
+                : never
+              : never
+            : never;
+        }
+      : {})
+>;
+
+export type DeriveViewResult<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends Record<
+    string,
+    {
+      definition: Record<string, any> & { _tableName: string };
+      schemas: {
+        sql: z.ZodObject<any>;
+        client: z.ZodObject<any>;
+        validation: z.ZodObject<any>;
+      };
+      defaults: Record<string, any>;
+    }
+  >,
+> = {
+  sql: TRegistry[TTableName]["schemas"]["sql"];
+  client: z.ZodObject<
+    _DeriveViewShape<TTableName, TSelection, TRegistry, "client">
+  >;
+  validation: z.ZodObject<
+    _DeriveViewShape<TTableName, TSelection, TRegistry, "validation">
+  >;
+  defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+};
 type NavigationProxy<
   CurrentTable extends string,
   Registry extends RegistryShape,
@@ -1730,51 +1899,7 @@ type RegistryShape = Record<
     };
   }
 >;
-type DeriveViewDefaults<
-  TTableName extends keyof TRegistry,
-  TSelection,
-  TRegistry extends RegistryShape,
-  Depth extends any[] = [],
-> = Depth["length"] extends 10 // Recursion guard
-  ? any
-  : Prettify<
-      // 1. Start with the defaults for the base primitive fields.
-      DeriveDefaults<TRegistry[TTableName]["rawSchema"]> &
-        // 2. Add the selected relations.
-        (TSelection extends Record<string, any>
-          ? {
-              // Iterate over selected fields that are also in the raw schema
-              -readonly [K in keyof TSelection &
-                keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
-                config: { sql: { type: infer RelType; schema: any } }; // Check if it's a relation
-              }
-                ? // THE FIX IS HERE: Find the correct registry key for the related schema.
-                  GetRelationRegistryKey<
-                    TRegistry[TTableName]["rawSchema"][K],
-                    TRegistry
-                  > extends infer TargetKey // Store it in TargetKey
-                  ? TargetKey extends keyof TRegistry // Check if the key exists in the registry
-                    ? RelType extends "hasMany" | "manyToMany"
-                      ? // Recursively call with the CORRECT key (TargetKey)
-                        DeriveViewDefaults<
-                          TargetKey,
-                          TSelection[K],
-                          TRegistry,
-                          [...Depth, 1]
-                        >[]
-                      : // Recursively call with the CORRECT key (TargetKey)
-                        DeriveViewDefaults<
-                          TargetKey,
-                          TSelection[K],
-                          TRegistry,
-                          [...Depth, 1]
-                        > | null
-                    : never // The key wasn't found in the registry
-                  : never // Could not determine the relation key
-                : never; // Not a relation field
-            }
-          : {})
-    >;
+
 // The main return type - moved outside and made generic
 type CreateSchemaBoxReturn<
   S extends Record<string, SchemaWithPlaceholders>,
@@ -1813,14 +1938,19 @@ type CreateSchemaBoxReturn<
     >(
       selection: TSelection
     ) => {
+      // THIS IS THE FIX:
+      // We now use the library's own internal helper types (`BuildZodShape`, `DeriveViewDefaults`)
+      // which are correctly designed to work with the `Resolved` type.
       sql: Resolved[K]["zodSchemas"]["sqlSchema"];
       client: z.ZodObject<
-        BuildZodShape<K, TSelection, "clientSchema", Resolved>
+        BuildZodShape<K & string, TSelection, "clientSchema", Resolved>
       >;
       validation: z.ZodObject<
-        BuildZodShape<K, TSelection, "validationSchema", Resolved>
+        BuildZodShape<K & string, TSelection, "validationSchema", Resolved>
       >;
-      defaults: Prettify<DeriveViewDefaults<K & string, TSelection, Resolved>>;
+      defaults: Prettify<
+        _Internal_DeriveViewDefaults<K & string, TSelection, Resolved>
+      >;
     };
   };
 };
