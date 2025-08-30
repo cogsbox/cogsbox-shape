@@ -174,10 +174,14 @@ function createBuilder(config) {
                 }
                 else {
                     // No schema provided, create from value type
-                    if (typeof actualValue === "string" ||
-                        typeof actualValue === "number" ||
-                        typeof actualValue === "boolean") {
-                        baseSchema = z.literal(actualValue);
+                    if (typeof actualValue === "string") {
+                        baseSchema = z.string();
+                    }
+                    else if (typeof actualValue === "number") {
+                        baseSchema = z.number();
+                    }
+                    else if (typeof actualValue === "boolean") {
+                        baseSchema = z.boolean();
                     }
                     else if (actualValue instanceof Date) {
                         baseSchema = z.date();
