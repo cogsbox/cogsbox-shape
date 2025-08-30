@@ -1912,6 +1912,7 @@ type CreateSchemaBoxReturn<
     : RegistryShape,
 > = {
   [K in keyof Resolved]: {
+    schemaKey: K;
     definition: Resolved[K]["rawSchema"];
 
     schemas: {

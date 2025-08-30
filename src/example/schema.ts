@@ -69,7 +69,26 @@ export const schemaBox = createSchemaBox(
     },
   })
 );
-
+/*const schemaBox: CreateSchemaBoxReturn<{
+    users: {
+        _tableName: "app_users";
+        user_id: EnrichedField<"user_id", {
+            config: {
+                sql: {
+                    type: "int";
+                    pk: true;
+                };
+                zodSqlSchema: z.ZodNumber;
+                zodNewSchema: z.ZodString;
+                initialValue: string;
+                zodClientSchema: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+                zodValidationSchema: z.ZodUnion<[z.ZodNumber, z.ZodString]>;
+            };
+            client: <TClientNext extends z.ZodTypeAny>(schema: TClientNext | ((tools: {
+                sql: z.ZodNumber;
+                initialState: z.ZodString;
+            }) => TClientNext)) => {
+                config: {*/
 const testChatMEssages = schemaBox.messages.createView({
   sender: true,
   recipient: true,
@@ -106,7 +125,14 @@ const messageSelection = {
 } as const;
 
 // We use the utility type to generate the Zod shape and infer the result.
+/*property) schemas: ExtractOriginalSchemas<{
+    readonly users: {
+        readonly schema: [{
+            definition: ResolveSchema<{
+                _tableName: "app_users";
+                user_id: EnrichedField<"user_id", {*/
 
+type TEst = typeof schemaBox;
 type TestResult1 = DeriveViewResult<
   "messages",
   typeof messageSelection,
