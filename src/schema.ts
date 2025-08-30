@@ -1693,7 +1693,43 @@ type DeriveViewDefaults<
         }
       : {})
 >;
-
+type _Internal_DeriveViewDefaults<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends RegistryShape,
+  Depth extends any[] = [],
+> = Prettify<
+  TRegistry[TTableName]["zodSchemas"]["defaultValues"] &
+    (TSelection extends Record<string, any>
+      ? {
+          -readonly [K in keyof TSelection &
+            keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+            config: { sql: { type: infer RelType; schema: any } };
+          }
+            ? GetRelationRegistryKey<
+                TRegistry[TTableName]["rawSchema"][K],
+                TRegistry
+              > extends infer TargetKey
+              ? TargetKey extends keyof TRegistry
+                ? RelType extends "hasMany" | "manyToMany"
+                  ? _Internal_DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    >[]
+                  : _Internal_DeriveViewDefaults<
+                      TargetKey,
+                      TSelection[K],
+                      TRegistry,
+                      [...Depth, 1]
+                    > | null
+                : never
+              : never
+            : never;
+        }
+      : {})
+>;
 // This is the FINAL public type that your `createView` return type should use.
 // It is now fully consistent with the internal `RegistryShape`.
 export type DeriveViewResult<
@@ -1708,7 +1744,7 @@ export type DeriveViewResult<
   validation: z.ZodObject<
     _DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">
   >;
-  defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+  defaults: _Internal_DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 };
 type NavigationProxy<
   CurrentTable extends string,

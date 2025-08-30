@@ -288,7 +288,7 @@ type _DeriveViewShape<TTableName extends keyof TRegistry, TSelection, TRegistry 
         1
     ]>>> : never : never : never;
 }> : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> : never;
-type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Prettify<TRegistry[TTableName]["zodSchemas"]["defaultValues"] & (TSelection extends Record<string, any> ? {
+type _Internal_DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Prettify<TRegistry[TTableName]["zodSchemas"]["defaultValues"] & (TSelection extends Record<string, any> ? {
     -readonly [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
@@ -296,10 +296,10 @@ type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistr
                 schema: any;
             };
         };
-    } ? GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
+    } ? GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? RelType extends "hasMany" | "manyToMany" ? _Internal_DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
         ...Depth,
         1
-    ]>[] : DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
+    ]>[] : _Internal_DeriveViewDefaults<TargetKey, TSelection[K], TRegistry, [
         ...Depth,
         1
     ]> | null : never : never : never;
@@ -308,7 +308,7 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
     sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
     client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>;
     validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">>;
-    defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+    defaults: _Internal_DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 };
 type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
     [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
