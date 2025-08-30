@@ -1,4 +1,4 @@
-import { schema, s, createSchemaBox, DeriveViewResult } from "../schema.js";
+import { schema, s, createSchemaBox } from "../schema.js";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
@@ -132,12 +132,10 @@ const messageSelection = {
                 _tableName: "app_users";
                 user_id: EnrichedField<"user_id", {*/
 
-type TEst = typeof schemaBox;
-type TestResult1 = DeriveViewResult<
-  "messages",
-  typeof messageSelection,
-  typeof schemaBox ///is htis the correct ytype to fuckign pass in
+type TestView = ReturnType<
+  typeof schemaBox.messages.createView<typeof messageSelection>
 >;
+type TestDefaults = TestView["defaults"];
 /*ype TestResult1 = {
     sql: z.ZodObject<{
         message_id: z.ZodNumber;
