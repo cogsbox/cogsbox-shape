@@ -1649,45 +1649,65 @@ type _DeriveViewShape<
         >
       : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>
     : never;
-
+// Add this helper type to map SQL types to TypeScript types
+type SQLTypeToTS<T extends SQLType> = T["pk"] extends true
+  ? number
+  : T["type"] extends "varchar" | "char" | "text" | "longtext"
+    ? string
+    : T["type"] extends "int"
+      ? number
+      : T["type"] extends "boolean"
+        ? boolean
+        : T["type"] extends "date" | "datetime" | "timestamp"
+          ? Date
+          : never;
+// Update DeriveViewDefaults to use actual types
 type DeriveViewDefaults<
   TTableName extends keyof TRegistry,
   TSelection,
   TRegistry extends RegistryShape,
   Depth extends any[] = [],
 > = Prettify<
-  TRegistry[TTableName]["zodSchemas"]["defaultValues"] &
-    (TSelection extends Record<string, any>
-      ? {
-          -readonly [K in keyof TSelection &
-            keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
-            config: { sql: { type: infer RelType; schema: any } };
-          }
-            ? GetRelationRegistryKey<
-                TRegistry[TTableName]["rawSchema"][K],
-                TRegistry
-              > extends infer TargetKey
-              ? TargetKey extends keyof TRegistry
-                ? RelType extends "hasMany" | "manyToMany"
-                  ? DeriveViewDefaults<
-                      TargetKey,
-                      TSelection[K],
-                      TRegistry,
-                      [...Depth, 1]
-                    >[]
-                  : DeriveViewDefaults<
-                      TargetKey,
-                      TSelection[K],
-                      TRegistry,
-                      [...Depth, 1]
-                    > | null
-                : never
-              : never
-            : never;
+  {
+    [K in keyof TRegistry[TTableName]["rawSchema"] as K extends "_tableName"
+      ? never
+      : K]: TRegistry[TTableName]["rawSchema"][K] extends {
+      config: { sql: infer TSql extends SQLType };
+    }
+      ? TSql["nullable"] extends true
+        ? SQLTypeToTS<TSql> | null
+        : SQLTypeToTS<TSql>
+      : never;
+  } & (TSelection extends Record<string, any>
+    ? {
+        [K in keyof TSelection &
+          keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+          config: { sql: { type: infer RelType; schema: any } };
         }
-      : {})
+          ? GetRelationRegistryKey<
+              TRegistry[TTableName]["rawSchema"][K],
+              TRegistry
+            > extends infer TargetKey
+            ? TargetKey extends keyof TRegistry
+              ? RelType extends "hasMany" | "manyToMany"
+                ? DeriveViewDefaults<
+                    TargetKey,
+                    TSelection[K],
+                    TRegistry,
+                    [...Depth, 1]
+                  >[]
+                : DeriveViewDefaults<
+                    TargetKey,
+                    TSelection[K],
+                    TRegistry,
+                    [...Depth, 1]
+                  > | null
+              : never
+            : never
+          : never;
+      }
+    : {})
 >;
-
 export type DeriveViewResultFromBox<
   TBox extends CreateSchemaBoxReturn<any, any>,
   TTableName extends keyof TBox,
