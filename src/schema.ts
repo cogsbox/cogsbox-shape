@@ -115,7 +115,13 @@ type IsLiteralType<T> = T extends string
         ? false
         : true
       : false;
-
+type NonLiteral<T> = T extends string
+  ? string
+  : T extends number
+    ? number
+    : T extends boolean
+      ? boolean
+      : T;
 type CollapsedUnion<
   A extends z.ZodTypeAny,
   B extends z.ZodTypeAny,
@@ -144,7 +150,7 @@ export interface IBuilderMethods<
                 "new",
                 T,
                 TSql,
-                TValue,
+                NonLiteral<TValue>,
                 z.infer<TValue>,
                 CollapsedUnion<TSql, TValue>,
                 CollapsedUnion<TSql, TValue>
@@ -157,7 +163,7 @@ export interface IBuilderMethods<
                   T,
                   TSql,
                   ZodTypeFromPrimitive<R>,
-                  R,
+                  NonLiteral<R>,
                   CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
                   CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
                 >
@@ -168,7 +174,7 @@ export interface IBuilderMethods<
                   T,
                   TSql,
                   ZodTypeFromPrimitive<R>,
-                  R,
+                  NonLiteral<R>,
                   CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>,
                   CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>
                 >
@@ -179,7 +185,7 @@ export interface IBuilderMethods<
               "new",
               T,
               TSql,
-              TValue,
+              NonLiteral<TValue>,
               z.infer<TValue>,
               CollapsedUnion<TSql, TValue>,
               CollapsedUnion<TSql, TValue>
@@ -192,7 +198,7 @@ export interface IBuilderMethods<
                 T,
                 TSql,
                 ZodTypeFromPrimitive<TValue>,
-                TValue,
+                NonLiteral<TValue>,
                 CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
                 CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
               >
@@ -203,7 +209,7 @@ export interface IBuilderMethods<
                 T,
                 TSql,
                 ZodTypeFromPrimitive<TValue>,
-                TValue,
+                NonLiteral<TValue>,
                 CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>,
                 CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>
               >
