@@ -631,12 +631,12 @@ function createBuilder<
         } else if (isFunction(schemaOrModifier)) {
           // It's a schema modifier function
           // Create base Zod schema from the value type
-          if (
-            typeof actualValue === "string" ||
-            typeof actualValue === "number" ||
-            typeof actualValue === "boolean"
-          ) {
-            baseSchema = z.literal(actualValue);
+          if (typeof actualValue === "string") {
+            baseSchema = z.string();
+          } else if (typeof actualValue === "number") {
+            baseSchema = z.number();
+          } else if (typeof actualValue === "boolean") {
+            baseSchema = z.boolean();
           } else if (actualValue instanceof Date) {
             baseSchema = z.date();
           } else if (actualValue === null) {
@@ -651,12 +651,12 @@ function createBuilder<
           finalSchema = schemaOrModifier(baseSchema);
         } else {
           // No schema provided, create from value type
-          if (
-            typeof actualValue === "string" ||
-            typeof actualValue === "number" ||
-            typeof actualValue === "boolean"
-          ) {
-            baseSchema = z.literal(actualValue);
+          if (typeof actualValue === "string") {
+            baseSchema = z.string();
+          } else if (typeof actualValue === "number") {
+            baseSchema = z.number();
+          } else if (typeof actualValue === "boolean") {
+            baseSchema = z.boolean();
           } else if (actualValue instanceof Date) {
             baseSchema = z.date();
           } else if (actualValue === null) {
@@ -1129,10 +1129,6 @@ type InferSchemaByKey<
                   : never
               : never;
     };
-
-type InferSqlSchema<T> = InferSchemaByKey<T, "zodSqlSchema">;
-type InferClientSchema<T> = InferSchemaByKey<T, "zodClientSchema">;
-type InferValidationSchema<T> = InferSchemaByKey<T, "zodValidationSchema">;
 
 // Helper to check if something is a reference
 function isReference<T extends () => any>(value: any): value is Reference<T> {
@@ -1654,8 +1650,6 @@ type _DeriveViewShape<
       : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>
     : never;
 
-// Corrected helper for building the DEFAULTS object.
-// CORRECTED: It now consistently starts from `zodSchemas.defaultValues` and uses `rawSchema`.
 type DeriveViewDefaults<
   TTableName extends keyof TRegistry,
   TSelection,
