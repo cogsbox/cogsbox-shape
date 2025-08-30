@@ -186,6 +186,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
     id: s
       .sql({ type: "int", pk: true })
       .initialState(() => "user-123", z.string()),
+
     petId: s.reference(() => pets.id),
     pets: s.hasMany(),
   });
