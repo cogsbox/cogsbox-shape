@@ -1812,7 +1812,7 @@ type NavigationProxy<
     }
   : {};
 type NavigationToSelection<Nav> = {
-  [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
+  [K in keyof Nav]?: boolean | Prettify<NavigationToSelection<Nav[K]>>;
 };
 // Helper type to omit relation fields from a shape
 export type OmitRelations<Shape, RawSchema> = Omit<
