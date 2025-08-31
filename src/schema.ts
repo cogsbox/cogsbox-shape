@@ -1870,8 +1870,8 @@ type CreateSchemaBoxReturn<
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
 
     nav: NavigationProxy<K & string, Resolved>;
-    RelationSelection: NavigationToSelection<
-      NavigationProxy<K & string, Resolved>
+    RelationSelection: Prettify<
+      NavigationToSelection<NavigationProxy<K & string, Resolved>>
     >;
     createView: <
       const TSelection extends NavigationToSelection<
