@@ -71,6 +71,13 @@ export const schemaBox = createSchemaBox(
 );
 
 schemaBox.users.RelationSelection;
+type TestUserRelations = typeof schemaBox.users.RelationSelection;
+type TestPetsType = TestUserRelations["messages"];
+//   ^? Hover over this to see what type it actually is
+
+// Or try this to force TypeScript to show the full type:
+type ExpandType<T> = T extends infer U ? { [K in keyof U]: U[K] } : never;
+type FullRelations = ExpandType<typeof schemaBox.users.RelationSelection>;
 /*(property) RelationSelection: {
     settings?: boolean | {
         user?: boolean | ... | undefined;

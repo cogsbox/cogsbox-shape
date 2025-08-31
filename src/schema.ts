@@ -1810,9 +1810,9 @@ type NavigationProxy<
           : never
         : never;
     }
-  : {};
+  : never;
 type NavigationToSelection<Nav> = {
-  [K in keyof Nav]?: boolean | Prettify<NavigationToSelection<Nav[K]>>;
+  [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
 };
 // Helper type to omit relation fields from a shape
 export type OmitRelations<Shape, RawSchema> = Omit<
@@ -1870,8 +1870,8 @@ type CreateSchemaBoxReturn<
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
 
     nav: NavigationProxy<K & string, Resolved>;
-    RelationSelection: Prettify<
-      NavigationToSelection<NavigationProxy<K & string, Resolved>>
+    RelationSelection: NavigationToSelection<
+      NavigationProxy<K & string, Resolved>
     >;
     createView: <
       const TSelection extends NavigationToSelection<

@@ -363,9 +363,9 @@ export type DeriveViewFromSchema<TSchema extends {
 } ? TKey extends keyof TRegistry ? TRegistry extends RegistryShape ? DeriveViewResult<TKey, TSelection, TRegistry> : never : never : never;
 type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
     [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
-} : {};
+} : never;
 type NavigationToSelection<Nav> = {
-    [K in keyof Nav]?: boolean | Prettify<NavigationToSelection<Nav[K]>>;
+    [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
 };
 export type OmitRelations<Shape, RawSchema> = Omit<Shape, {
     [K in keyof Shape]: K extends keyof RawSchema ? RawSchema[K] extends {
@@ -402,7 +402,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
         nav: NavigationProxy<K & string, Resolved>;
-        RelationSelection: Prettify<NavigationToSelection<NavigationProxy<K & string, Resolved>>>;
+        RelationSelection: NavigationToSelection<NavigationProxy<K & string, Resolved>>;
         createView: <const TSelection extends NavigationToSelection<NavigationProxy<K & string, Resolved>>>(selection: TSelection) => DeriveViewResult<K & string, TSelection, Resolved>;
         __registry: Resolved;
     };
