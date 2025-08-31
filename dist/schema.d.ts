@@ -361,10 +361,14 @@ export type DeriveViewFromSchema<TSchema extends {
     schemaKey: infer TKey;
     __registry: infer TRegistry;
 } ? TKey extends keyof TRegistry ? TRegistry extends RegistryShape ? DeriveViewResult<TKey, TSelection, TRegistry> : never : never : never;
-type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
-    [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
+type RelationKeysOf<Cur extends string, Reg extends RegistryShape> = Cur extends keyof Reg ? {
+    [K in keyof Reg[Cur]["rawSchema"]]: IsRelationField<Reg[Cur]["rawSchema"][K]> extends true ? K : never;
+}[keyof Reg[Cur]["rawSchema"]] : never;
+type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? RelationKeysOf<CurrentTable, Registry> extends never ? never : {
+    [K in RelationKeysOf<CurrentTable, Registry>]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
 } : never;
-type NavigationToSelection<T> = [keyof T] extends [never] ? never : {
+type IsEffectivelyEmpty<T> = [T] extends [never] ? true : [keyof T] extends [never] ? true : string extends keyof T ? true : number extends keyof T ? true : symbol extends keyof T ? true : false;
+type NavigationToSelection<T> = IsEffectivelyEmpty<T> extends true ? never : {
     [K in keyof T]?: boolean | NavigationToSelection<T[K]>;
 };
 export type OmitRelations<Shape, RawSchema> = Omit<Shape, {
