@@ -40,7 +40,7 @@ type NonLiteral<T> = T extends string ? string : T extends number ? number : T e
 type CollapsedUnion<A extends z.ZodTypeAny, B extends z.ZodTypeAny> = A extends B ? (B extends A ? A : z.ZodUnion<[A, B]>) : z.ZodUnion<[A, B]>;
 export interface IBuilderMethods<T extends SQLType | RelationConfig<any>, TSql extends z.ZodTypeAny, TNew extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
     initialState: {
-        <const TValue>(value: TValue extends (...args: any[]) => void | undefined ? never : TValue): TValue extends (...args: any[]) => infer R ? R extends void | undefined ? never : TValue extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, NonLiteral<TValue>, z.infer<TValue>, CollapsedUnion<TSql, TValue>, CollapsedUnion<TSql, TValue>>> : R extends string | number | boolean ? Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<R>, NonLiteral<R>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<R>, NonLiteral<R>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>>> : TValue extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, NonLiteral<TValue>, z.infer<TValue>, CollapsedUnion<TSql, TValue>, CollapsedUnion<TSql, TValue>>> : TValue extends string | number | boolean ? Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TValue>, NonLiteral<TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TValue>, NonLiteral<TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>>>;
+        <const TValue>(value: TValue extends (...args: any[]) => void | undefined ? never : TValue): TValue extends (...args: any[]) => infer R ? R extends void | undefined ? never : TValue extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, TValue, z.infer<TValue>, CollapsedUnion<TSql, TValue>, CollapsedUnion<TSql, TValue>>> : R extends string | number | boolean ? Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<R>, NonLiteral<R>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<R>, NonLiteral<R>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<R>>>> : TValue extends z.ZodTypeAny ? Prettify<Builder<"new", T, TSql, NonLiteral<TValue>, z.infer<TValue>, CollapsedUnion<TSql, TValue>, CollapsedUnion<TSql, TValue>>> : TValue extends string | number | boolean ? Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TValue>, NonLiteral<TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>>> : Prettify<Builder<"new", T, TSql, ZodTypeFromPrimitive<TValue>, NonLiteral<TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue>>>>;
         <const TValue, TSchema extends z.ZodTypeAny>(value: TValue extends (...args: any[]) => void | undefined ? never : TValue, schema: TSchema): Prettify<Builder<"new", T, TSql, TSchema, TValue extends () => infer R ? R : TValue, CollapsedUnion<TSql, TSchema>, CollapsedUnion<TSql, TSchema>>>;
         <const TValue, TSchema extends z.ZodTypeAny>(value: TValue extends (...args: any[]) => void | undefined ? never : TValue, schemaModifier: (baseSchema: TValue extends () => infer R ? R extends string | number | boolean ? z.ZodLiteral<R> : ZodTypeFromPrimitive<R> : TValue extends string | number | boolean ? z.ZodLiteral<TValue> : ZodTypeFromPrimitive<TValue>) => TSchema): Prettify<Builder<"new", T, TSql, TSchema, TValue extends () => infer R ? R : TValue, CollapsedUnion<TSql, TSchema>, CollapsedUnion<TSql, TSchema>>>;
     };
@@ -353,6 +353,14 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
     validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">>;
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 };
+export type DeriveViewFromSchema<TSchema extends {
+    schemaKey: string;
+    __registry: RegistryShape;
+    RelationSelection: any;
+}, TSelection extends TSchema["RelationSelection"]> = TSchema extends {
+    schemaKey: infer TKey;
+    __registry: infer TRegistry;
+} ? TKey extends keyof TRegistry ? TRegistry extends RegistryShape ? DeriveViewResult<TKey, TSelection, TRegistry> : never : never : never;
 type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
     [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
 } : {};
@@ -396,6 +404,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         nav: NavigationProxy<K & string, Resolved>;
         RelationSelection: NavigationToSelection<NavigationProxy<K & string, Resolved>>;
         createView: <const TSelection extends NavigationToSelection<NavigationProxy<K & string, Resolved>>>(selection: TSelection) => DeriveViewResult<K & string, TSelection, Resolved>;
+        __registry: Resolved;
     };
 };
 export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>>(schemas: S, resolver: (proxy: SchemaProxy<S>) => R): CreateSchemaBoxReturn<S, R>;

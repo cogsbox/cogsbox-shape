@@ -150,7 +150,7 @@ export interface IBuilderMethods<
                 "new",
                 T,
                 TSql,
-                NonLiteral<TValue>,
+                TValue,
                 z.infer<TValue>,
                 CollapsedUnion<TSql, TValue>,
                 CollapsedUnion<TSql, TValue>
@@ -1772,6 +1772,26 @@ export type DeriveViewResult<
   >;
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 };
+
+export type DeriveViewFromSchema<
+  // TSchema must be one of the schema objects from your box, like `typeof myBox.users`
+  TSchema extends {
+    schemaKey: string;
+    __registry: RegistryShape;
+    RelationSelection: any;
+  },
+  // TSelection must be a valid selection for that schema
+  TSelection extends TSchema["RelationSelection"],
+> = TSchema extends { schemaKey: infer TKey; __registry: infer TRegistry }
+  ? TKey extends keyof TRegistry
+    ? TRegistry extends RegistryShape
+      ? // It works by extracting the registry and key, then calling the same
+        // internal logic that createView uses.
+        DeriveViewResult<TKey, TSelection, TRegistry>
+      : never
+    : never
+  : never;
+
 type NavigationProxy<
   CurrentTable extends string,
   Registry extends RegistryShape,
@@ -1864,6 +1884,7 @@ type CreateSchemaBoxReturn<
     >(
       selection: TSelection
     ) => DeriveViewResult<K & string, TSelection, Resolved>;
+    __registry: Resolved;
   };
 };
 
