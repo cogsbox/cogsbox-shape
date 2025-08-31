@@ -69,6 +69,17 @@ export const schemaBox = createSchemaBox(
     },
   })
 );
+
+schemaBox.users.RelationSelection;
+/*(property) RelationSelection: {
+    settings?: boolean | {
+        user?: boolean | ... | undefined;
+    } | undefined;
+    messages?: boolean | {
+        sender?: boolean | ... | undefined;
+        recipient?: boolean | ... | undefined;
+    } | undefined;
+}*/
 /*const schemaBox: CreateSchemaBoxReturn<{
     users: {
         _tableName: "app_users";
