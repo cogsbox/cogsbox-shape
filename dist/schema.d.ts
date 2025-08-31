@@ -364,8 +364,8 @@ export type DeriveViewFromSchema<TSchema extends {
 type NavigationProxy<CurrentTable extends string, Registry extends RegistryShape> = CurrentTable extends keyof Registry ? {
     [K in keyof Registry[CurrentTable]["rawSchema"] as IsRelationField<Registry[CurrentTable]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<Registry[CurrentTable]["rawSchema"][K], Registry> extends infer TargetKey ? TargetKey extends keyof Registry ? NavigationProxy<TargetKey & string, Registry> : never : never;
 } : never;
-type NavigationToSelection<Nav> = {
-    [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
+type NavigationToSelection<T> = [keyof T] extends [never] ? never : {
+    [K in keyof T]?: boolean | NavigationToSelection<T[K]>;
 };
 export type OmitRelations<Shape, RawSchema> = Omit<Shape, {
     [K in keyof Shape]: K extends keyof RawSchema ? RawSchema[K] extends {

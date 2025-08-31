@@ -1811,9 +1811,9 @@ type NavigationProxy<
         : never;
     }
   : never;
-type NavigationToSelection<Nav> = {
-  [K in keyof Nav]?: boolean | NavigationToSelection<Nav[K]>;
-};
+type NavigationToSelection<T> = [keyof T] extends [never] // if T has no keys (i.e., {})
+  ? never
+  : { [K in keyof T]?: boolean | NavigationToSelection<T[K]> };
 // Helper type to omit relation fields from a shape
 export type OmitRelations<Shape, RawSchema> = Omit<
   Shape,
