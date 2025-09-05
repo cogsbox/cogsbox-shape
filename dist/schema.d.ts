@@ -306,33 +306,41 @@ type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistr
     ]> | null : never : never : never;
 } : {})>;
 export type DeriveViewResultFromBox<TBox extends CreateSchemaBoxReturn<any, any>, TTableName extends keyof TBox, TSelection extends TBox[TTableName]["RelationSelection"]> = {
-    sql: TBox[TTableName]["schemas"]["sql"];
-    client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, {
-        [K in keyof TBox]: {
-            rawSchema: TBox[K]["definition"];
-            zodSchemas: {
-                sqlSchema: TBox[K]["schemas"]["sql"];
-                clientSchema: TBox[K]["schemas"]["client"];
-                validationSchema: TBox[K]["schemas"]["validation"];
-                defaultValues: TBox[K]["defaults"];
-                toClient: TBox[K]["transforms"]["toClient"];
-                toDb: TBox[K]["transforms"]["toDb"];
+    definition: TBox[TTableName]["definition"];
+    schemaKey: TTableName;
+    schemas: {
+        sql: TBox[TTableName]["schemas"]["sql"];
+        client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, {
+            [K in keyof TBox]: {
+                rawSchema: TBox[K]["definition"];
+                zodSchemas: {
+                    sqlSchema: TBox[K]["schemas"]["sql"];
+                    clientSchema: TBox[K]["schemas"]["client"];
+                    validationSchema: TBox[K]["schemas"]["validation"];
+                    defaultValues: TBox[K]["defaults"];
+                    toClient: TBox[K]["transforms"]["toClient"];
+                    toDb: TBox[K]["transforms"]["toDb"];
+                };
             };
-        };
-    }, "clientSchema">>;
-    validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, {
-        [K in keyof TBox]: {
-            rawSchema: TBox[K]["definition"];
-            zodSchemas: {
-                sqlSchema: TBox[K]["schemas"]["sql"];
-                clientSchema: TBox[K]["schemas"]["client"];
-                validationSchema: TBox[K]["schemas"]["validation"];
-                defaultValues: TBox[K]["defaults"];
-                toClient: TBox[K]["transforms"]["toClient"];
-                toDb: TBox[K]["transforms"]["toDb"];
+        }, "clientSchema">>;
+        validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, {
+            [K in keyof TBox]: {
+                rawSchema: TBox[K]["definition"];
+                zodSchemas: {
+                    sqlSchema: TBox[K]["schemas"]["sql"];
+                    clientSchema: TBox[K]["schemas"]["client"];
+                    validationSchema: TBox[K]["schemas"]["validation"];
+                    defaultValues: TBox[K]["defaults"];
+                    toClient: TBox[K]["transforms"]["toClient"];
+                    toDb: TBox[K]["transforms"]["toDb"];
+                };
             };
-        };
-    }, "validationSchema">>;
+        }, "validationSchema">>;
+    };
+    transforms: {
+        toClient: TBox[TTableName]["transforms"]["toClient"];
+        toDb: TBox[TTableName]["transforms"]["toDb"];
+    };
     defaults: DeriveViewDefaults<TTableName, TSelection, {
         [K in keyof TBox]: {
             rawSchema: TBox[K]["definition"];
@@ -346,6 +354,13 @@ export type DeriveViewResultFromBox<TBox extends CreateSchemaBoxReturn<any, any>
             };
         };
     }>;
+    isView: true;
+    viewSelection: TSelection;
+    baseTable: TTableName;
+    nav?: undefined;
+    createView?: undefined;
+    RelationSelection?: undefined;
+    __registry: TBox;
 };
 export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape> = {
     definition: TRegistry[TTableName]["rawSchema"];
@@ -363,6 +378,9 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
     isView: true;
     viewSelection: TSelection;
     baseTable: TTableName;
+    nav?: undefined;
+    createView?: undefined;
+    RelationSelection?: undefined;
     __registry: TRegistry;
 };
 export type DeriveViewFromSchema<TSchema extends {

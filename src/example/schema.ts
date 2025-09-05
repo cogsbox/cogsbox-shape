@@ -126,6 +126,7 @@ const users = schemaBox.users.createView({
   settings: true,
   messages: true,
 });
+
 const clientUsers = users.schemas.client;
 type clientInfer2 = z.infer<typeof clientUsers>;
 /*type clientInfer2 = {
