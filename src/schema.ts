@@ -40,25 +40,6 @@ type BaseConfig = {
   field?: string; //not implemnted yet
 };
 
-// Update specific configs
-type IntConfig = BaseConfig & {
-  default?: number;
-};
-
-type BooleanConfig = BaseConfig & {
-  default?: boolean;
-};
-
-type DateConfig = BaseConfig & {
-  type?: "date" | "datetime" | "timestamp";
-  default?: Date;
-};
-
-type StringConfig = BaseConfig & {
-  length?: number;
-  default?: string;
-};
-
 type SQLToZodType<
   T extends SQLType,
   TDefault extends boolean,
@@ -102,19 +83,7 @@ type ZodTypeFromPrimitive<T> = T extends string
       : T extends Date
         ? z.ZodDate
         : z.ZodAny;
-type IsLiteralType<T> = T extends string
-  ? string extends T
-    ? false
-    : true
-  : T extends number
-    ? number extends T
-      ? false
-      : true
-    : T extends boolean
-      ? boolean extends T
-        ? false
-        : true
-      : false;
+
 type NonLiteral<T> = T extends string
   ? string
   : T extends number
@@ -394,26 +363,7 @@ export type Reference<TGetter extends () => any> = {
   getter: TGetter;
 };
 
-// First, define the interface for the shape object
 interface ShapeAPI {
-  // int: (config?: IntConfig) => ReturnType<typeof createBuilder>;
-  // varchar: (
-  //   config?: Omit<StringConfig, "type">
-  // ) => ReturnType<typeof createBuilder>;
-  // char: (
-  //   config?: Omit<StringConfig, "type">
-  // ) => ReturnType<typeof createBuilder>;
-  // text: (
-  //   config?: Omit<StringConfig, "type" | "length">
-  // ) => ReturnType<typeof createBuilder>;
-  // longtext: (
-  //   config?: Omit<StringConfig, "type" | "length">
-  // ) => ReturnType<typeof createBuilder>;
-  // boolean: (config?: BooleanConfig) => ReturnType<typeof createBuilder>;
-  // date: (config?: Omit<DateConfig, "type">) => ReturnType<typeof createBuilder>;
-  // datetime: (
-  //   config?: Omit<DateConfig, "type">
-  // ) => ReturnType<typeof createBuilder>;
   sql: <T extends SQLType>(
     sqlConfig: T
   ) => Builder<
@@ -438,56 +388,7 @@ interface ShapeAPI {
   }) => PlaceholderRelation<"manyToMany">;
 }
 
-// Now define the shape object with the explicit type annotation
 export const s: ShapeAPI = {
-  // int: (config: IntConfig = {}) =>
-  //   s.sql({
-  //     type: "int",
-  //     ...config,
-  //   }),
-
-  // varchar: (config: Omit<StringConfig, "type"> = {}) =>
-  //   s.sql({
-  //     type: "varchar",
-  //     ...config,
-  //   }),
-
-  // char: (config: Omit<StringConfig, "type"> = {}) =>
-  //   s.sql({
-  //     type: "char",
-  //     ...config,
-  //   }),
-
-  // text: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-  //   s.sql({
-  //     type: "text",
-  //     ...config,
-  //   }),
-
-  // longtext: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-  //   s.sql({
-  //     type: "longtext",
-  //     ...config,
-  //   }),
-
-  // boolean: (config: BooleanConfig = {}) =>
-  //   s.sql({
-  //     type: "boolean",
-  //     ...config,
-  //   }),
-
-  // date: (config: Omit<DateConfig, "type"> = {}) =>
-  //   s.sql({
-  //     type: "date",
-  //     ...config,
-  //   }),
-
-  // datetime: (config: Omit<DateConfig, "type"> = {}) =>
-  //   s.sql({
-  //     type: "datetime",
-  //     ...config,
-  //   }),
-
   reference: <TGetter extends () => any>(
     getter: TGetter
   ): Reference<TGetter> => ({
@@ -1763,16 +1664,27 @@ export type DeriveViewResult<
   TSelection,
   TRegistry extends RegistryShape,
 > = {
-  sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
-  client: z.ZodObject<
-    _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
-  >;
-  validation: z.ZodObject<
-    _DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">
-  >;
+  definition: TRegistry[TTableName]["rawSchema"]; // Or enhanced version
+  schemaKey: TTableName;
+  schemas: {
+    sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
+    client: z.ZodObject<
+      _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+    >;
+    validation: z.ZodObject<
+      _DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">
+    >;
+  };
+  transforms: {
+    toClient: TRegistry[TTableName]["zodSchemas"]["toClient"];
+    toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
+  };
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+  isView: true;
+  viewSelection: TSelection;
+  baseTable: TTableName;
+  __registry: TRegistry;
 };
-
 export type DeriveViewFromSchema<
   // TSchema must be one of the schema objects from your box, like `typeof myBox.users`
   TSchema extends {
@@ -2093,10 +2005,29 @@ export function createSchemaBox<
           finalRegistry,
           tableNameToRegistryKeyMap
         );
-        console.log("View defaults:", defaults); // ADD THIS
+
+        // Return the same shape as regular entries, but with isView marker
         return {
-          ...view,
+          definition: entry.rawSchema, // Could be enhanced with selection info
+          schemaKey: tableName,
+          schemas: {
+            sql: view.sql,
+            client: view.client,
+            validation: view.validation,
+          },
+          transforms: {
+            toClient: entry.zodSchemas.toClient, // May need composition for nested
+            toDb: entry.zodSchemas.toDb,
+          },
           defaults: defaults,
+          isView: true as const, // Discriminator
+          viewSelection: selection, // Store what was selected
+          baseTable: tableName,
+          // Optionally exclude these for views:
+          // nav: undefined,
+          // createView: undefined,
+          // RelationSelection: undefined,
+          __registry: finalRegistry,
         };
       },
       RelationSelection: {} as NavigationToSelection<any>,

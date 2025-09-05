@@ -348,10 +348,22 @@ export type DeriveViewResultFromBox<TBox extends CreateSchemaBoxReturn<any, any>
     }>;
 };
 export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape> = {
-    sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
-    client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>;
-    validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">>;
+    definition: TRegistry[TTableName]["rawSchema"];
+    schemaKey: TTableName;
+    schemas: {
+        sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
+        client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>;
+        validation: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">>;
+    };
+    transforms: {
+        toClient: TRegistry[TTableName]["zodSchemas"]["toClient"];
+        toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
+    };
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+    isView: true;
+    viewSelection: TSelection;
+    baseTable: TTableName;
+    __registry: TRegistry;
 };
 export type DeriveViewFromSchema<TSchema extends {
     schemaKey: string;

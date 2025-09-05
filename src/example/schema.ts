@@ -111,7 +111,7 @@ const testChatMEssages = schemaBox.messages.createView({
   sender: true,
   recipient: true,
 });
-const clientChat = testChatMEssages.client;
+const clientChat = testChatMEssages.schemas.client;
 type clientInfer = z.infer<typeof clientChat>;
 /*type clientInfer = {
     message_id: string | number;
@@ -126,7 +126,7 @@ const users = schemaBox.users.createView({
   settings: true,
   messages: true,
 });
-const clientUsers = users.client;
+const clientUsers = users.schemas.client;
 type clientInfer2 = z.infer<typeof clientUsers>;
 /*type clientInfer2 = {
     user_id: string | number;

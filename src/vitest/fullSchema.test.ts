@@ -243,7 +243,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         pets: true,
       });
 
-      type ViewClient = z.infer<typeof userView.client>;
+      type ViewClient = z.infer<typeof userView.schemas.client>;
       expectTypeOf<ViewClient>().toEqualTypeOf<{
         id: string | number;
         petId: number;
@@ -254,7 +254,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       }>();
 
       // Runtime check
-      const viewShape = userView.client.shape;
+      const viewShape = userView.schemas.client.shape;
       expect(viewShape).toHaveProperty("pets");
       expect(viewShape.pets).toBeInstanceOf(z.ZodArray);
     });
@@ -264,7 +264,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         pets: { owner: true },
       });
 
-      type ViewClientNested = z.infer<typeof userViewNested.client>;
+      type ViewClientNested = z.infer<typeof userViewNested.schemas.client>;
       expectTypeOf<ViewClientNested>().toEqualTypeOf<{
         id: string | number;
         petId: number;
@@ -281,7 +281,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       }>();
 
       // Runtime check - owner should not have pets
-      const shape = userViewNested.client.shape;
+      const shape = userViewNested.schemas.client.shape;
       if (shape.pets instanceof z.ZodArray) {
         const petSchema = shape.pets.element;
         if (petSchema instanceof z.ZodObject) {
@@ -407,7 +407,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
           pets: true,
         });
 
-        type ViewClient = z.infer<typeof userView.client>;
+        type ViewClient = z.infer<typeof userView.schemas.client>;
         expectTypeOf<ViewClient>().toEqualTypeOf<{
           id: string | number;
           petId: number;
@@ -418,7 +418,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         }>();
 
         // Runtime check
-        const viewShape = userView.client.shape;
+        const viewShape = userView.schemas.client.shape;
         expect(viewShape).toHaveProperty("pets");
         expect(viewShape.pets).toBeInstanceOf(z.ZodArray);
       });
@@ -428,7 +428,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
           pets: { owner: true },
         });
 
-        type ViewClientNested = z.infer<typeof userViewNested.client>;
+        type ViewClientNested = z.infer<typeof userViewNested.schemas.client>;
         expectTypeOf<ViewClientNested>().toEqualTypeOf<{
           id: string | number;
           petId: number;
@@ -445,7 +445,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         }>();
 
         // Runtime check - owner should not have pets
-        const shape = userViewNested.client.shape;
+        const shape = userViewNested.schemas.client.shape;
         if (shape.pets instanceof z.ZodArray) {
           const petSchema = shape.pets.element;
           if (petSchema instanceof z.ZodObject) {

@@ -7,48 +7,7 @@ export function currentTimeStamp() {
         defaultValue: new Date(),
     };
 }
-// Now define the shape object with the explicit type annotation
 export const s = {
-    // int: (config: IntConfig = {}) =>
-    //   s.sql({
-    //     type: "int",
-    //     ...config,
-    //   }),
-    // varchar: (config: Omit<StringConfig, "type"> = {}) =>
-    //   s.sql({
-    //     type: "varchar",
-    //     ...config,
-    //   }),
-    // char: (config: Omit<StringConfig, "type"> = {}) =>
-    //   s.sql({
-    //     type: "char",
-    //     ...config,
-    //   }),
-    // text: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-    //   s.sql({
-    //     type: "text",
-    //     ...config,
-    //   }),
-    // longtext: (config: Omit<StringConfig, "type" | "length"> = {}) =>
-    //   s.sql({
-    //     type: "longtext",
-    //     ...config,
-    //   }),
-    // boolean: (config: BooleanConfig = {}) =>
-    //   s.sql({
-    //     type: "boolean",
-    //     ...config,
-    //   }),
-    // date: (config: Omit<DateConfig, "type"> = {}) =>
-    //   s.sql({
-    //     type: "date",
-    //     ...config,
-    //   }),
-    // datetime: (config: Omit<DateConfig, "type"> = {}) =>
-    //   s.sql({
-    //     type: "datetime",
-    //     ...config,
-    //   }),
     reference: (getter) => ({
         __type: "reference",
         getter: getter,
@@ -753,10 +712,28 @@ export function createSchemaBox(schemas, resolver) {
             createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
-                console.log("View defaults:", defaults); // ADD THIS
+                // Return the same shape as regular entries, but with isView marker
                 return {
-                    ...view,
+                    definition: entry.rawSchema, // Could be enhanced with selection info
+                    schemaKey: tableName,
+                    schemas: {
+                        sql: view.sql,
+                        client: view.client,
+                        validation: view.validation,
+                    },
+                    transforms: {
+                        toClient: entry.zodSchemas.toClient, // May need composition for nested
+                        toDb: entry.zodSchemas.toDb,
+                    },
                     defaults: defaults,
+                    isView: true, // Discriminator
+                    viewSelection: selection, // Store what was selected
+                    baseTable: tableName,
+                    // Optionally exclude these for views:
+                    // nav: undefined,
+                    // createView: undefined,
+                    // RelationSelection: undefined,
+                    __registry: finalRegistry,
                 };
             },
             RelationSelection: {},
