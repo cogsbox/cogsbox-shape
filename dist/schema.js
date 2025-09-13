@@ -460,8 +460,7 @@ export function createSchema(schema, relations) {
     for (const key in fullSchema) {
         if (key === "_tableName" ||
             key.startsWith("__") ||
-            key === String(SchemaWrapperBrand) ||
-            key === "resolvePKs")
+            key === String(SchemaWrapperBrand))
             continue;
         const definition = fullSchema[key];
         // Handle new-style references
@@ -546,9 +545,8 @@ export function createSchema(schema, relations) {
         return dbObject;
     };
     return {
-        pk: pkKeys,
-        clientPk: clientPkKeys,
-        resolvePKs: pkResolver,
+        pk: pkKeys?.length ? pkKeys : null,
+        clientPk: clientPkKeys ? clientPkKeys : null,
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),
         validationSchema: z.object(serverFields),
@@ -765,7 +763,6 @@ export function createSchemaBox(schemas, resolver) {
             // ADD: Expose PK info and resolver
             pk: entry.zodSchemas.pk,
             clientPk: entry.zodSchemas.clientPk,
-            resolvePKs: entry.zodSchemas.resolvePKs,
             nav: createNavProxy(tableName, finalRegistry),
             // Add this
             createView: (selection) => {

@@ -127,7 +127,7 @@ export interface IBuilderMethods<
     >
   >;
 
-  // Overload 2: For when only a `schema` is provided
+  // Overload 2: Only schema provided
   initialState<const TSchema extends z.ZodTypeAny>(options: {
     value?: never;
     schema: TSchema;
@@ -144,17 +144,15 @@ export interface IBuilderMethods<
     >
   >;
 
-  // Overload 3: For when `value` and `schema` are both provided
+  // Overload 3: Both value and schema provided
+  // THE FIX: Changed TInitialValue from literal value to z.infer<TSchema>
   initialState<const TValue, const TSchema extends z.ZodTypeAny>(options: {
     value: TValue | (() => TValue);
-    // V V V V  THE BUG WAS HERE V V V V
-    // This no longer creates a z.ZodLiteral. It correctly uses the general primitive type.
     schema:
       | TSchema
       | ((
           base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
         ) => TSchema);
-    // ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
     clientPk?: boolean;
   }): Prettify<
     Builder<
@@ -162,7 +160,7 @@ export interface IBuilderMethods<
       T,
       TSql,
       TSchema,
-      TValue extends () => infer R ? R : TValue,
+      z.infer<TSchema>, // <-- THIS IS THE FIX: Use schema's type, not literal value
       CollapsedUnion<TSql, TSchema>,
       CollapsedUnion<TSql, TSchema>
     >
@@ -1059,9 +1057,9 @@ export function createSchema<
   schema: T,
   relations?: R
 ): {
-  pk: string[];
-  clientPk: string[];
-  resolvePKs?: (record: any) => { clientPk: any[]; dbPk: any[] };
+  pk: string[] | null;
+  clientPk: string[] | null;
+
   sqlSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
   >;
@@ -1100,15 +1098,14 @@ export function createSchema<
   > = {};
 
   const fullSchema = { ...schema, ...(relations || {}) };
-  let pkKeys: string[] = [];
-  let clientPkKeys: string[] = [];
+  let pkKeys: string[] | null = [];
+  let clientPkKeys: string[] | null = [];
   const pkResolver = (schema as any).__pkResolver;
   for (const key in fullSchema) {
     if (
       key === "_tableName" ||
       key.startsWith("__") ||
-      key === String(SchemaWrapperBrand) ||
-      key === "resolvePKs"
+      key === String(SchemaWrapperBrand)
     )
       continue;
 
@@ -1204,9 +1201,9 @@ export function createSchema<
   };
 
   return {
-    pk: pkKeys,
-    clientPk: clientPkKeys,
-    resolvePKs: pkResolver,
+    pk: pkKeys?.length ? pkKeys : null,
+    clientPk: clientPkKeys ? clientPkKeys : null,
+
     sqlSchema: z.object(sqlFields) as z.ZodObject<
       Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
     >,
@@ -1618,85 +1615,6 @@ type DeriveViewDefaults<
         }
       : {})
 >;
-export type DeriveViewResultFromBox<
-  TBox extends CreateSchemaBoxReturn<any, any>,
-  TTableName extends keyof TBox,
-  TSelection extends TBox[TTableName]["RelationSelection"],
-> = {
-  definition: TBox[TTableName]["definition"];
-  schemaKey: TTableName;
-  schemas: {
-    sql: TBox[TTableName]["schemas"]["sql"];
-    client: z.ZodObject<
-      _DeriveViewShape<
-        TTableName,
-        TSelection,
-        {
-          [K in keyof TBox]: {
-            rawSchema: TBox[K]["definition"];
-            zodSchemas: {
-              sqlSchema: TBox[K]["schemas"]["sql"];
-              clientSchema: TBox[K]["schemas"]["client"];
-              validationSchema: TBox[K]["schemas"]["server"];
-              defaultValues: TBox[K]["defaults"];
-              toClient: TBox[K]["transforms"]["toClient"];
-              toDb: TBox[K]["transforms"]["toDb"];
-            };
-          };
-        },
-        "clientSchema"
-      >
-    >;
-    server: z.ZodObject<
-      _DeriveViewShape<
-        TTableName,
-        TSelection,
-        {
-          [K in keyof TBox]: {
-            rawSchema: TBox[K]["definition"];
-            zodSchemas: {
-              sqlSchema: TBox[K]["schemas"]["sql"];
-              clientSchema: TBox[K]["schemas"]["client"];
-              validationSchema: TBox[K]["schemas"]["server"];
-              defaultValues: TBox[K]["defaults"];
-              toClient: TBox[K]["transforms"]["toClient"];
-              toDb: TBox[K]["transforms"]["toDb"];
-            };
-          };
-        },
-        "validationSchema"
-      >
-    >;
-  };
-  transforms: {
-    toClient: TBox[TTableName]["transforms"]["toClient"];
-    toDb: TBox[TTableName]["transforms"]["toDb"];
-  };
-  defaults: DeriveViewDefaults<
-    TTableName,
-    TSelection,
-    {
-      [K in keyof TBox]: {
-        rawSchema: TBox[K]["definition"];
-        zodSchemas: {
-          sqlSchema: TBox[K]["schemas"]["sql"];
-          clientSchema: TBox[K]["schemas"]["client"];
-          validationSchema: TBox[K]["schemas"]["server"];
-          defaultValues: TBox[K]["defaults"];
-          toClient: TBox[K]["transforms"]["toClient"];
-          toDb: TBox[K]["transforms"]["toDb"];
-        };
-      };
-    }
-  >;
-  isView: true;
-  viewSelection: TSelection;
-  baseTable: TTableName;
-  nav?: undefined;
-  createView?: undefined;
-  RelationSelection?: undefined;
-  __registry: TBox;
-};
 export type DeriveViewResult<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -1726,21 +1644,6 @@ export type DeriveViewResult<
   RelationSelection?: undefined;
   __registry: TRegistry;
 };
-
-export type DeriveViewFromSchema<
-  TSchema extends {
-    schemaKey: string;
-    __registry: RegistryShape;
-    RelationSelection: any;
-  },
-  TSelection extends TSchema["RelationSelection"],
-> = TSchema extends { schemaKey: infer TKey; __registry: infer TRegistry }
-  ? TKey extends keyof TRegistry
-    ? TRegistry extends RegistryShape
-      ? DeriveViewResult<TKey, TSelection, TRegistry>
-      : never
-    : never
-  : never;
 
 type RelationKeysOf<
   Cur extends string,
@@ -2035,7 +1938,6 @@ export function createSchemaBox<
       // ADD: Expose PK info and resolver
       pk: entry.zodSchemas.pk,
       clientPk: entry.zodSchemas.clientPk,
-      resolvePKs: entry.zodSchemas.resolvePKs,
 
       nav: createNavProxy(tableName, finalRegistry),
 
