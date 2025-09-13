@@ -34,15 +34,18 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
 
   describe("Chainable Methods", () => {
     it("should create a union type when .initialState provides a different type", () => {
-      const idField = s
-        .sql({ type: "int", pk: true })
-        .initialState(() => "temp-uuid-123", z.literal("temp-uuid-123"));
+      const idField = s.sql({ type: "int", pk: true }).initialState({
+        value: () => "temp-uuid-123",
+        schema: z.literal("temp-uuid-123"),
+      });
       type InferredClient = z.infer<typeof idField.config.zodClientSchema>;
       expectTypeOf<InferredClient>().toEqualTypeOf<number | "temp-uuid-123">();
     });
 
     it("should NOT create a union type when .initialState provides the same type", () => {
-      const countField = s.sql({ type: "int" }).initialState(() => 0);
+      const countField = s
+        .sql({ type: "int" })
+        .initialState({ value: () => 0, schema: z.number() });
       type InferredClient = z.infer<typeof countField.config.zodClientSchema>;
       expectTypeOf<InferredClient>().toEqualTypeOf<number>();
     });
@@ -60,9 +63,10 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     // 1. Define schemas with placeholders
     const users = schema({
       _tableName: "users",
-      id: s
-        .sql({ type: "int", pk: true })
-        .initialState(() => "new-user" as const, z.literal("new-user")),
+      id: s.sql({ type: "int", pk: true }).initialState({
+        value: () => "new-user" as const,
+        schema: z.literal("new-user"),
+      }),
       posts: s.hasMany(),
     });
 
@@ -103,9 +107,10 @@ describe("Schema Builder Runtime Behavior", () => {
     // Define the schema using the new builder syntax
     const defaultsSchema = schema({
       _tableName: "defaults",
-      fromInitialState: s
-        .sql({ type: "varchar" })
-        .initialState(() => "from-initial-state"),
+      fromInitialState: s.sql({ type: "varchar" }).initialState({
+        value: () => "from-initial-state",
+        schema: z.string(),
+      }),
       fromSqlDefault: s.sql({ type: "int", default: 99 }),
       isNullable: s.sql({ type: "boolean", nullable: true }),
       hasNoDefault: s.sql({ type: "int" }),
@@ -147,14 +152,14 @@ describe("Schema Builder Runtime Behavior", () => {
         }),
       name: s
         .sql({ type: "varchar" })
-        .validation(({ sql }) => sql.min(3, "Name is too short")),
+        .server(({ sql }) => sql.min(3, "Name is too short")),
     });
 
     // Use the new registry to process the schema
     const box = createSchemaBox({ complex: complexSchemaDef }, () => ({
       complex: {}, // No relations to resolve
     }));
-    const { client, sql, validation } = box.complex.schemas;
+    const { client, sql, server } = box.complex.schemas;
     const { toClient, toDb } = box.complex.transforms;
     it("should correctly transform a DB object to a Client object", () => {
       const dbData = { id: 1, status: 1, name: "Test" };
@@ -172,7 +177,7 @@ describe("Schema Builder Runtime Behavior", () => {
 
     it("should still use the validationSchema for pure validation", () => {
       const invalidClientData = { id: 1, status: "inactive", name: "ab" };
-      const result = validation.safeParse(invalidClientData);
+      const result = server.safeParse(invalidClientData);
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(result.error.issues[0].message).toBe("Name is too short");
@@ -185,7 +190,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
     _tableName: "users",
     id: s
       .sql({ type: "int", pk: true })
-      .initialState(() => "user-123", z.string()),
+      .initialState({ value: () => "user-123", schema: z.string() }),
 
     petId: s.reference(() => pets.id),
     pets: s.hasMany(),
@@ -341,7 +346,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       _tableName: "users",
       id: s
         .sql({ type: "int", pk: true })
-        .initialState(() => "user-123", z.string()),
+        .initialState({ value: () => "user-123", schema: z.string() }),
       petId: s.reference(() => pets.id),
       pets: s.hasMany(),
     });
@@ -518,8 +523,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
   describe("Relation Defaults in Views", () => {
     const users = schema({
       _tableName: "users",
-      id: s.sql({ type: "int", pk: true }).initialState(() => "user-123"),
-      name: s.sql({ type: "varchar" }).initialState("John"),
+      id: s
+        .sql({ type: "int", pk: true })
+        .initialState({ value: () => "user-123", schema: z.string() }),
+      name: s.sql({ type: "varchar" }).initialState({ value: "John" }),
       posts: s.hasMany({ count: 2 }), // Should generate 2 posts
       comments: s.hasMany([]), // Should be empty array
       profile: s.hasOne(true), // Changed from {} to true
@@ -530,7 +537,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
     const posts = schema({
       _tableName: "posts",
       id: s.sql({ type: "int", pk: true }),
-      title: s.sql({ type: "varchar" }).initialState("Default Post"),
+      title: s.sql({ type: "varchar" }).initialState({ value: "Default Post" }),
       authorId: s.reference(() => users.id),
       user: s.hasOne(true),
     });
@@ -538,7 +545,9 @@ describe("New Session Features - Base Schema Without Relations", () => {
     const comments = schema({
       _tableName: "comments",
       id: s.sql({ type: "int", pk: true }),
-      text: s.sql({ type: "varchar" }).initialState("Default Comment"),
+      text: s
+        .sql({ type: "varchar" })
+        .initialState({ value: "Default Comment" }),
       userId: s.reference(() => users.id),
       user: s.hasOne(true),
     });
@@ -546,7 +555,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
     const profiles = schema({
       _tableName: "profiles",
       id: s.sql({ type: "int", pk: true }),
-      bio: s.sql({ type: "varchar" }).initialState("Default Bio"),
+      bio: s.sql({ type: "varchar" }).initialState({ value: "Default Bio" }),
       userId: s.reference(() => users.id),
       user: s.hasOne(true),
     });
@@ -638,7 +647,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
       const items = schema({
         _tableName: "items",
         id: s.sql({ type: "int", pk: true }),
-        name: s.sql({ type: "varchar" }).initialState("Item"),
+        name: s.sql({ type: "varchar" }).initialState({ value: "Item" }),
       });
 
       const trueBox = createSchemaBox({ trueUsers, items }, (s) => ({

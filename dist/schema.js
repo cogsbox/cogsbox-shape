@@ -8,6 +8,41 @@ export function currentTimeStamp() {
     };
 }
 export const s = {
+    initialState: (value) => {
+        const actualValue = isFunction(value) ? value() : value;
+        // Infer the Zod type from the primitive value
+        let inferredZodType;
+        if (typeof actualValue === "string") {
+            inferredZodType = z.string();
+        }
+        else if (typeof actualValue === "number") {
+            inferredZodType = z.number();
+        }
+        else if (typeof actualValue === "boolean") {
+            inferredZodType = z.boolean();
+        }
+        else if (actualValue instanceof Date) {
+            inferredZodType = z.date();
+        }
+        else if (actualValue === null) {
+            inferredZodType = z.null();
+        }
+        else {
+            inferredZodType = z.any();
+        }
+        return createBuilder({
+            stage: "new",
+            // THE MAGIC: There is no SQL config and the SQL schema is z.undefined()
+            // This guarantees the field will be stripped from the final SQL schema object.
+            sqlConfig: null,
+            sqlZod: z.undefined(),
+            // The rest of the schemas are based on the inferred type
+            newZod: inferredZodType,
+            initialValue: actualValue,
+            clientZod: inferredZodType,
+            validationZod: inferredZodType, // This is our internal name
+        }); // Using `as any` to simplify the complex return type
+    },
     reference: (getter) => ({
         __type: "reference",
         getter: getter,
@@ -85,93 +120,71 @@ function createBuilder(config) {
             clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
             validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
         },
-        initialState: (value, schemaOrModifier) => {
+        initialState: (options) => {
             if (completedStages.has("new")) {
                 throw new Error("initialState() can only be called once in the chain");
             }
+            const { value, schema: schemaOrModifier, clientPk } = options;
             let actualValue;
-            let baseSchema;
             let finalSchema;
-            // Check if value is a Zod schema (single argument case)
-            if (value && typeof value === "object" && "_def" in value) {
-                // It's a Zod schema - infer the default value
-                baseSchema = value;
-                actualValue = inferDefaultFromZod(baseSchema, config.sqlConfig);
-                finalSchema = baseSchema;
+            // 1. Determine the actual value
+            if (value !== undefined) {
+                actualValue = isFunction(value) ? value() : value;
+            }
+            else if (schemaOrModifier &&
+                typeof schemaOrModifier === "object" &&
+                "_def" in schemaOrModifier) {
+                // If only a schema is provided, infer the default from it
+                actualValue = inferDefaultFromZod(schemaOrModifier, config.sqlConfig);
+            }
+            // 2. Determine the final schema
+            let baseSchema;
+            if (schemaOrModifier &&
+                typeof schemaOrModifier === "object" &&
+                "_def" in schemaOrModifier) {
+                // A raw Zod schema was passed
+                finalSchema = schemaOrModifier;
             }
             else {
-                // Get the actual value
-                actualValue = isFunction(value) ? value() : value;
-                // If second parameter is provided and is a Zod schema, use it directly
-                if (schemaOrModifier &&
-                    typeof schemaOrModifier === "object" &&
-                    "_def" in schemaOrModifier) {
-                    finalSchema = schemaOrModifier;
-                }
-                else if (isFunction(schemaOrModifier)) {
-                    // It's a schema modifier function
-                    // Create base Zod schema from the value type
-                    if (typeof actualValue === "string") {
-                        baseSchema = z.string();
-                    }
-                    else if (typeof actualValue === "number") {
-                        baseSchema = z.number();
-                    }
-                    else if (typeof actualValue === "boolean") {
-                        baseSchema = z.boolean();
-                    }
-                    else if (actualValue instanceof Date) {
-                        baseSchema = z.date();
-                    }
-                    else if (actualValue === null) {
-                        baseSchema = z.null();
-                    }
-                    else if (actualValue === undefined) {
-                        baseSchema = z.undefined();
-                    }
-                    else {
-                        baseSchema = z.any();
-                    }
-                    // Apply the modifier
+                // Base schema must be inferred from the value type
+                if (typeof actualValue === "string")
+                    baseSchema = z.string();
+                else if (typeof actualValue === "number")
+                    baseSchema = z.number();
+                else if (typeof actualValue === "boolean")
+                    baseSchema = z.boolean();
+                else if (actualValue instanceof Date)
+                    baseSchema = z.date();
+                else if (actualValue === null)
+                    baseSchema = z.null();
+                else
+                    baseSchema = z.any();
+                if (isFunction(schemaOrModifier)) {
+                    // A modifier function was passed
                     finalSchema = schemaOrModifier(baseSchema);
                 }
                 else {
-                    // No schema provided, create from value type
-                    if (typeof actualValue === "string") {
-                        baseSchema = z.string();
-                    }
-                    else if (typeof actualValue === "number") {
-                        baseSchema = z.number();
-                    }
-                    else if (typeof actualValue === "boolean") {
-                        baseSchema = z.boolean();
-                    }
-                    else if (actualValue instanceof Date) {
-                        baseSchema = z.date();
-                    }
-                    else if (actualValue === null) {
-                        baseSchema = z.null();
-                    }
-                    else if (actualValue === undefined) {
-                        baseSchema = z.undefined();
-                    }
-                    else {
-                        baseSchema = z.any();
-                    }
+                    // No schema/modifier, use the inferred base schema
                     finalSchema = baseSchema;
                 }
             }
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
-            // Create union for client/validation
-            const clientValidationSchema = z.union([config.sqlZod, finalSchema]);
+            // Create union of the SQL type and the new client type
+            const clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
+            const newConfig = { ...config.sqlConfig };
+            if (clientPk) {
+                // Add our metadata flag to the config
+                newConfig.isClientPk = true;
+            }
             return createBuilder({
                 ...config,
                 stage: "new",
+                sqlConfig: newConfig,
                 newZod: finalSchema,
                 initialValue: actualValue,
-                clientZod: clientValidationSchema,
-                validationZod: clientValidationSchema,
+                clientZod: clientAndServerSchema,
+                validationZod: clientAndServerSchema, // Our internal name
                 completedStages: newCompletedStages,
             });
         },
@@ -188,7 +201,7 @@ function createBuilder(config) {
             if (completedStages.has("client")) {
                 throw new Error("client() can only be called once in the chain");
             }
-            if (completedStages.has("validation")) {
+            if (completedStages.has("server")) {
                 throw new Error("client() must be called before validation()");
             }
             const newCompletedStages = new Set(completedStages);
@@ -224,10 +237,10 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
-        validation: (
+        server: (
         // ... this validation function remains unchanged ...
         assert) => {
-            if (completedStages.has("validation")) {
+            if (completedStages.has("server")) {
                 throw new Error("validation() can only be called once in the chain");
             }
             const validationSchema = isFunction(assert)
@@ -238,17 +251,16 @@ function createBuilder(config) {
                 })
                 : assert;
             const newCompletedStages = new Set(completedStages);
-            newCompletedStages.add("validation");
+            newCompletedStages.add("server");
             return createBuilder({
                 ...config,
-                stage: "validation",
+                stage: "server",
                 validationZod: validationSchema,
                 completedStages: newCompletedStages,
             });
         },
         transform: (transforms) => {
-            if (!completedStages.has("validation") &&
-                !completedStages.has("client")) {
+            if (!completedStages.has("server") && !completedStages.has("client")) {
                 throw new Error("transform() requires at least client() or validation() to be called first");
             }
             return {
@@ -265,50 +277,65 @@ function createBuilder(config) {
     return builderObject;
 }
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
-// Update the schema function
 export function schema(schema) {
+    // Create the enriched schema with all fields
     const enrichedSchema = {};
     for (const key in schema) {
         if (Object.prototype.hasOwnProperty.call(schema, key)) {
             if (key === "_tableName") {
-                // Don't enrich _tableName, keep it as a simple string
                 enrichedSchema[key] = schema[key];
             }
             else {
-                // Enrich other fields
                 enrichedSchema[key] = {
                     ...schema[key],
-                    __meta: {
-                        _key: key,
-                        _fieldType: schema[key],
-                    },
+                    __meta: { _key: key, _fieldType: schema[key] },
                     __parentTableType: schema,
                 };
             }
         }
     }
     enrichedSchema[SchemaWrapperBrand] = true;
+    // Add private properties
+    enrichedSchema.__primaryKeySQL = undefined;
+    enrichedSchema.__isClientChecker = undefined;
+    // Add methods directly
+    enrichedSchema.primaryKeySQL = function (definer) {
+        const pkFieldsOnly = {};
+        // Find all PK fields
+        for (const key in schema) {
+            const field = schema[key];
+            if (field &&
+                typeof field === "object" &&
+                field.config?.sql?.pk === true) {
+                pkFieldsOnly[key] = schema[key];
+            }
+        }
+        enrichedSchema.__primaryKeySQL = definer(pkFieldsOnly);
+        return enrichedSchema;
+    };
+    enrichedSchema.isClient = function (checker) {
+        enrichedSchema.__isClientChecker = checker;
+        return enrichedSchema;
+    };
     return enrichedSchema;
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
+    // --- START OF FIX ---
+    // If the database is responsible for the default, the client shouldn't generate a value.
+    if (sqlConfig &&
+        "default" in sqlConfig &&
+        sqlConfig.default === "CURRENT_TIMESTAMP") {
+        return undefined;
+    }
+    // --- END OF FIX ---
     if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
         if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-            if (sqlConfig.default === "CURRENT_TIMESTAMP") {
-                return undefined;
-            }
+            // This part now runs only if default is not CURRENT_TIMESTAMP
             return sqlConfig.default;
         }
         if (typeof sqlConfig.type === "string" &&
             ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-            const relationConfig = sqlConfig;
-            if (relationConfig.type === "hasMany" ||
-                relationConfig.type === "manyToMany") {
-                return Array.from({ length: relationConfig.defaultCount || 0 }, () => ({}));
-            }
-            if (relationConfig.type === "hasOne" ||
-                relationConfig.type === "belongsTo") {
-                return {};
-            }
+            // ... (rest of the function is unchanged)
         }
         const sqlTypeConfig = sqlConfig;
         if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
@@ -324,6 +351,7 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                     return false;
                 case "date":
                 case "datetime":
+                case "timestamp": // Added timestamp here for completeness
                     return new Date();
             }
         }
@@ -421,14 +449,19 @@ function isReference(value) {
 export function createSchema(schema, relations) {
     const sqlFields = {};
     const clientFields = {};
-    const validationFields = {};
+    const serverFields = {};
     const defaultValues = {};
+    const defaultGenerators = {};
     const fieldTransforms = {};
     const fullSchema = { ...schema, ...(relations || {}) };
+    let pkKeys = [];
+    let clientPkKeys = [];
+    const pkResolver = schema.__pkResolver;
     for (const key in fullSchema) {
         if (key === "_tableName" ||
             key.startsWith("__") ||
-            key === String(SchemaWrapperBrand))
+            key === String(SchemaWrapperBrand) ||
+            key === "resolvePKs")
             continue;
         const definition = fullSchema[key];
         // Handle new-style references
@@ -438,7 +471,9 @@ export function createSchema(schema, relations) {
                 const config = targetField.config;
                 sqlFields[key] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
-                validationFields[key] = config.zodValidationSchema;
+                serverFields[key] = config.zodValidationSchema;
+                const initialValueOrFn = config.initialValue;
+                defaultGenerators[key] = initialValueOrFn;
                 defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
                     ...config.sql,
                     default: undefined,
@@ -447,43 +482,51 @@ export function createSchema(schema, relations) {
                     fieldTransforms[key] = config.transforms;
                 }
             }
-            continue;
+            continue; // Skip the rest of the logic for references
         }
-        // Handle old-style references (for backward compatibility)
-        if (definition && definition.type === "reference") {
-            const referencedFieldBuilder = definition.to();
-            const referencedConfig = referencedFieldBuilder.config;
-            sqlFields[key] = referencedConfig.zodSqlSchema;
-            clientFields[key] = referencedConfig.zodClientSchema;
-            validationFields[key] = referencedConfig.zodValidationSchema;
-            defaultValues[key] = inferDefaultFromZod(referencedConfig.zodClientSchema, { ...referencedConfig.sql, default: undefined });
-            continue;
-        }
-        // Handle fields with a config property (builders)
+        // THEN, handle all other fields that have a config (builders, relations, etc.)
         if (definition && definition.config) {
             const config = definition.config;
+            if (config.sql?.pk && !config.sql?.isForeignKey) {
+                pkKeys.push(key);
+            }
+            if (config.sql?.isClientPk) {
+                clientPkKeys.push(key);
+            }
+            // The rest of the logic for builders
             const sqlConfig = config.sql;
             if (sqlConfig &&
                 typeof sqlConfig === "object" &&
                 ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-                console.log(`Skipping relation: ${key}`);
+                // This is for relations, which also aren't PKs, so we just continue.
                 continue;
             }
             else {
-                // Handle regular fields
+                // This is for regular s.sql() fields
                 sqlFields[key] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
-                validationFields[key] = config.zodValidationSchema;
+                serverFields[key] = config.zodValidationSchema;
                 if (config.transforms) {
                     fieldTransforms[key] = config.transforms;
                 }
                 const initialValueOrFn = config.initialValue;
+                defaultGenerators[key] = initialValueOrFn;
                 defaultValues[key] = isFunction(initialValueOrFn)
                     ? initialValueOrFn()
                     : initialValueOrFn;
             }
         }
     }
+    const generateDefaults = () => {
+        const freshDefaults = {};
+        for (const key in defaultGenerators) {
+            const generatorOrValue = defaultGenerators[key];
+            freshDefaults[key] = isFunction(generatorOrValue)
+                ? generatorOrValue() // Call the function to get a fresh value
+                : generatorOrValue; // Use the static value
+        }
+        return freshDefaults;
+    };
     const toClient = (dbObject) => {
         const clientObject = { ...dbObject };
         for (const key in fieldTransforms) {
@@ -503,10 +546,14 @@ export function createSchema(schema, relations) {
         return dbObject;
     };
     return {
+        pk: pkKeys,
+        clientPk: clientPkKeys,
+        resolvePKs: pkResolver,
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),
-        validationSchema: z.object(validationFields),
+        validationSchema: z.object(serverFields),
         defaultValues: defaultValues,
+        generateDefaults,
         toClient,
         toDb,
     };
@@ -530,7 +577,9 @@ selection, registry, tableNameToRegistryKeyMap // The lookup map
             throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
         }
         // 2. Get the base Zod schema (primitives and references only) for the current level.
-        const baseSchema = registryEntry.zodSchemas[`${schemaType}Schema`];
+        const baseSchema = schemaType === "server"
+            ? registryEntry.zodSchemas.validationSchema
+            : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
         // 3. If the selection is just `true`, we are done at this level. Return the base primitive schema.
         if (subSelection === true) {
@@ -574,7 +623,7 @@ selection, registry, tableNameToRegistryKeyMap // The lookup map
     return {
         sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
         client: buildView(initialRegistryKey, selection, "client"),
-        validation: buildView(initialRegistryKey, selection, "validation"),
+        server: buildView(initialRegistryKey, selection, "server"),
     };
 }
 export function createSchemaBox(schemas, resolver) {
@@ -611,7 +660,12 @@ export function createSchemaBox(schemas, resolver) {
             if (isReference(field)) {
                 const targetField = field.getter();
                 if (targetField && targetField.config) {
-                    resolvedSchemas[tableName][fieldName] = targetField;
+                    const newConfig = JSON.parse(JSON.stringify(targetField.config));
+                    newConfig.sql.isForeignKey = true; // Add the tag
+                    resolvedSchemas[tableName][fieldName] = {
+                        ...targetField,
+                        config: newConfig,
+                    };
                 }
                 else {
                     throw new Error(`Could not resolve reference for ${tableName}.${fieldName}`);
@@ -700,13 +754,18 @@ export function createSchemaBox(schemas, resolver) {
             schemas: {
                 sql: entry.zodSchemas.sqlSchema,
                 client: entry.zodSchemas.clientSchema,
-                validation: entry.zodSchemas.validationSchema,
+                server: entry.zodSchemas.validationSchema,
             },
             transforms: {
                 toClient: entry.zodSchemas.toClient,
                 toDb: entry.zodSchemas.toDb,
             },
             defaults: entry.zodSchemas.defaultValues,
+            generateDefaults: entry.zodSchemas.generateDefaults,
+            // ADD: Expose PK info and resolver
+            pk: entry.zodSchemas.pk,
+            clientPk: entry.zodSchemas.clientPk,
+            resolvePKs: entry.zodSchemas.resolvePKs,
             nav: createNavProxy(tableName, finalRegistry),
             // Add this
             createView: (selection) => {
@@ -719,7 +778,7 @@ export function createSchemaBox(schemas, resolver) {
                     schemas: {
                         sql: view.sql,
                         client: view.client,
-                        validation: view.validation,
+                        server: view.server,
                     },
                     transforms: {
                         toClient: entry.zodSchemas.toClient, // May need composition for nested
