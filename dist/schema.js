@@ -562,18 +562,27 @@ export function createSchema(schema, relations) {
 function createViewObject(initialRegistryKey, selection, registry, tableNameToRegistryKeyMap) {
     // Add a flag to track if all tables support reconciliation
     let allTablesSupportsReconciliation = true;
+    // Debug: track which tables are checked
+    const checkedTables = {};
     function buildView(currentRegistryKey, subSelection, schemaType) {
         const registryEntry = registry[currentRegistryKey];
         if (!registryEntry) {
             throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
         }
-        // Check if this table has pk and clientPk
-        const hasPks = !!(registryEntry.pk &&
-            registryEntry.pk.length > 0 &&
-            registryEntry.clientPk &&
-            registryEntry.clientPk.length > 0);
-        if (!hasPks) {
-            allTablesSupportsReconciliation = false;
+        // Check if this table has pk and clientPk (only check once per table)
+        if (!(currentRegistryKey in checkedTables)) {
+            const hasPks = !!(registryEntry.pk &&
+                registryEntry.pk.length > 0 &&
+                registryEntry.clientPk &&
+                registryEntry.clientPk.length > 0);
+            checkedTables[currentRegistryKey] = hasPks;
+            if (!hasPks) {
+                console.log(`Table ${currentRegistryKey} missing pk/clientPk:`, {
+                    pk: registryEntry.pk,
+                    clientPk: registryEntry.clientPk,
+                });
+                allTablesSupportsReconciliation = false;
+            }
         }
         const baseSchema = schemaType === "server"
             ? registryEntry.zodSchemas.validationSchema
@@ -608,11 +617,16 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
         const finalShape = { ...primitiveShape, ...selectedRelationShapes };
         return z.object(finalShape);
     }
+    // For array schemas, handle the initial registry key check
+    const isArray = Array.isArray(selection);
+    const actualSelection = isArray ? true : selection;
     return {
         sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
-        client: buildView(initialRegistryKey, selection, "client"),
-        server: buildView(initialRegistryKey, selection, "server"),
-        supportsReconciliation: allTablesSupportsReconciliation, // Add this flag
+        client: buildView(initialRegistryKey, actualSelection, "client"),
+        server: buildView(initialRegistryKey, actualSelection, "server"),
+        supportsReconciliation: allTablesSupportsReconciliation,
+        // Debug info
+        checkedTables,
     };
 }
 export function createSchemaBox(schemas, resolver) {
@@ -772,8 +786,9 @@ export function createSchemaBox(schemas, resolver) {
                         toDb: entry.zodSchemas.toDb,
                     },
                     defaults: defaults,
-                    // Use the flag from createViewObject
-                    supportsReconciliation: view.supportsReconciliation,
+                    // ADD THESE BACK - views need the pk/clientPk arrays from base table
+                    pk: entry.zodSchemas.pk,
+                    clientPk: entry.zodSchemas.clientPk,
                     isView: true,
                     viewSelection: selection,
                     baseTable: tableName,
