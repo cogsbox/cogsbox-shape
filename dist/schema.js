@@ -569,17 +569,17 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
         if (!registryEntry) {
             throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
         }
-        // Check if this table has pk and clientPk (only check once per table)
+        // FIX: Check at the correct path - registryEntry.zodSchemas
         if (!(currentRegistryKey in checkedTables)) {
-            const hasPks = !!(registryEntry.pk &&
-                registryEntry.pk.length > 0 &&
-                registryEntry.clientPk &&
-                registryEntry.clientPk.length > 0);
+            const hasPks = !!(registryEntry.zodSchemas?.pk &&
+                registryEntry.zodSchemas.pk.length > 0 &&
+                registryEntry.zodSchemas?.clientPk &&
+                registryEntry.zodSchemas.clientPk.length > 0);
             checkedTables[currentRegistryKey] = hasPks;
             if (!hasPks) {
                 console.log(`Table ${currentRegistryKey} missing pk/clientPk:`, {
-                    pk: registryEntry.pk,
-                    clientPk: registryEntry.clientPk,
+                    pk: registryEntry.zodSchemas?.pk,
+                    clientPk: registryEntry.zodSchemas?.clientPk,
                 });
                 allTablesSupportsReconciliation = false;
             }
@@ -617,16 +617,11 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
         const finalShape = { ...primitiveShape, ...selectedRelationShapes };
         return z.object(finalShape);
     }
-    // For array schemas, handle the initial registry key check
-    const isArray = Array.isArray(selection);
-    const actualSelection = isArray ? true : selection;
     return {
         sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
-        client: buildView(initialRegistryKey, actualSelection, "client"),
-        server: buildView(initialRegistryKey, actualSelection, "server"),
+        client: buildView(initialRegistryKey, selection, "client"),
+        server: buildView(initialRegistryKey, selection, "server"),
         supportsReconciliation: allTablesSupportsReconciliation,
-        // Debug info
-        checkedTables,
     };
 }
 export function createSchemaBox(schemas, resolver) {

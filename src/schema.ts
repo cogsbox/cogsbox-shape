@@ -1391,6 +1391,7 @@ type ResolvedRegistryWithSchemas<
     };
   };
 };
+
 function createViewObject(
   initialRegistryKey: string,
   selection: Record<string, any>,
@@ -1415,21 +1416,21 @@ function createViewObject(
       );
     }
 
-    // Check if this table has pk and clientPk (only check once per table)
+    // FIX: Check at the correct path - registryEntry.zodSchemas
     if (!(currentRegistryKey in checkedTables)) {
       const hasPks = !!(
-        registryEntry.pk &&
-        registryEntry.pk.length > 0 &&
-        registryEntry.clientPk &&
-        registryEntry.clientPk.length > 0
+        registryEntry.zodSchemas?.pk &&
+        registryEntry.zodSchemas.pk.length > 0 &&
+        registryEntry.zodSchemas?.clientPk &&
+        registryEntry.zodSchemas.clientPk.length > 0
       );
 
       checkedTables[currentRegistryKey] = hasPks;
 
       if (!hasPks) {
         console.log(`Table ${currentRegistryKey} missing pk/clientPk:`, {
-          pk: registryEntry.pk,
-          clientPk: registryEntry.clientPk,
+          pk: registryEntry.zodSchemas?.pk,
+          clientPk: registryEntry.zodSchemas?.clientPk,
         });
         allTablesSupportsReconciliation = false;
       }
@@ -1482,17 +1483,11 @@ function createViewObject(
     return z.object(finalShape);
   }
 
-  // For array schemas, handle the initial registry key check
-  const isArray = Array.isArray(selection);
-  const actualSelection = isArray ? true : selection;
-
   return {
     sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
-    client: buildView(initialRegistryKey, actualSelection, "client"),
-    server: buildView(initialRegistryKey, actualSelection, "server"),
+    client: buildView(initialRegistryKey, selection, "client"),
+    server: buildView(initialRegistryKey, selection, "server"),
     supportsReconciliation: allTablesSupportsReconciliation,
-    // Debug info
-    checkedTables,
   };
 }
 
