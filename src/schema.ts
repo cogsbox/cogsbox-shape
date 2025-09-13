@@ -1100,12 +1100,16 @@ export function createSchema<
   const fullSchema = { ...schema, ...(relations || {}) };
   let pkKeys: string[] | null = [];
   let clientPkKeys: string[] | null = [];
-  const pkResolver = (schema as any).__pkResolver;
+
   for (const key in fullSchema) {
+    const value = (fullSchema as any)[key];
     if (
       key === "_tableName" ||
       key.startsWith("__") ||
-      key === String(SchemaWrapperBrand)
+      key === String(SchemaWrapperBrand) ||
+      key === "isClient" ||
+      key === "primaryKeySQL" ||
+      typeof value === "function"
     )
       continue;
 
@@ -1970,6 +1974,8 @@ export function createSchemaBox<
             toClient: entry.zodSchemas.toClient, // May need composition for nested
             toDb: entry.zodSchemas.toDb,
           },
+          pk: entry.zodSchemas.pk,
+          clientPk: entry.zodSchemas.clientPk,
           defaults: defaults,
           isView: true as const, // Discriminator
           viewSelection: selection, // Store what was selected
