@@ -1981,9 +1981,12 @@ export function createSchemaBox<
           },
           defaults: defaults,
 
-          // ADD THESE BACK - views need the pk/clientPk arrays from base table
+          // Include the pk and clientPk arrays
           pk: entry.zodSchemas.pk,
           clientPk: entry.zodSchemas.clientPk,
+
+          // ADD THIS - the boolean from createViewObject
+          supportsReconciliation: view.supportsReconciliation,
 
           isView: true as const,
           viewSelection: selection,
