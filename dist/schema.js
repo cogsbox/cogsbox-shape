@@ -559,54 +559,43 @@ export function createSchema(schema, relations) {
         toDb,
     };
 }
-function createViewObject(initialRegistryKey, // The key for the starting schema, e.g., "users"
-selection, registry, tableNameToRegistryKeyMap // The lookup map
-) {
-    /**
-     * A recursive helper function that builds a Zod schema for a given schema and its selected relations.
-     * It is defined inside createViewObject to have access to the `registry` and `tableNameToRegistryKeyMap` via a closure.
-     *
-     * @param currentRegistryKey - The user-defined key for the current schema being processed (e.g., "users", then "posts").
-     * @param subSelection - The part of the selection object for the current schema (e.g., { comments: true } or just `true`).
-     * @param schemaType - Whether to build the 'client' or 'validation' schema.
-     * @returns A ZodObject representing the composed schema.
-     */
+function createViewObject(initialRegistryKey, selection, registry, tableNameToRegistryKeyMap) {
+    // Add a flag to track if all tables support reconciliation
+    let allTablesSupportsReconciliation = true;
     function buildView(currentRegistryKey, subSelection, schemaType) {
-        // 1. Find the current schema's definition in the registry using its KEY.
         const registryEntry = registry[currentRegistryKey];
         if (!registryEntry) {
             throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
         }
-        // 2. Get the base Zod schema (primitives and references only) for the current level.
+        // Check if this table has pk and clientPk
+        const hasPks = !!(registryEntry.pk &&
+            registryEntry.pk.length > 0 &&
+            registryEntry.clientPk &&
+            registryEntry.clientPk.length > 0);
+        if (!hasPks) {
+            allTablesSupportsReconciliation = false;
+        }
         const baseSchema = schemaType === "server"
             ? registryEntry.zodSchemas.validationSchema
             : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
-        // 3. If the selection is just `true`, we are done at this level. Return the base primitive schema.
         if (subSelection === true) {
             return z.object(primitiveShape);
         }
-        // 4. If the selection is an object, we need to process its relations.
         const selectedRelationShapes = {};
         if (typeof subSelection === "object") {
-            // Iterate over the keys in the selection object (e.g., "posts", "profile").
             for (const relationKey in subSelection) {
-                // Check if this key corresponds to a valid relation in the raw schema definition.
                 const relationBuilder = registryEntry.rawSchema[relationKey];
                 const isRelation = relationBuilder?.config?.sql?.schema;
                 if (subSelection[relationKey] && isRelation) {
                     const relationConfig = relationBuilder.config.sql;
-                    // 5. KEY STEP: Get the internal `_tableName` of the TARGET schema (e.g., "post_table").
                     const targetTableName = relationConfig.schema()._tableName;
-                    // 6. KEY STEP: Use the map to find the REGISTRY KEY for that target schema (e.g., "posts").
                     const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
                     if (!nextRegistryKey) {
                         throw new Error(`Could not resolve registry key for table "${targetTableName}"`);
                     }
-                    // 7. RECURSIVE CALL: Call `buildView` for the related schema, passing the
-                    //    CORRECT registry key and the sub-selection for that relation.
+                    // Recursive call will also check that table's pk/clientPk
                     const relationSchema = buildView(nextRegistryKey, subSelection[relationKey], schemaType);
-                    // 8. Wrap the resulting schema in an array or optional based on the relation type.
                     if (["hasMany", "manyToMany"].includes(relationConfig.type)) {
                         selectedRelationShapes[relationKey] = z.array(relationSchema);
                     }
@@ -616,15 +605,14 @@ selection, registry, tableNameToRegistryKeyMap // The lookup map
                 }
             }
         }
-        // 9. Combine the base primitive fields with the newly built relational schemas.
         const finalShape = { ...primitiveShape, ...selectedRelationShapes };
         return z.object(finalShape);
     }
-    // The main function's return value. It kicks off the recursive process for both client and validation schemas.
     return {
         sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
         client: buildView(initialRegistryKey, selection, "client"),
         server: buildView(initialRegistryKey, selection, "server"),
+        supportsReconciliation: allTablesSupportsReconciliation, // Add this flag
     };
 }
 export function createSchemaBox(schemas, resolver) {
@@ -771,9 +759,8 @@ export function createSchemaBox(schemas, resolver) {
             createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
-                // Return the same shape as regular entries, but with isView marker
                 return {
-                    definition: entry.rawSchema, // Could be enhanced with selection info
+                    definition: entry.rawSchema,
                     schemaKey: tableName,
                     schemas: {
                         sql: view.sql,
@@ -781,19 +768,15 @@ export function createSchemaBox(schemas, resolver) {
                         server: view.server,
                     },
                     transforms: {
-                        toClient: entry.zodSchemas.toClient, // May need composition for nested
+                        toClient: entry.zodSchemas.toClient,
                         toDb: entry.zodSchemas.toDb,
                     },
-                    pk: entry.zodSchemas.pk,
-                    clientPk: entry.zodSchemas.clientPk,
                     defaults: defaults,
-                    isView: true, // Discriminator
-                    viewSelection: selection, // Store what was selected
+                    // Use the flag from createViewObject
+                    supportsReconciliation: view.supportsReconciliation,
+                    isView: true,
+                    viewSelection: selection,
                     baseTable: tableName,
-                    // Optionally exclude these for views:
-                    // nav: undefined,
-                    // createView: undefined,
-                    // RelationSelection: undefined,
                     __registry: finalRegistry,
                 };
             },
