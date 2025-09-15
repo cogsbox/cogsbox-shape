@@ -171,7 +171,10 @@ function createBuilder(config) {
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
             // Create union of the SQL type and the new client type
-            const clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
+            const hasProvidedSchema = !!schemaOrModifier;
+            const clientAndServerSchema = hasProvidedSchema
+                ? finalSchema
+                : z.union([config.sqlZod, finalSchema]);
             const newConfig = { ...config.sqlConfig };
             if (clientPk) {
                 // Add our metadata flag to the config
