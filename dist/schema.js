@@ -521,6 +521,11 @@ export function createSchema(schema, relations) {
                     : initialValueOrFn;
             }
         }
+    } // Apply transforms to default values so they match client schema
+    for (const key in fieldTransforms) {
+        if (key in defaultValues && defaultValues[key] !== undefined) {
+            defaultValues[key] = fieldTransforms[key].toClient(defaultValues[key]);
+        }
     }
     const generateDefaults = () => {
         const freshDefaults = {};
@@ -529,6 +534,11 @@ export function createSchema(schema, relations) {
             freshDefaults[key] = isFunction(generatorOrValue)
                 ? generatorOrValue() // Call the function to get a fresh value
                 : generatorOrValue; // Use the static value
+        }
+        for (const key in fieldTransforms) {
+            if (key in freshDefaults && freshDefaults[key] !== undefined) {
+                freshDefaults[key] = fieldTransforms[key].toClient(freshDefaults[key]);
+            }
         }
         return freshDefaults;
     };

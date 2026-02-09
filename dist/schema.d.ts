@@ -454,6 +454,11 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<Depth["length"] exte
         };
     } ? D extends () => infer R ? R : D : never : T[K] extends {
         config: {
+            transforms: any;
+            zodClientSchema: infer TClient extends z.ZodTypeAny;
+        };
+    } ? z.infer<TClient> : T[K] extends {
+        config: {
             initialValue: infer D;
         };
     } ? D extends () => infer R ? R : D : never;
