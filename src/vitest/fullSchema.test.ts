@@ -664,4 +664,95 @@ describe("New Session Features - Base Schema Without Relations", () => {
       expect(defaults.items?.[0]).toEqual({ id: 0, name: "Item" });
     });
   });
+  describe("Transform affects defaults", () => {
+    const userSchema = schema({
+      _tableName: "users",
+
+      id: s.sql({ type: "int", pk: true }).initialState({
+        value: () => `temp_${Math.random().toString(36).substr(2, 9)}`,
+        schema: z.string(),
+      }),
+
+      email: s
+        .sql({ type: "varchar", length: 255 })
+        .server(({ sql }) => sql.email("Invalid email address")),
+
+      isActive: s
+        .sql({ type: "int" })
+        .client(() => z.boolean())
+        .transform({
+          toClient: (val) => val === 1,
+          toDb: (val) => (val ? 1 : 0),
+        }),
+
+      role: s.sql({ type: "varchar" }).initialState({
+        value: "user",
+        schema: z.enum(["user", "admin"]),
+      }),
+    });
+
+    const box = createSchemaBox({ users: userSchema }, () => ({ users: {} }));
+
+    const { schemas, transforms, defaults } = box.users;
+
+    it("should have defaults that match the client schema type", () => {
+      // THIS IS THE KEY TEST:
+      // Hover over `defaults` — it should show isActive as boolean, not number
+      const d = defaults;
+      //    ^? should be { id: string; email: string; isActive: boolean; role: "user" | "admin"; }
+
+      // Type-level: defaults should be assignable to z.infer<typeof schemas.client>
+      type ClientType = z.infer<typeof schemas.client>;
+      type DefaultsType = typeof defaults;
+
+      // This is the exact error from the issue - defaults should satisfy client schema
+      expectTypeOf<DefaultsType>().toMatchTypeOf<ClientType>();
+
+      // Runtime: isActive default should be false (toClient(0) => false), not 0
+      expect(d.isActive).toBe(false);
+      expect(typeof d.isActive).toBe("boolean");
+    });
+
+    it("should have isActive typed as boolean in defaults, not number", () => {
+      expectTypeOf(defaults.isActive).toEqualTypeOf<boolean>();
+    });
+
+    it("should have isActive typed as boolean in client schema", () => {
+      type ClientIsActive = z.infer<typeof schemas.client>["isActive"];
+      expectTypeOf<ClientIsActive>().toEqualTypeOf<boolean>();
+    });
+
+    it("should have isActive typed as number in sql schema", () => {
+      type SqlIsActive = z.infer<typeof schemas.sql>["isActive"];
+      expectTypeOf<SqlIsActive>().toEqualTypeOf<number>();
+    });
+
+    it("should allow using defaults directly as useState initial value", () => {
+      // This is the exact use case from the issue
+      type ClientInferred = z.infer<typeof schemas.client>;
+
+      // This should NOT produce a type error
+      const testAssignment: ClientInferred = defaults;
+      expect(testAssignment).toBeDefined();
+    });
+
+    it("should correctly round-trip transform defaults", () => {
+      // defaults are client-side, so toDb should work on them
+      const dbVersion = transforms.toDb(defaults);
+      expect(dbVersion.isActive).toBe(0);
+      expect(typeof dbVersion.isActive).toBe("number");
+
+      // And back to client
+      const clientVersion = transforms.toClient(dbVersion);
+      expect(clientVersion.isActive).toBe(false);
+      expect(typeof clientVersion.isActive).toBe("boolean");
+    });
+
+    it("should have other defaults unaffected by the transform fix", () => {
+      expect(defaults.email).toBe("");
+      expect(defaults.role).toBe("user");
+      expect(typeof defaults.id).toBe("string");
+      expect(defaults.id.startsWith("temp_")).toBe(true);
+    });
+  });
 });
