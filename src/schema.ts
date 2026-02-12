@@ -1176,11 +1176,6 @@ export function createSchema<
           : initialValueOrFn;
       }
     }
-  } // Apply transforms to default values so they match client schema
-  for (const key in fieldTransforms) {
-    if (key in defaultValues && defaultValues[key] !== undefined) {
-      defaultValues[key] = fieldTransforms[key]!.toClient(defaultValues[key]);
-    }
   }
   const generateDefaults = () => {
     const freshDefaults: any = {};
@@ -1190,11 +1185,7 @@ export function createSchema<
         ? generatorOrValue() // Call the function to get a fresh value
         : generatorOrValue; // Use the static value
     }
-    for (const key in fieldTransforms) {
-      if (key in freshDefaults && freshDefaults[key] !== undefined) {
-        freshDefaults[key] = fieldTransforms[key]!.toClient(freshDefaults[key]);
-      }
-    }
+
     return freshDefaults;
   };
   const toClient = (dbObject: any) => {
@@ -2195,21 +2186,19 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
               ? R
               : D
             : never
-          : // When transforms exist, the default is the CLIENT type
-            T[K] extends {
+          : T[K] extends {
                 config: {
-                  transforms: any;
+                  zodNewSchema: infer TNew;
+                  zodSqlSchema: infer TSql;
                   zodClientSchema: infer TClient extends z.ZodTypeAny;
+                  initialValue: infer D;
                 };
               }
-            ? z.infer<TClient>
-            : // Otherwise use initialValue as before
-              T[K] extends {
-                  config: { initialValue: infer D };
-                }
-              ? D extends () => infer R
+            ? TNew extends TSql
+              ? z.infer<TClient>
+              : D extends () => infer R
                 ? R
                 : D
-              : never;
+            : never;
       }
 >;

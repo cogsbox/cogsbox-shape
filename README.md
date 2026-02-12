@@ -22,27 +22,29 @@ pnpm add cogsbox-shape
 In full-stack applications, data flows through multiple layers:
 
 - **Database** stores data in SQL types (integers, varchars, etc.)
-- **Server** needs to transform data for clients (e.g., convert cents to dollars)
-- **Client** expects data in specific formats (e.g., temporary UUIDs for new records)
-- **Forms** need validation rules and default values
+- **Client** needs different types for UI work (booleans instead of 0/1, temp string IDs instead of auto-increment integers)
+- **Validation** rules differ between client and server boundaries
+- **Forms** need typed default values that match the client representation
 
-Traditional approaches require defining these transformations in multiple places, leading to type mismatches and runtime errors.
+Traditional approaches require defining these layers separately, leading to type mismatches and duplicated logic.
 
-## The Solution: The Shape Flow
+## The Shape Flow
 
-cogsbox-shape introduces a unified flow that mirrors how data moves through your application:
+Define a field by chaining methods. Each step is optional — use only what you need.
 
 ```
-        Initial State
-                   \
-SQL ←→ Transform ←→ Client ←→ Server (Validation)
+s.sql()  →  .initialState()  →  .client()  →  .server()  →  .transform()
 ```
 
-This flow ensures type safety at every step while giving you control over transformations.
+| Method                             | Purpose                                                        |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `s.sql({ type })`                  | Database column type. The starting point for every field.      |
+| `.initialState({ value, schema })` | Default value and type for new records created on the client.  |
+| `.client(fn)`                      | Client-side validation. Overrides the client type if needed.   |
+| `.server(fn)`                      | Server-side validation. Stricter rules before database writes. |
+| `.transform({ toClient, toDb })`   | Converts between database and client representations.          |
 
-## Core Concept: The Shape Flow
-
-### 1. SQL - Define Your Database Schema
+### 1. SQL — Define Your Database Schema
 
 Start with your database reality:
 
@@ -51,119 +53,192 @@ import { s, schema } from "cogsbox-shape";
 
 const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }), // In DB: integer auto-increment
+  id: s.sql({ type: "int", pk: true }),
   email: s.sql({ type: "varchar", length: 255 }),
   createdAt: s.sql({ type: "datetime", default: "CURRENT_TIMESTAMP" }),
 });
 ```
 
-### 2. Initial State - Define Creation Defaults
+This generates a Zod schema matching your SQL types exactly.
 
-When creating new records, you often need different types than what's stored in the database.
+### 2. Initial State — Defaults for New Records
 
-**Note:** `initialState` takes an object configuration where you provide the runtime `value` and optionally the Zod `schema`.
+When creating new records on the client, you often need different types than what the database stores. `.initialState()` sets the default value and optionally narrows or widens the client type.
 
 ```typescript
-import { z } from "zod";
-
 const userSchema = schema({
   _tableName: "users",
-  // DB stores integers, but new records start with UUID strings
+  // DB stores auto-increment integers, but new records need a temp string ID
   id: s.sql({ type: "int", pk: true }).initialState({
     value: () => crypto.randomUUID(),
     schema: z.string(),
   }),
-  // This automatically creates a union type: number | string on the client
+  // Client type becomes: string | number (union of SQL + initialState)
+  // Default value: a generated UUID string
 });
 ```
 
-### 3. Client - Define Client Representation
-
-Transform how data appears to clients using `.client()`:
+If the type you pass to `.initialState()` matches the SQL type, no union is created:
 
 ```typescript
-const productSchema = schema({
-  _tableName: "products",
-  id: s.sql({ type: "int", pk: true }).initialState({
-    value: () => `tmp_${Date.now()}`,
-    schema: z.string(),
-  }),
-
-  price: s
-    .sql({ type: "int" }) // Stored as cents in DB
-    .client(() => z.number().multipleOf(0.01)) // But dollars on client
-    .transform({
-      toClient: (cents) => cents / 100,
-      toDb: (dollars) => Math.round(dollars * 100),
-    }),
-});
+count: s.sql({ type: "int" }).initialState({ value: 0 }),
+// Client type: number (no union, same type)
+// Default value: 0
 ```
 
-### 4. Server - Define Validation Rules
+### 3. Client — Client-Side Validation
 
-Add validation that runs at your client -> server boundary using `.server()`:
+The client schema is automatically derived as a union of the SQL type (data fetched from the database) and the initial state type (data created on the client). `.client()` lets you override this to add client-side validation rules or declare a completely different type.
+
+```typescript
+// Without .client() — the type is inferred automatically
+id: s.sql({ type: "int", pk: true }).initialState({
+  value: () => crypto.randomUUID(),
+  schema: z.string(),
+}),
+// Client type: string | number
+// (string from initialState + number from SQL)
+
+// With .client() — add validation rules
+name: s
+  .sql({ type: "varchar" })
+  .client(({ sql }) => sql.min(2).max(100)),
+// Client type: string (with min/max validation)
+
+// With .client() — declare a different type entirely
+// Pair with .transform() to convert between them
+isActive: s
+  .sql({ type: "int" })
+  .client(() => z.boolean())
+  .transform({
+    toClient: (dbValue) => dbValue === 1,
+    toDb: (clientValue) => (clientValue ? 1 : 0),
+  }),
+// Client type: boolean (DB stores 0/1, client works with true/false)
+```
+
+When `.client()` overrides the type without `.initialState()`, the default value is inferred from the client schema (e.g., `boolean` → `false`, `string` → `""`).
+
+### 4. Server — Server-Side Validation
+
+`.server()` adds validation rules that run at the server boundary before database writes. It builds on the client schema, adding stricter constraints.
 
 ```typescript
 const userSchema = schema({
   _tableName: "users",
   email: s
     .sql({ type: "varchar", length: 255 })
-    .server(({ sql }) => sql.email().toLowerCase()),
+    .server(({ sql }) => sql.email("Invalid email")),
 
-  age: s.sql({ type: "int" }).server(({ sql }) => sql.min(18).max(120)),
+  age: s
+    .sql({ type: "int" })
+    .server(({ sql }) => sql.min(18, "Must be 18+").max(120)),
 });
 ```
 
-### 5. Transform - Convert Between Representations
-
-Define bidirectional transformations between database and client:
+The callback receives the previous schema in the chain so you can refine it:
 
 ```typescript
-const userSchema = schema({
-  _tableName: "users",
-  status: s
-    .sql({ type: "int" }) // 0 or 1 in database
-    .client(() => z.enum(["active", "inactive"])) // String enum on client
+name: s
+  .sql({ type: "varchar" })
+  .client(() => z.string().trim())
+  .server(({ client }) => client.min(2, "Too short")),
+```
+
+### 5. Transform — Convert Between Layers
+
+`.transform()` defines bidirectional conversion functions. These run on the server when reading from or writing to the database.
+
+```typescript
+status: s
+  .sql({ type: "int" })                              // DB: 0 or 1
+  .client(() => z.enum(["active", "inactive"]))       // Client: string enum
+  .transform({
+    toClient: (dbValue) => dbValue === 1 ? "active" : "inactive",
+    toDb: (clientValue) => clientValue === "active" ? 1 : 0,
+  }),
+```
+
+Transforms are optional — only needed when the client type differs from the SQL type.
+
+## Using Schemas
+
+### Single Schema with `createSchema`
+
+For standalone schemas without relationships:
+
+```typescript
+import { s, schema, createSchema } from "cogsbox-shape";
+
+const contactSchema = schema({
+  _tableName: "contacts",
+  id: s.sql({ type: "int", pk: true }).initialState({
+    value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    schema: z.string(),
+  }),
+  name: s.sql({ type: "varchar" }).server(({ sql }) => sql.min(2)),
+  email: s.sql({ type: "varchar" }).server(({ sql }) => sql.email()),
+  isArchived: s
+    .sql({ type: "int" })
+    .client(() => z.boolean())
     .transform({
-      toClient: (dbValue) => (dbValue === 1 ? "active" : "inactive"),
-      toDb: (clientValue) => (clientValue === "active" ? 1 : 0),
+      toClient: (val) => val === 1,
+      toDb: (val) => (val ? 1 : 0),
     }),
 });
+
+const {
+  clientSchema, // Zod schema for client-side validation
+  validationSchema, // Zod schema with .server() rules
+  sqlSchema, // Zod schema matching DB column types
+  defaultValues, // Typed defaults matching clientSchema
+  toClient, // DB row → client object
+  toDb, // Client object → DB row
+} = createSchema(contactSchema);
+
+// Use in a form
+const [data, setData] = useState(defaultValues);
+// { id: "new_a1b2c3d4", name: "", email: "", isArchived: false }
+
+// Validate
+const result = validationSchema.safeParse(data);
+
+// Transform (on the server)
+const dbRow = toDb(data); // { isArchived: 0, ... }
+const clientObj = toClient(row); // { isArchived: true, ... }
 ```
 
 ## Relationships and Views
 
-Define relationships between schemas and create specific data views using the `createSchemaBox`.
+For schemas with relationships, use `createSchemaBox`.
 
 ### 1. Define Schemas with Placeholders
 
 ```typescript
 import { s, schema, createSchemaBox } from "cogsbox-shape";
 
-// Define schemas with relationship placeholders
 const users = schema({
   _tableName: "users",
   id: s.sql({ type: "int", pk: true }),
   name: s.sql({ type: "varchar" }),
-  posts: s.hasMany(), // Placeholder for a one-to-many relationship
+  posts: s.hasMany(), // Placeholder — resolved later
 });
 
 const posts = schema({
   _tableName: "posts",
   id: s.sql({ type: "int", pk: true }),
   title: s.sql({ type: "varchar" }),
-  authorId: s.reference(() => users.id), // Foreign key reference
+  authorId: s.reference(() => users.id), // Foreign key
 });
 ```
 
-### 2. Create the Registry (The "Box")
+### 2. Create the Registry
 
-The `createSchemaBox` function processes your raw schemas, resolves the relationships, and gives you a powerful, type-safe API for accessing them.
+The `createSchemaBox` function resolves relationships and gives you a type-safe API:
 
 ```typescript
 const box = createSchemaBox({ users, posts }, (s) => ({
   users: {
-    // Resolve the 'posts' relation on the 'users' schema
     posts: { fromKey: "id", toKey: s.posts.authorId },
   },
 }));
@@ -171,47 +246,37 @@ const box = createSchemaBox({ users, posts }, (s) => ({
 
 ### 3. Access Base Schemas
 
-By default, the schemas accessed directly on the box **exclude relations**. This prevents circular dependencies and over-fetching.
+Base schemas **exclude relations** by default, preventing circular dependencies:
 
 ```typescript
-// Access the processed schemas for the 'users' table
-const userSchemas = box.users.schemas;
+const { schemas, defaults } = box.users;
 
-// The base schema does NOT include the 'posts' relation
-type UserClient = z.infer<typeof userSchemas.client>;
+type UserClient = z.infer<typeof schemas.client>;
 // { id: number; name: string; }
+// No 'posts' — relations are excluded from base schemas
 ```
 
 ### 4. Create Views to Include Relations
 
-To include relationships, you must explicitly create a view. This ensures you only load the data you need.
+Explicitly select which relations to include:
 
 ```typescript
-// Create a view that includes the 'posts' for a user
-const userWithPostsView = box.users.createView({
-  posts: true, // Select the 'posts' relation
+const userWithPosts = box.users.createView({
+  posts: true,
 });
 
-// The type of this view now includes the nested posts
-type UserWithPosts = z.infer<typeof userWithPostsView.schemas.client>;
+type UserWithPosts = z.infer<typeof userWithPosts.schemas.client>;
 // {
 //   id: number;
 //   name: string;
-//   posts: {
-//     id: number;
-//     title: string;
-//     authorId: number;
-//   }[];
+//   posts: { id: number; title: string; authorId: number; }[]
 // }
 
-// You can also get default values specifically for this view
-const defaults = userWithPostsView.defaults;
+const defaults = userWithPosts.defaults;
 // { id: 0, name: '', posts: [] }
 ```
 
-## Real-World Example
-
-Here's a complete example showing the power of the flow:
+## Complete Example
 
 ```typescript
 import { s, schema, createSchemaBox } from "cogsbox-shape";
@@ -223,40 +288,23 @@ const users = schema({
     value: () => `user_${crypto.randomUUID()}`,
     schema: z.string(),
   }),
-
   email: s
     .sql({ type: "varchar", length: 255 })
     .server(({ sql }) => sql.email()),
-
-  metadata: s
-    .sql({ type: "text" })
-    .client(
-      z.object({
-        preferences: z.object({
-          theme: z.enum(["light", "dark"]),
-          notifications: z.boolean(),
-        }),
-      }),
-    )
+  isActive: s
+    .sql({ type: "int" })
+    .client(() => z.boolean())
     .transform({
-      toClient: (json) => JSON.parse(json),
-      toDb: (obj) => JSON.stringify(obj),
+      toClient: (val) => val === 1,
+      toDb: (val) => (val ? 1 : 0),
     }),
-
-  posts: s.hasMany({ count: 0 }), // Default to an empty array
+  posts: s.hasMany({ count: 0 }),
 });
 
 const posts = schema({
   _tableName: "posts",
   id: s.sql({ type: "int", pk: true }),
   title: s.sql({ type: "varchar" }),
-  published: s
-    .sql({ type: "int" }) // 0 or 1 in DB
-    .client(() => z.boolean())
-    .transform({
-      toClient: (int) => Boolean(int),
-      toDb: (bool) => (bool ? 1 : 0),
-    }),
   authorId: s.reference(() => users.id),
 });
 
@@ -266,48 +314,50 @@ const box = createSchemaBox({ users, posts }, (s) => ({
   },
 }));
 
-// 1. Create a View for your API response
-const userApiView = box.users.createView({ posts: true });
-const { client, server } = userApiView.schemas;
-const { toClient, toDb } = userApiView.transforms;
+// Base schema (no relations)
+const { schemas, defaults, transforms } = box.users;
 
-// 2. Type Inference
-type UserApiResponse = z.infer<typeof client>;
+// View with relations
+const userView = box.users.createView({ posts: true });
+const { client, server } = userView.schemas;
 
-// 3. Validation
-// Validate user input against the view's server schema
-const validated = server.parse(userInput);
+// Type inference
+type User = z.infer<typeof client>;
 
-// 4. Transformation
-const dbUser = toDb(validated); // Ready for SQL
-const apiUser = toClient(dbUser); // Ready for API response
+// Validation
+const result = server.safeParse(formData);
+
+// Transformation (server-side)
+const dbRow = transforms.toDb(validated);
+const apiResponse = transforms.toClient(dbRow);
 ```
 
 ## API Reference
 
 ### Schema Definition
 
-- `s.sql(config)`: Define SQL column type.
-- `.initialState({ value, schema })`: Set default value for new records and the Zod schema for that state.
-- `.client(schema | fn)`: Define client-side schema.
-- `.server(schema | fn)`: Add validation rules (runs on server before DB insertion).
-- `.transform(transforms)`: Define `toClient` and `toDb` transformations.
+- `s.sql(config)` — Define SQL column type. The starting point for every field.
+- `.initialState({ value, schema })` — Set default value for new records. Optionally provide a Zod schema to widen or narrow the client type.
+- `.client(schema | fn)` — Define the client-side Zod schema for validation. Use when the client type differs from SQL.
+- `.server(schema | fn)` — Add server-side validation rules. Receives the previous schema in the chain for refinement.
+- `.transform({ toClient, toDb })` — Define bidirectional conversion between SQL and client types. Runs on the server.
 
 ### Relationships
 
-- `s.reference(getter)`: Create a foreign key reference.
-- `s.hasMany(config)`: Define one-to-many relationship placeholder.
-- `s.hasOne(config)`: Define one-to-one relationship placeholder.
-- `s.manyToMany(config)`: Define many-to-many relationship placeholder.
+- `s.reference(getter)` — Create a foreign key reference to another schema's field.
+- `s.hasMany(config)` — Declare a one-to-many relationship placeholder.
+- `s.hasOne(config)` — Declare a one-to-one relationship placeholder.
+- `s.manyToMany(config)` — Declare a many-to-many relationship placeholder.
 
 ### Schema Processing
 
-- `schema(definition)`: Create a schema definition.
-- `createSchemaBox(schemas, resolver)`: The main function to create and resolve a schema registry.
-- From the box entry (e.g., `box.users`):
-  - `.schemas`: Access base Zod schemas (excludes relations).
-  - `.defaults`: Access base default values.
-  - `.createView(selection)`: Creates a specific view including selected relations.
+- `schema(definition)` — Create a schema definition from field declarations.
+- `createSchema(schema)` — Process a single schema. Returns `clientSchema`, `validationSchema`, `sqlSchema`, `defaultValues`, `toClient`, `toDb`.
+- `createSchemaBox(schemas, resolver)` — Process multiple schemas with relationships. Returns a registry with:
+  - `.schemas` — Base Zod schemas (excludes relations).
+  - `.defaults` — Typed default values.
+  - `.transforms` — `toClient` and `toDb` functions.
+  - `.createView(selection)` — Create a view including selected relations.
 
 ## License
 
