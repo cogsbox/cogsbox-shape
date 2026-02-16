@@ -1,59 +1,59 @@
 {
-    "name": "cogsbox-shape",
-    "version": "0.5.157",
-    "description": "A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
-    "repository": "github:cogsbox/cogsbox-shape",
-    "scripts": {
-        "build": " tsc",
-        "lint": "eslint src --ext .ts",
-        "format": "prettier --write \"src/**/*.ts\"",
-        "test": "vitest  "
-    },
-    "bin": {
-        "cogsbox-shape": "tsx ./dist/cli.js"
-    },
-    "exports": {
-        ".": "./dist/index.js"
-    },
-    "keywords": [
-        "typescript",
-        "orm",
-        "database",
-        "full-stack",
-        "type-safe",
-        "client-server",
-        "zod",
-        "validation",
-        "cogs",
-        "schema",
-        "types"
-    ],
-    "author": "",
-    "license": "MIT",
-    "dependencies": {
-        "commander": "^13.1.0",
-        "tsx": "^4.19.3",
-        "uuid": "^9.0.0"
-    },
-    "devDependencies": {
-        "@types/node": "^20.10.5",
-        "@types/uuid": "^9.0.7",
-        "@typescript-eslint/eslint-plugin": "^6.15.0",
-        "@typescript-eslint/parser": "^6.15.0",
-        "eslint": "^8.56.0",
-        "expect-type": "^1.2.1",
-        "prettier": "^3.1.1",
-        "typescript": "^5.3.3",
-        "vitest": "^3.2.0",
-        "zod": "^3.25.0 || ^4.0.0"
-    },
-    "peerDependencies": {
-        "zod": "^3.22.4 || ^4.0.0"
-    },
-    "type": "module"
+  "name": "cogsbox-shape",
+  "version": "0.5.157",
+  "description": "A TypeScript library for creating type-safe database schemas with Zod validation, SQL type definitions, and automatic client/server transformations. Unifies client, server, and database types through a single schema definition, with built-in support for relationships and serialization.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": "github:cogsbox/cogsbox-shape",
+  "scripts": {
+    "build": " tsc",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "vitest  "
+  },
+  "bin": {
+    "cogsbox-shape": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "keywords": [
+    "typescript",
+    "orm",
+    "database",
+    "full-stack",
+    "type-safe",
+    "client-server",
+    "zod",
+    "validation",
+    "cogs",
+    "schema",
+    "types"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^13.1.0",
+    "tsx": "^4.19.3",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "eslint": "^8.56.0",
+    "expect-type": "^1.2.1",
+    "prettier": "^3.1.1",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.0",
+    "zod": "^3.25.0 || ^4.0.0"
+  },
+  "peerDependencies": {
+    "zod": "^3.22.4 || ^4.0.0"
+  },
+  "type": "module"
 }
