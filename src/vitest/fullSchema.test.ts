@@ -819,4 +819,45 @@ describe("New Session Features - Base Schema Without Relations", () => {
       expectTypeOf<PetDefaults["user_id"]>().toEqualTypeOf<string>();
     });
   });
+  describe("UUID generation in initialState", () => {
+    it("should call value function with uuid tool", () => {
+      // This is the exact pattern from the user's app
+      const field = s.sql({ type: "int", pk: true }).initialState({
+        value: ({ uuid }) => uuid(),
+        schema: z.string(),
+        clientPk: true,
+      });
+
+      // Should not throw "Cannot destructure property 'uuid' of 'undefined'"
+      expect(typeof field.config.initialValue).toBe("string");
+      expect(field.config.initialValue.length).toBeGreaterThan(0);
+    });
+
+    it("should have uuid available in s.sql().initialState()", () => {
+      let receivedUuid: any;
+
+      s.sql({ type: "int", pk: true }).initialState({
+        value: (tools) => {
+          receivedUuid = tools;
+          return tools.uuid();
+        },
+        schema: z.string(),
+      });
+
+      expect(receivedUuid).toBeDefined();
+      expect(typeof receivedUuid.uuid).toBe("function");
+    });
+
+    it("should have uuid available in standalone s.initialState()", () => {
+      let receivedUuid: any;
+
+      s.initialState((tools) => {
+        receivedUuid = tools;
+        return tools.uuid();
+      });
+
+      expect(receivedUuid).toBeDefined();
+      expect(typeof receivedUuid.uuid).toBe("function");
+    });
+  });
 });
