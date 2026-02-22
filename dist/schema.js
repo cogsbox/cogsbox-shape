@@ -652,7 +652,7 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
                         selectedRelationShapes[relationKey] = z.array(relationSchema);
                     }
                     else {
-                        selectedRelationShapes[relationKey] = relationSchema.optional();
+                        selectedRelationShapes[relationKey] = relationSchema.nullable();
                     }
                 }
             }

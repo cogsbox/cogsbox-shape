@@ -324,7 +324,7 @@ type _DeriveViewShape<TTableName extends keyof TRegistry, TSelection, TRegistry 
     } ? RelType extends "hasMany" | "manyToMany" ? z.ZodArray<z.ZodObject<_DeriveViewShape<TargetKey, TSelection[K], TRegistry, TKey, [
         ...Depth,
         1
-    ]>>> : z.ZodOptional<z.ZodObject<_DeriveViewShape<TargetKey, TSelection[K], TRegistry, TKey, [
+    ]>>> : z.ZodNullable<z.ZodObject<_DeriveViewShape<TargetKey, TSelection[K], TRegistry, TKey, [
         ...Depth,
         1
     ]>>> : never : never : never;

@@ -1531,7 +1531,7 @@ function createViewObject(
           if (["hasMany", "manyToMany"].includes(relationConfig.type)) {
             selectedRelationShapes[relationKey] = z.array(relationSchema);
           } else {
-            selectedRelationShapes[relationKey] = relationSchema.optional();
+            selectedRelationShapes[relationKey] = relationSchema.nullable();
           }
         }
       }
@@ -1587,7 +1587,6 @@ type OmitRelationFields<Shape, RawSchema> = Omit<
       : never;
   }[keyof Shape]
 >;
-
 type _DeriveViewShape<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -1627,7 +1626,7 @@ type _DeriveViewShape<
                           >
                         >
                       >
-                    : z.ZodOptional<
+                    : z.ZodNullable<
                         z.ZodObject<
                           _DeriveViewShape<
                             TargetKey,

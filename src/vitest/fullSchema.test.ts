@@ -276,12 +276,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
         pets: {
           id: number;
           userId: string | number;
-          owner?:
-            | {
-                id: string | number;
-                petId: number;
-              }
-            | undefined;
+          owner: {
+            id: string | number;
+            petId: number;
+          } | null;
         }[];
       }>();
 
@@ -294,10 +292,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
           expect(petShape).toHaveProperty("owner");
 
           // Check that owner is optional
-          expect(petShape.owner).toBeInstanceOf(z.ZodOptional);
+          expect(petShape.owner).toBeInstanceOf(z.ZodNullable);
 
           // Check that owner doesn't include pets
-          if (petShape.owner instanceof z.ZodOptional) {
+          if (petShape.owner instanceof z.ZodNullable) {
             const ownerSchema = petShape.owner._def.innerType;
             if (ownerSchema instanceof z.ZodObject) {
               expect(ownerSchema.shape).not.toHaveProperty("pets");
@@ -440,12 +438,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
           pets: {
             id: number;
             userId: string | number;
-            owner?:
-              | {
-                  id: string | number;
-                  petId: number;
-                }
-              | undefined;
+            owner: {
+              id: string | number;
+              petId: number;
+            } | null;
           }[];
         }>();
 
@@ -458,10 +454,10 @@ describe("New Session Features - Base Schema Without Relations", () => {
             expect(petShape).toHaveProperty("owner");
 
             // Check that owner is optional
-            expect(petShape.owner).toBeInstanceOf(z.ZodOptional);
+            expect(petShape.owner).toBeInstanceOf(z.ZodNullable);
 
             // Check that owner doesn't include pets
-            if (petShape.owner instanceof z.ZodOptional) {
+            if (petShape.owner instanceof z.ZodNullable) {
               const ownerSchema = petShape.owner._def.innerType;
               if (ownerSchema instanceof z.ZodObject) {
                 expect(ownerSchema.shape).not.toHaveProperty("pets");
