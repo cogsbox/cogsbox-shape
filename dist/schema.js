@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { v4 as uuid } from "uuid";
 export const isFunction = (fn) => typeof fn === "function";
 // Function to create a properly typed current timestamp config
 export function currentTimeStamp() {
@@ -9,7 +10,7 @@ export function currentTimeStamp() {
 }
 export const s = {
     initialState: (value) => {
-        const actualValue = isFunction(value) ? value() : value;
+        const actualValue = isFunction(value) ? value({ uuid }) : value;
         // Infer the Zod type from the primitive value
         let inferredZodType;
         if (typeof actualValue === "string") {
@@ -129,7 +130,7 @@ function createBuilder(config) {
             let finalSchema;
             // 1. Determine the actual value
             if (value !== undefined) {
-                actualValue = isFunction(value) ? value() : value;
+                actualValue = isFunction(value) ? value({ uuid }) : value;
             }
             else if (schemaOrModifier &&
                 typeof schemaOrModifier === "object" &&
@@ -521,11 +522,6 @@ export function createSchema(schema, relations) {
                     : initialValueOrFn;
             }
         }
-    } // Apply transforms to default values so they match client schema
-    for (const key in fieldTransforms) {
-        if (key in defaultValues && defaultValues[key] !== undefined) {
-            defaultValues[key] = fieldTransforms[key].toClient(defaultValues[key]);
-        }
     }
     const generateDefaults = () => {
         const freshDefaults = {};
@@ -534,11 +530,6 @@ export function createSchema(schema, relations) {
             freshDefaults[key] = isFunction(generatorOrValue)
                 ? generatorOrValue() // Call the function to get a fresh value
                 : generatorOrValue; // Use the static value
-        }
-        for (const key in fieldTransforms) {
-            if (key in freshDefaults && freshDefaults[key] !== undefined) {
-                freshDefaults[key] = fieldTransforms[key].toClient(freshDefaults[key]);
-            }
         }
         return freshDefaults;
     };
