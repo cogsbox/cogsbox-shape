@@ -171,15 +171,24 @@ function createBuilder(config) {
             }
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
-            // Create union of the SQL type and the new client type
-            const hasProvidedSchema = !!schemaOrModifier;
-            const clientAndServerSchema = hasProvidedSchema
-                ? finalSchema
-                : z.union([config.sqlZod, finalSchema]);
             const newConfig = { ...config.sqlConfig };
             if (clientPk) {
-                // Add our metadata flag to the config
                 newConfig.isClientPk = true;
+            }
+            // When clientPk is true, ALWAYS union the SQL type with the client type
+            // because records can be either DB-sourced (number) or client-created (string)
+            let clientAndServerSchema;
+            if (clientPk) {
+                // Always union for clientPk fields
+                clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
+            }
+            else if (schemaOrModifier) {
+                // Schema provided without clientPk — use as-is
+                clientAndServerSchema = finalSchema;
+            }
+            else {
+                // No schema provided — union with SQL type
+                clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
             }
             return createBuilder({
                 ...config,
@@ -188,7 +197,7 @@ function createBuilder(config) {
                 newZod: finalSchema,
                 initialValue: actualValue,
                 clientZod: clientAndServerSchema,
-                validationZod: clientAndServerSchema, // Our internal name
+                validationZod: clientAndServerSchema,
                 completedStages: newCompletedStages,
             });
         },
