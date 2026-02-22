@@ -1180,7 +1180,7 @@ export function createSchema<
 
         // Get the raw default value
         let rawDefault = isFunction(initialValueOrFn)
-          ? initialValueOrFn()
+          ? initialValueOrFn({ uuid })
           : initialValueOrFn;
 
         // Apply toClient transform if it exists
@@ -1227,10 +1227,9 @@ export function createSchema<
     for (const key in defaultGenerators) {
       const generatorOrValue = defaultGenerators[key];
       let rawValue = isFunction(generatorOrValue)
-        ? generatorOrValue()
+        ? generatorOrValue({ uuid }) // Pass the tools
         : generatorOrValue;
 
-      // Apply toClient transform if it exists
       if (fieldTransforms[key]?.toClient && rawValue !== undefined) {
         freshDefaults[key] = fieldTransforms[key].toClient(rawValue);
       } else {
@@ -1262,7 +1261,7 @@ export function createSchema<
   return {
     pk: pkKeys.length ? pkKeys : null,
     clientPk: clientPkKeys.length ? clientPkKeys : null,
-    isClientRecord, // NOW IT'S IN SCOPE
+    isClientRecord,
 
     sqlSchema: z.object(sqlFields) as any,
     clientSchema: z.object(clientFields) as any,
