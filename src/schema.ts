@@ -1655,8 +1655,12 @@ type DeriveViewDefaults<
   TRegistry[TTableName]["zodSchemas"]["defaultValues"] &
     (TSelection extends Record<string, any>
       ? {
-          -readonly [K in keyof TSelection &
-            keyof TRegistry[TTableName]["rawSchema"]]?: TRegistry[TTableName]["rawSchema"][K] extends {
+          [K in keyof TSelection &
+            keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<
+            TRegistry[TTableName]["rawSchema"][K]
+          > extends true
+            ? K
+            : never]: TRegistry[TTableName]["rawSchema"][K] extends {
             config: { sql: { type: infer RelType; schema: any } };
           }
             ? GetRelationRegistryKey<
