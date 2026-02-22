@@ -1085,6 +1085,7 @@ export function createSchema<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
   >;
   defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
+  stateType: Prettify<DeriveStateType<TActualSchema>>; // ADD THIS
 
   generateDefaults: () => Prettify<DeriveDefaults<TActualSchema>>;
   toClient: (
@@ -1267,6 +1268,7 @@ export function createSchema<
     clientSchema: z.object(clientFields) as any,
     validationSchema: z.object(serverFields) as any,
     defaultValues: defaultValues as any,
+    stateType: {} as any,
     generateDefaults,
     toClient,
     toDb,
@@ -1428,6 +1430,14 @@ type ResolvedRegistryWithSchemas<
       >;
       defaultValues: Prettify<
         DeriveDefaults<
+          ResolveSchema<
+            S[K],
+            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
+          >
+        >
+      >;
+      stateType: Prettify<
+        DeriveStateType<
           ResolveSchema<
             S[K],
             K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
@@ -1771,6 +1781,7 @@ type RegistryShape = Record<
       clientSchema: z.ZodObject<any>;
       validationSchema: z.ZodObject<any>;
       defaultValues: any;
+      stateType: any;
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
     };
@@ -1803,6 +1814,7 @@ type CreateSchemaBoxReturn<
     };
 
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
+    stateType: Resolved[K]["zodSchemas"]["stateType"]; // ADD THIS
 
     nav: NavigationProxy<K & string, Resolved>;
     RelationSelection: NavigationToSelection<
@@ -1991,6 +2003,7 @@ export function createSchemaBox<
         toDb: entry.zodSchemas.toDb,
       },
       defaults: entry.zodSchemas.defaultValues,
+      stateType: entry.zodSchemas.stateType,
       generateDefaults: entry.zodSchemas.generateDefaults,
 
       // ADD: Expose PK info and resolver
@@ -2196,8 +2209,7 @@ type DeriveSchemaByKey<
           ? ZodSchema
           : never;
     };
-
-// Update DeriveDefaults to handle references
+// DeriveDefaults — uses initialValue (what you actually generate)
 type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
   Depth["length"] extends 10
     ? any
@@ -2243,6 +2255,47 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
               : D extends () => infer R
                 ? R
                 : D
+            : never;
+      }
+>;
+
+// DeriveStateType — uses zodClientSchema (what state can hold: client OR server records)
+type DeriveStateType<T, Depth extends any[] = []> = Prettify<
+  Depth["length"] extends 10
+    ? any
+    : {
+        [K in keyof T as K extends
+          | "_tableName"
+          | typeof SchemaWrapperBrand
+          | "__primaryKeySQL"
+          | "__isClientChecker"
+          | "primaryKeySQL"
+          | "isClient"
+          ? never
+          : K extends keyof T
+            ? T[K] extends Reference<any>
+              ? K
+              : T[K] extends {
+                    config: {
+                      sql: {
+                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                      };
+                    };
+                  }
+                ? never
+                : K
+            : never]: T[K] extends Reference<infer TGetter>
+          ? ReturnType<TGetter> extends {
+              config: { zodClientSchema: infer TClient extends z.ZodTypeAny };
+            }
+            ? z.infer<TClient>
+            : never
+          : T[K] extends {
+                config: {
+                  zodClientSchema: infer TClient extends z.ZodTypeAny;
+                };
+              }
+            ? z.infer<TClient>
             : never;
       }
 >;

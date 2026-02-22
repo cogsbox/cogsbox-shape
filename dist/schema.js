@@ -596,6 +596,7 @@ export function createSchema(schema, relations) {
         clientSchema: z.object(clientFields),
         validationSchema: z.object(serverFields),
         defaultValues: defaultValues,
+        stateType: {},
         generateDefaults,
         toClient,
         toDb,
@@ -801,6 +802,7 @@ export function createSchemaBox(schemas, resolver) {
                 toDb: entry.zodSchemas.toDb,
             },
             defaults: entry.zodSchemas.defaultValues,
+            stateType: entry.zodSchemas.stateType,
             generateDefaults: entry.zodSchemas.generateDefaults,
             // ADD: Expose PK info and resolver
             pk: entry.zodSchemas.pk,
