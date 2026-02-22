@@ -502,7 +502,13 @@ export function createSchema(schema, relations) {
         }
         if (definition && definition.config) {
             const config = definition.config;
-            // ... pk collection logic ...
+            // PK collection logic
+            if (config.sql?.pk && !config.sql?.isForeignKey) {
+                pkKeys.push(key);
+            }
+            if (config.sql?.isClientPk) {
+                clientPkKeys.push(key);
+            }
             const sqlConfig = config.sql;
             if (sqlConfig &&
                 typeof sqlConfig === "object" &&
