@@ -1,5 +1,5 @@
 import { z } from "zod";
-
+import { v4 as uuid } from "uuid";
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
   defaultValue: Date;
@@ -106,7 +106,7 @@ export interface IBuilderMethods<
   TValidation extends z.ZodTypeAny,
 > {
   initialState<const TValue>(options: {
-    value: TValue | (() => TValue);
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema?: never;
     clientPk?: boolean;
   }): Prettify<
@@ -147,7 +147,7 @@ export interface IBuilderMethods<
   // Overload 3: Both value and schema provided
   // THE FIX: Changed TInitialValue from literal value to z.infer<TSchema>
   initialState<const TValue, const TSchema extends z.ZodTypeAny>(options: {
-    value: TValue | (() => TValue);
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema:
       | TSchema
       | ((
@@ -292,7 +292,9 @@ export type Reference<TGetter extends () => any> = {
 };
 
 interface ShapeAPI {
-  initialState: <const TValue>(value: TValue | (() => TValue)) => Builder<
+  initialState: <const TValue>(
+    value: TValue | ((tools: { uuid: () => string }) => TValue),
+  ) => Builder<
     "new",
     null,
     z.ZodUndefined, // No SQL schema
@@ -326,8 +328,10 @@ interface ShapeAPI {
 }
 
 export const s: ShapeAPI = {
-  initialState: <const TValue>(value: TValue | (() => TValue)) => {
-    const actualValue = isFunction(value) ? value() : value;
+  initialState: <const TValue>(
+    value: TValue | ((tools: { uuid: () => string }) => TValue),
+  ) => {
+    const actualValue = isFunction(value) ? value({ uuid }) : value;
 
     // Infer the Zod type from the primitive value
     let inferredZodType: z.ZodTypeAny;
@@ -494,7 +498,7 @@ function createBuilder<
 
       // 1. Determine the actual value
       if (value !== undefined) {
-        actualValue = isFunction(value) ? value() : value;
+        actualValue = isFunction(value) ? value({ uuid }) : value;
       } else if (
         schemaOrModifier &&
         typeof schemaOrModifier === "object" &&

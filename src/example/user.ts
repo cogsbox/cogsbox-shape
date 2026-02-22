@@ -6,7 +6,9 @@ import { v4 as uuidv4 } from "uuid";
 
 const users = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).initialState(() => uuidv4(), z.string()),
+  id: s
+    .sql({ type: "int", pk: true })
+    .initialState({ value: ({ uuid }) => uuid() }),
   petId: s.reference(() => pets.id),
   pets: s.hasMany([]),
 });
@@ -55,7 +57,7 @@ const testPets = petsEndSchema.schemas;
 const clientSChema = usersEndSchema.createView({ pets: true });
 
 const defaults = clientSChema.defaults;
-type ClientUser = z.infer<typeof clientSChema.client>;
+type ClientUser = z.infer<typeof clientSChema.schemas.client>;
 /*type ClientUser = {
     id: string | number;
     petId: number;
@@ -70,7 +72,7 @@ type ClientUser3 = z.infer<typeof clientSChema2>;
 
 const clientSChemView = usersEndSchema.createView({
   pets: { owner: { pets: true } },
-}).client;
+}).schemas.client;
 
 type ClientUserview = z.infer<typeof clientSChemView>;
 // Test the pets relation in working example
