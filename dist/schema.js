@@ -460,6 +460,7 @@ export function createSchema(schema, relations) {
     const fullSchema = { ...schema, ...(relations || {}) };
     let pkKeys = [];
     let clientPkKeys = [];
+    // FIRST PASS: Collect all fields and PKs
     for (const key in fullSchema) {
         const value = fullSchema[key];
         if (key === "_tableName" ||
@@ -470,7 +471,6 @@ export function createSchema(schema, relations) {
             typeof value === "function")
             continue;
         const definition = fullSchema[key];
-        // Handle new-style references
         if (isReference(definition)) {
             const targetField = definition.getter();
             if (targetField && targetField.config) {
@@ -488,27 +488,18 @@ export function createSchema(schema, relations) {
                     fieldTransforms[key] = config.transforms;
                 }
             }
-            continue; // Skip the rest of the logic for references
+            continue;
         }
-        // THEN, handle all other fields that have a config (builders, relations, etc.)
         if (definition && definition.config) {
             const config = definition.config;
-            if (config.sql?.pk && !config.sql?.isForeignKey) {
-                pkKeys.push(key);
-            }
-            if (config.sql?.isClientPk) {
-                clientPkKeys.push(key);
-            }
-            // The rest of the logic for builders
+            // ... pk collection logic ...
             const sqlConfig = config.sql;
             if (sqlConfig &&
                 typeof sqlConfig === "object" &&
                 ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-                // This is for relations, which also aren't PKs, so we just continue.
                 continue;
             }
             else {
-                // This is for regular s.sql() fields
                 sqlFields[key] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
@@ -517,19 +508,56 @@ export function createSchema(schema, relations) {
                 }
                 const initialValueOrFn = config.initialValue;
                 defaultGenerators[key] = initialValueOrFn;
-                defaultValues[key] = isFunction(initialValueOrFn)
+                // Get the raw default value
+                let rawDefault = isFunction(initialValueOrFn)
                     ? initialValueOrFn()
                     : initialValueOrFn;
+                // Apply toClient transform if it exists
+                if (config.transforms?.toClient && rawDefault !== undefined) {
+                    defaultValues[key] = config.transforms.toClient(rawDefault);
+                }
+                else {
+                    defaultValues[key] = rawDefault;
+                }
             }
+        }
+    }
+    // AFTER THE LOOP: Build isClientRecord checker
+    let isClientRecord;
+    const explicitChecker = fullSchema.__isClientChecker;
+    if (explicitChecker) {
+        isClientRecord = explicitChecker;
+    }
+    else if (clientPkKeys.length > 0) {
+        const autoChecks = [];
+        for (const key of clientPkKeys) {
+            const field = fullSchema[key];
+            const sqlType = field?.config?.sql?.type;
+            const initialValue = field?.config?.initialValue;
+            const dbIsNumeric = sqlType === "int";
+            const clientIsString = typeof initialValue === "string";
+            if (dbIsNumeric && clientIsString) {
+                autoChecks.push({ key, check: (val) => typeof val === "string" });
+            }
+        }
+        if (autoChecks.length > 0) {
+            isClientRecord = (record) => autoChecks.some(({ key, check }) => check(record[key]));
         }
     }
     const generateDefaults = () => {
         const freshDefaults = {};
         for (const key in defaultGenerators) {
             const generatorOrValue = defaultGenerators[key];
-            freshDefaults[key] = isFunction(generatorOrValue)
-                ? generatorOrValue() // Call the function to get a fresh value
-                : generatorOrValue; // Use the static value
+            let rawValue = isFunction(generatorOrValue)
+                ? generatorOrValue()
+                : generatorOrValue;
+            // Apply toClient transform if it exists
+            if (fieldTransforms[key]?.toClient && rawValue !== undefined) {
+                freshDefaults[key] = fieldTransforms[key].toClient(rawValue);
+            }
+            else {
+                freshDefaults[key] = rawValue;
+            }
         }
         return freshDefaults;
     };
@@ -552,8 +580,9 @@ export function createSchema(schema, relations) {
         return dbObject;
     };
     return {
-        pk: pkKeys?.length ? pkKeys : null,
-        clientPk: clientPkKeys ? clientPkKeys : null,
+        pk: pkKeys.length ? pkKeys : null,
+        clientPk: clientPkKeys.length ? clientPkKeys : null,
+        isClientRecord, // NOW IT'S IN SCOPE
         sqlSchema: z.object(sqlFields),
         clientSchema: z.object(clientFields),
         validationSchema: z.object(serverFields),
