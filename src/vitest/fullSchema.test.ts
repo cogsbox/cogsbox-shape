@@ -751,4 +751,72 @@ describe("New Session Features - Base Schema Without Relations", () => {
       expect(defaults.id.startsWith("temp_")).toBe(true);
     });
   });
+  describe("Reference field defaults with uuid generator", () => {
+    const users = schema({
+      _tableName: "users",
+      user_id: s.sql({ type: "int", pk: true }).initialState({
+        value: ({ uuid }) => uuid(),
+        schema: z.string(),
+        clientPk: true,
+      }),
+      username: s.sql({ type: "varchar" }).initialState({ value: "" }),
+    });
+
+    const pets = schema({
+      _tableName: "pets",
+      pet_id: s.sql({ type: "int", pk: true }).initialState({
+        value: ({ uuid }) => uuid(),
+        schema: z.string(),
+        clientPk: true,
+      }),
+      name: s.sql({ type: "varchar" }).initialState({ value: "" }),
+      user_id: s.reference(() => users.user_id),
+    });
+
+    const box = createSchemaBox({ users, pets }, (s) => ({
+      users: {
+        // no relations needed for this test
+      },
+      pets: {
+        // no relations needed for this test
+      },
+    }));
+
+    it("should resolve uuid in primary key defaults", () => {
+      const userDefaults = box.users.defaults;
+      expect(typeof userDefaults.user_id).toBe("string");
+      expect(userDefaults.user_id.length).toBeGreaterThan(0);
+    });
+
+    it("should resolve uuid in reference field defaults", () => {
+      const petDefaults = box.pets.defaults;
+
+      // pet_id should be a uuid string
+      expect(typeof petDefaults.pet_id).toBe("string");
+      expect(petDefaults.pet_id.length).toBeGreaterThan(0);
+
+      // user_id (reference) should also be resolved, not a function
+      expect(typeof petDefaults.user_id).toBe("string");
+      expect(petDefaults.user_id.length).toBeGreaterThan(0);
+
+      // Should NOT throw "Cannot destructure property 'uuid' of 'undefined'"
+    });
+
+    it("should generate consistent defaults with generateDefaults", () => {
+      const defaults1 = box.users.generateDefaults();
+      const defaults2 = box.users.generateDefaults();
+
+      // Should return the same defaults each time
+      expect(defaults1.user_id).toBe(defaults2.user_id);
+      expect(typeof defaults1.user_id).toBe("string");
+    });
+
+    it("should have correct types for reference fields", () => {
+      type PetDefaults = typeof box.pets.defaults;
+
+      // user_id references users.user_id which has clientPk with string schema
+      // so it should be string | number (client type includes both)
+      expectTypeOf<PetDefaults["user_id"]>().toEqualTypeOf<string>();
+    });
+  });
 });

@@ -1141,10 +1141,14 @@ export function createSchema<
         serverFields[key] = config.zodValidationSchema;
         const initialValueOrFn = config.initialValue;
         defaultGenerators[key] = initialValueOrFn;
-        defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
-          ...config.sql,
-          default: undefined,
-        });
+
+        // FIX: Call the function with { uuid } if it's a function
+        let rawDefault = isFunction(initialValueOrFn)
+          ? initialValueOrFn({ uuid })
+          : initialValueOrFn;
+
+        defaultValues[key] = rawDefault;
+
         if (config.transforms) {
           fieldTransforms[key] = config.transforms;
         }
@@ -1817,7 +1821,7 @@ type CreateSchemaBoxReturn<
 
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
     stateType: Resolved[K]["zodSchemas"]["stateType"]; // ADD THIS
-
+    generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
     nav: NavigationProxy<K & string, Resolved>;
     RelationSelection: NavigationToSelection<
       NavigationProxy<K & string, Resolved>

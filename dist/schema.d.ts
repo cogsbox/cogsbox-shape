@@ -412,6 +412,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
         stateType: Resolved[K]["zodSchemas"]["stateType"];
+        generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
         nav: NavigationProxy<K & string, Resolved>;
         RelationSelection: NavigationToSelection<NavigationProxy<K & string, Resolved>>;
         createView: <const TSelection extends NavigationToSelection<NavigationProxy<K & string, Resolved>>>(selection: TSelection) => DeriveViewResult<K & string, TSelection, Resolved>;

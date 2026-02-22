@@ -489,10 +489,11 @@ export function createSchema(schema, relations) {
                 serverFields[key] = config.zodValidationSchema;
                 const initialValueOrFn = config.initialValue;
                 defaultGenerators[key] = initialValueOrFn;
-                defaultValues[key] = inferDefaultFromZod(config.zodClientSchema, {
-                    ...config.sql,
-                    default: undefined,
-                });
+                // FIX: Call the function with { uuid } if it's a function
+                let rawDefault = isFunction(initialValueOrFn)
+                    ? initialValueOrFn({ uuid })
+                    : initialValueOrFn;
+                defaultValues[key] = rawDefault;
                 if (config.transforms) {
                     fieldTransforms[key] = config.transforms;
                 }
