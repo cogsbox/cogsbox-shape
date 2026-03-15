@@ -709,7 +709,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
       posts: { fromKey: "id", toKey: s.posts.authorId },
     },
   }));
-
+  box.users.schemas;
   // =======================================================
   // NEW TEST SUITE: Proving the DB key fix is working!
   // =======================================================
