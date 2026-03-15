@@ -34,12 +34,13 @@ export type SQLType = (
       length?: number;
       default?: string;
     }
-) & { pk?: true };
-// Update base config
+) &
+  BaseConfig;
+
 type BaseConfig = {
   nullable?: boolean;
   pk?: true;
-  field?: string; //not implemnted yet
+  field?: string;
 };
 
 type SQLToZodType<
@@ -86,13 +87,6 @@ type ZodTypeFromPrimitive<T> = T extends string
         ? z.ZodDate
         : z.ZodAny;
 
-type NonLiteral<T> = T extends string
-  ? string
-  : T extends number
-    ? number
-    : T extends boolean
-      ? boolean
-      : T;
 type CollapsedUnion<
   A extends z.ZodTypeAny,
   B extends z.ZodTypeAny,
@@ -351,17 +345,15 @@ export const s: ShapeAPI = {
 
     return createBuilder({
       stage: "new",
-      // THE MAGIC: There is no SQL config and the SQL schema is z.undefined()
-      // This guarantees the field will be stripped from the final SQL schema object.
+
       sqlConfig: null,
       sqlZod: z.undefined(),
 
-      // The rest of the schemas are based on the inferred type
       newZod: inferredZodType,
       initialValue: actualValue,
       clientZod: inferredZodType,
-      validationZod: inferredZodType, // This is our internal name
-    }) as any; // Using `as any` to simplify the complex return type
+      validationZod: inferredZodType,
+    }) as any;
   },
   reference: <TGetter extends () => any>(
     getter: TGetter,
@@ -906,156 +898,6 @@ function inferDefaultFromZod(
   return undefined;
 }
 
-export function createMixedValidationSchema<T extends Schema<any>>(
-  schema: T,
-  clientSchema?: z.ZodObject<any>,
-  dbSchema?: z.ZodObject<any>,
-): z.ZodObject<any> {
-  // If schemas are provided, use them (to avoid circular calls)
-  if (clientSchema && dbSchema) {
-    const mixedFields: Record<string, z.ZodTypeAny> = {};
-
-    const allKeys = new Set([
-      ...Object.keys(clientSchema.shape),
-      ...Object.keys(dbSchema.shape),
-    ]);
-
-    for (const key of allKeys) {
-      const clientField = clientSchema.shape[key];
-      const dbField = dbSchema.shape[key];
-
-      if (clientField && dbField) {
-        mixedFields[key] = z.union([clientField, dbField]);
-      } else {
-        mixedFields[key] = clientField || dbField;
-      }
-    }
-
-    return z.object(mixedFields);
-  }
-
-  // Build schemas manually without calling createSchema
-  const clientFields: Record<string, z.ZodTypeAny> = {};
-  const dbFields: Record<string, z.ZodTypeAny> = {};
-
-  for (const [key, value] of Object.entries(schema)) {
-    if (key === "_tableName") continue;
-
-    if (typeof value === "function") {
-      const relation = value();
-      if (!isRelation(relation)) continue;
-
-      // For relations, create mixed schemas recursively
-      const childMixedSchema = createMixedValidationSchema(relation.schema);
-
-      if (relation.type === "hasMany") {
-        clientFields[key] = z.array(childMixedSchema);
-        dbFields[key] = z.array(childMixedSchema);
-      } else {
-        clientFields[key] = childMixedSchema;
-        dbFields[key] = childMixedSchema;
-      }
-      continue;
-    }
-
-    clientFields[key] = value.zodClientSchema;
-    dbFields[key] = value.zodDbSchema;
-  }
-
-  // Now create mixed fields
-  const mixedFields: Record<string, z.ZodTypeAny> = {};
-  const allKeys = new Set([
-    ...Object.keys(clientFields),
-    ...Object.keys(dbFields),
-  ]);
-
-  for (const key of allKeys) {
-    const clientField = clientFields[key];
-    const dbField = dbFields[key];
-
-    if (clientField && dbField) {
-      mixedFields[key] = z.union([clientField, dbField]);
-    } else {
-      mixedFields[key] = (clientField || dbField) as any;
-    }
-  }
-
-  return z.object(mixedFields);
-}
-function isRelation(value: any): value is Relation<any> {
-  return (
-    value &&
-    typeof value === "object" &&
-    "type" in value &&
-    "fromKey" in value &&
-    "toKey" in value &&
-    "schema" in value
-  );
-}
-
-type InferSchemaByKey<
-  T,
-  Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
-  Depth extends any[] = [],
-> = Depth["length"] extends 10 // Prevent infinite recursion
-  ? any
-  : {
-      [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand
-        ? never
-        : K]: T[K] extends {
-        // Case 1: Builder for hasMany/manyToMany
-        config: {
-          sql: { type: "hasMany" | "manyToMany"; schema: () => infer S };
-        };
-      }
-        ? z.ZodArray<
-            S extends { _tableName: string }
-              ? z.ZodObject<
-                  Omit<
-                    InferSchemaByKey<S, Key, [...Depth, 1]>,
-                    typeof SchemaWrapperBrand
-                  >
-                >
-              : z.ZodObject<any>
-          >
-        : // Case 2: Builder for hasOne/belongsTo
-          T[K] extends {
-              config: {
-                sql: { type: "hasOne" | "belongsTo"; schema: () => infer S };
-              };
-            }
-          ? S extends { _tableName: string }
-            ? z.ZodObject<
-                Omit<
-                  InferSchemaByKey<S, Key, [...Depth, 1]>,
-                  typeof SchemaWrapperBrand
-                >
-              >
-            : z.ZodObject<any>
-          : // Case 3: Reference fields
-            T[K] extends { type: "reference"; to: () => infer RefField }
-            ? RefField extends { config: { [P in Key]: infer ZodSchema } }
-              ? ZodSchema
-              : never
-            : // Case 4: Standard field builder
-              T[K] extends {
-                  config: infer Config;
-                }
-              ? Key extends "zodSqlSchema"
-                ? Config extends {
-                    sql: infer SqlConfig;
-                    zodSqlSchema: infer ZodSchema extends z.ZodTypeAny;
-                  }
-                  ? ZodSchema
-                  : never
-                : Config extends {
-                      [P in Key]: infer ZodSchema extends z.ZodTypeAny;
-                    }
-                  ? ZodSchema
-                  : never
-              : never;
-    };
-
 // Helper to check if something is a reference
 function isReference<T extends () => any>(value: any): value is Reference<T> {
   return value && typeof value === "object" && value.__type === "reference";
@@ -1085,22 +927,28 @@ export function createSchema<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
   >;
   defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
-  stateType: Prettify<DeriveStateType<TActualSchema>>; // ADD THIS
-
+  stateType: Prettify<DeriveStateType<TActualSchema>>;
   generateDefaults: () => Prettify<DeriveDefaults<TActualSchema>>;
-  toClient: (
-    dbObject: z.infer<
-      z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
-    >,
-  ) => z.infer<
-    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
-  >;
-  toDb: (
-    clientObject: z.infer<
-      z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
+  toClient: (dbObject: any) => any;
+  toDb: (clientObject: any) => any;
+  parseForDb: (
+    appData: z.input<
+      z.ZodObject<
+        Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
+      >
     >,
   ) => z.infer<
     z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+  >;
+
+  parseFromDb: (
+    dbData: Partial<
+      z.infer<
+        z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+      >
+    >,
+  ) => z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
   >;
 } {
   const sqlFields: any = {};
@@ -1113,11 +961,14 @@ export function createSchema<
     { toClient: (val: any) => any; toDb: (val: any) => any }
   > = {};
 
+  // NEW: Track the runtime mappings
+  const clientToDbKeys: Record<string, string> = {};
+  const dbToClientKeys: Record<string, string> = {};
+
   const fullSchema = { ...schema, ...(relations || {}) };
   let pkKeys: string[] | null = [];
   let clientPkKeys: string[] | null = [];
 
-  // FIRST PASS: Collect all fields and PKs
   for (const key in fullSchema) {
     const value = (fullSchema as any)[key];
     if (
@@ -1136,13 +987,20 @@ export function createSchema<
       const targetField = definition.getter();
       if (targetField && targetField.config) {
         const config = targetField.config;
+
+        // Track mapping
+        const dbFieldName = config.sql?.field || key;
+        clientToDbKeys[key] = dbFieldName;
+        dbToClientKeys[dbFieldName] = key;
+
+        // ALL SCHEMAS STRICTLY USE THE JS KEY
         sqlFields[key] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
+
         const initialValueOrFn = config.initialValue;
         defaultGenerators[key] = initialValueOrFn;
 
-        // FIX: Call the function with { uuid } if it's a function
         let rawDefault = isFunction(initialValueOrFn)
           ? initialValueOrFn({ uuid })
           : initialValueOrFn;
@@ -1159,13 +1017,8 @@ export function createSchema<
     if (definition && definition.config) {
       const config = definition.config;
 
-      // PK collection logic
-      if (config.sql?.pk && !config.sql?.isForeignKey) {
-        pkKeys.push(key);
-      }
-      if ((config.sql as any)?.isClientPk) {
-        clientPkKeys.push(key);
-      }
+      if (config.sql?.pk && !config.sql?.isForeignKey) pkKeys.push(key);
+      if ((config.sql as any)?.isClientPk) clientPkKeys.push(key);
 
       const sqlConfig = config.sql;
       if (
@@ -1177,6 +1030,12 @@ export function createSchema<
       ) {
         continue;
       } else {
+        // Track mapping
+        const dbFieldName = sqlConfig?.field || key;
+        clientToDbKeys[key] = dbFieldName;
+        dbToClientKeys[dbFieldName] = key;
+
+        // ALL SCHEMAS STRICTLY USE THE JS KEY
         sqlFields[key] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
@@ -1188,12 +1047,10 @@ export function createSchema<
         const initialValueOrFn = config.initialValue;
         defaultGenerators[key] = initialValueOrFn;
 
-        // Get the raw default value
         let rawDefault = isFunction(initialValueOrFn)
           ? initialValueOrFn({ uuid })
           : initialValueOrFn;
 
-        // Apply toClient transform if it exists
         if (config.transforms?.toClient && rawDefault !== undefined) {
           defaultValues[key] = config.transforms.toClient(rawDefault);
         } else {
@@ -1203,29 +1060,21 @@ export function createSchema<
     }
   }
 
-  // AFTER THE LOOP: Build isClientRecord checker
   let isClientRecord: ((record: any) => boolean) | undefined;
-
   const explicitChecker = (fullSchema as any).__isClientChecker;
 
   if (explicitChecker) {
     isClientRecord = explicitChecker;
   } else if (clientPkKeys.length > 0) {
     const autoChecks: Array<{ key: string; check: (val: any) => boolean }> = [];
-
     for (const key of clientPkKeys) {
       const field = (fullSchema as any)[key];
       const sqlType = field?.config?.sql?.type;
       const initialValue = field?.config?.initialValue;
-
-      const dbIsNumeric = sqlType === "int";
-      const clientIsString = typeof initialValue === "string";
-
-      if (dbIsNumeric && clientIsString) {
+      if (sqlType === "int" && typeof initialValue === "string") {
         autoChecks.push({ key, check: (val) => typeof val === "string" });
       }
     }
-
     if (autoChecks.length > 0) {
       isClientRecord = (record: any) =>
         autoChecks.some(({ key, check }) => check(record[key]));
@@ -1237,50 +1086,70 @@ export function createSchema<
     for (const key in defaultGenerators) {
       const generatorOrValue = defaultGenerators[key];
       let rawValue = isFunction(generatorOrValue)
-        ? generatorOrValue({ uuid }) // Pass the tools
+        ? generatorOrValue({ uuid })
         : generatorOrValue;
-
-      if (fieldTransforms[key]?.toClient && rawValue !== undefined) {
-        freshDefaults[key] = fieldTransforms[key].toClient(rawValue);
-      } else {
-        freshDefaults[key] = rawValue;
-      }
+      freshDefaults[key] = fieldTransforms[key]?.toClient
+        ? fieldTransforms[key].toClient(rawValue)
+        : rawValue;
     }
     return freshDefaults;
   };
+
+  // --- RUNTIME TRANSFORMERS: Map keys and apply value transforms ---
   const toClient = (dbObject: any) => {
-    const clientObject: any = { ...dbObject };
-    for (const key in fieldTransforms) {
-      if (key in clientObject && clientObject[key] !== undefined) {
-        clientObject[key] = fieldTransforms[key]!.toClient(clientObject[key]);
-      }
+    const clientObject: any = {};
+    for (const dbKey in dbObject) {
+      if (dbObject[dbKey] === undefined) continue;
+
+      const clientKey = dbToClientKeys[dbKey] || dbKey;
+      const transform = fieldTransforms[clientKey]?.toClient;
+
+      clientObject[clientKey] = transform
+        ? transform(dbObject[dbKey])
+        : dbObject[dbKey];
     }
     return clientObject;
   };
 
   const toDb = (clientObject: any) => {
-    const dbObject: any = { ...clientObject };
-    for (const key in fieldTransforms) {
-      if (key in dbObject && dbObject[key] !== undefined) {
-        dbObject[key] = fieldTransforms[key]!.toDb(dbObject[key]);
-      }
+    const dbObject: any = {};
+    for (const clientKey in clientObject) {
+      if (clientObject[clientKey] === undefined) continue;
+
+      const dbKey = clientToDbKeys[clientKey] || clientKey;
+      const transform = fieldTransforms[clientKey]?.toDb;
+
+      dbObject[dbKey] = transform
+        ? transform(clientObject[clientKey])
+        : clientObject[clientKey];
     }
     return dbObject;
   };
-
+  // Create the final Zod objects once
+  const finalSqlSchema = z.object(sqlFields) as any;
+  const finalClientSchema = z.object(clientFields) as any;
+  const finalValidationSchema = z.object(serverFields) as any;
   return {
     pk: pkKeys.length ? pkKeys : null,
     clientPk: clientPkKeys.length ? clientPkKeys : null,
     isClientRecord,
-
-    sqlSchema: z.object(sqlFields) as any,
-    clientSchema: z.object(clientFields) as any,
-    validationSchema: z.object(serverFields) as any,
+    sqlSchema: finalSqlSchema,
+    clientSchema: finalClientSchema,
+    validationSchema: finalValidationSchema,
     defaultValues: defaultValues as any,
     stateType: {} as any,
     generateDefaults,
     toClient,
     toDb,
+    parseForDb: (appData) => {
+      const validData = finalValidationSchema.parse(appData);
+      return toDb(validData);
+    },
+
+    parseFromDb: (dbData) => {
+      const mappedData = toClient(dbData);
+      return finalClientSchema.parse(mappedData);
+    },
   };
 }
 
@@ -1455,6 +1324,19 @@ type ResolvedRegistryWithSchemas<
       >;
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
+      parseForDb: (appData: any) => any;
+      parseFromDb: (dbData: any) => any;
+      pk: string[] | null;
+      clientPk: string[] | null;
+      isClientRecord: ((record: any) => boolean) | undefined;
+      generateDefaults: () => Prettify<
+        DeriveDefaults<
+          ResolveSchema<
+            S[K],
+            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
+          >
+        >
+      >;
     };
   };
 };
@@ -1715,7 +1597,22 @@ export type DeriveViewResult<
     toClient: TRegistry[TTableName]["zodSchemas"]["toClient"];
     toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
   };
+
+  // ADD: parse functions on views too
+  parseForDb: (
+    appData: z.input<TRegistry[TTableName]["zodSchemas"]["validationSchema"]>,
+  ) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
+  parseFromDb: (
+    dbData: Partial<z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>>,
+  ) => z.infer<TRegistry[TTableName]["zodSchemas"]["clientSchema"]>;
+
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+
+  // ADD: pk info
+  pk: string[] | null;
+  clientPk: string[] | null;
+  supportsReconciliation: boolean;
+
   isView: true;
   viewSelection: TSelection;
   baseTable: TTableName;
@@ -1784,6 +1681,7 @@ export type OmitRelations<Shape, RawSchema> = Omit<
 >;
 
 // Helper type to ensure proper shape
+
 type RegistryShape = Record<
   string,
   {
@@ -1796,6 +1694,12 @@ type RegistryShape = Record<
       stateType: any;
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
+      parseForDb: (appData: any) => any;
+      parseFromDb: (dbData: any) => any;
+      pk: string[] | null;
+      clientPk: string[] | null;
+      isClientRecord: ((record: any) => boolean) | undefined;
+      generateDefaults: () => any;
     };
   }
 >;
@@ -1825,9 +1729,24 @@ type CreateSchemaBoxReturn<
       toDb: Resolved[K]["zodSchemas"]["toDb"];
     };
 
+    // ADD: parse functions with proper types
+    parseForDb: (
+      appData: z.input<Resolved[K]["zodSchemas"]["validationSchema"]>,
+    ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+
+    parseFromDb: (
+      dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>,
+    ) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
+
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
-    stateType: Resolved[K]["zodSchemas"]["stateType"]; // ADD THIS
+    stateType: Resolved[K]["zodSchemas"]["stateType"];
     generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
+
+    // ADD: pk info
+    pk: string[] | null;
+    clientPk: string[] | null;
+    isClientRecord: ((record: any) => boolean) | undefined;
+
     nav: NavigationProxy<K & string, Resolved>;
     RelationSelection: NavigationToSelection<
       NavigationProxy<K & string, Resolved>
@@ -1888,9 +1807,11 @@ export function createSchemaBox<
       if (isReference(field)) {
         const targetField = field.getter();
         if (targetField && targetField.config) {
-          const newConfig = JSON.parse(JSON.stringify(targetField.config));
-          newConfig.sql.isForeignKey = true; // Add the tag
-
+          // FIX: Shallow copy preserving Zod instances
+          const newConfig = {
+            ...targetField.config,
+            sql: { ...targetField.config.sql, isForeignKey: true },
+          };
           resolvedSchemas[tableName]![fieldName] = {
             ...targetField,
             config: newConfig,
@@ -1997,12 +1918,13 @@ export function createSchemaBox<
     const tableName = finalRegistry[key].rawSchema._tableName;
     tableNameToRegistryKeyMap[tableName] = key;
   }
-
+  // Inside createSchemaBox, in the cleanerRegistry loop:
   for (const tableName in finalRegistry) {
     const entry = finalRegistry[tableName];
 
     cleanerRegistry[tableName] = {
       definition: entry.rawSchema,
+      schemaKey: tableName, // ADD THIS - was missing from runtime
 
       schemas: {
         sql: entry.zodSchemas.sqlSchema,
@@ -2014,17 +1936,21 @@ export function createSchemaBox<
         toClient: entry.zodSchemas.toClient,
         toDb: entry.zodSchemas.toDb,
       },
+
+      // ADD: parse functions
+      parseForDb: entry.zodSchemas.parseForDb,
+      parseFromDb: entry.zodSchemas.parseFromDb,
+
       defaults: entry.zodSchemas.defaultValues,
       stateType: entry.zodSchemas.stateType,
       generateDefaults: entry.zodSchemas.generateDefaults,
 
-      // ADD: Expose PK info and resolver
+      // ADD: PK info
       pk: entry.zodSchemas.pk,
       clientPk: entry.zodSchemas.clientPk,
+      isClientRecord: entry.zodSchemas.isClientRecord,
 
       nav: createNavProxy(tableName, finalRegistry),
-
-      // Add this
 
       createView: (selection: any) => {
         const view = createViewObject(
@@ -2051,16 +1977,14 @@ export function createSchemaBox<
           transforms: {
             toClient: entry.zodSchemas.toClient,
             toDb: entry.zodSchemas.toDb,
+            parseForDb: entry.zodSchemas.parseForDb,
+            parseFromDb: entry.zodSchemas.parseFromDb,
           },
-          defaults: defaults,
 
-          // Include the pk and clientPk arrays
+          defaults: defaults,
           pk: entry.zodSchemas.pk,
           clientPk: entry.zodSchemas.clientPk,
-
-          // ADD THIS - the boolean from createViewObject
           supportsReconciliation: view.supportsReconciliation,
-
           isView: true as const,
           viewSelection: selection,
           baseTable: tableName,
@@ -2068,6 +1992,7 @@ export function createSchemaBox<
         };
       },
       RelationSelection: {} as NavigationToSelection<any>,
+      __registry: finalRegistry, // ADD THIS - was in type but not runtime
     };
   }
 

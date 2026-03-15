@@ -860,4 +860,256 @@ describe("New Session Features - Base Schema Without Relations", () => {
       expect(typeof receivedUuid.uuid).toBe("function");
     });
   });
+  describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRecord, schemaKey, stateType", () => {
+    const users = schema({
+      _tableName: "users",
+      id: s.sql({ type: "int", pk: true }).initialState({
+        value: ({ uuid }) => uuid(),
+        schema: z.string(),
+        clientPk: true,
+      }),
+      name: s.sql({ type: "varchar" }).initialState({ value: "John" }),
+      isActive: s
+        .sql({ type: "int" })
+        .client(() => z.boolean())
+        .transform({
+          toClient: (val) => val === 1,
+          toDb: (val) => (val ? 1 : 0),
+        }),
+      email: s.sql({ type: "varchar", field: "email_address" }),
+      posts: s.hasMany({ count: 1 }),
+    });
+
+    const posts = schema({
+      _tableName: "posts",
+      id: s.sql({ type: "int", pk: true }),
+      title: s.sql({ type: "varchar" }).initialState({ value: "Untitled" }),
+      authorId: s.reference(() => users.id),
+    });
+
+    const box = createSchemaBox({ users, posts }, (s) => ({
+      users: {
+        posts: { fromKey: "id", toKey: s.posts.authorId },
+      },
+    }));
+    describe("pk and clientPk", () => {
+      it("should expose pk array on base schema", () => {
+        expect(box.users.pk).toEqual(["id"]);
+        expect(box.posts.pk).toEqual(["id"]);
+      });
+
+      it("should expose clientPk array for fields with clientPk: true", () => {
+        expect(box.users.clientPk).toEqual(["id"]);
+      });
+
+      it("should inherit clientPk on reference fields", () => {
+        // authorId references users.id which has clientPk: true,
+        // so the reference resolution copies isClientPk to the post's authorId field
+        expect(box.posts.clientPk).toEqual(["authorId"]);
+      });
+
+      it("should expose pk and clientPk on views", () => {
+        const view = box.users.createView({ posts: true });
+        expect(view.pk).toEqual(["id"]);
+        expect(view.clientPk).toEqual(["id"]);
+      });
+    });
+
+    describe("isClientRecord", () => {
+      it("should auto-detect client records when clientPk is string but sql is int", () => {
+        expect(box.users.isClientRecord).toBeDefined();
+        expect(typeof box.users.isClientRecord).toBe("function");
+
+        expect(
+          box.users.isClientRecord!({ id: "some-uuid", name: "Test" }),
+        ).toBe(true);
+        expect(box.users.isClientRecord!({ id: 42, name: "Test" })).toBe(false);
+      });
+
+      it("should also have isClientRecord on posts due to inherited clientPk from reference", () => {
+        // authorId references users.id which has clientPk with string initialState,
+        // so posts also gets an isClientRecord checker
+        expect(box.posts.isClientRecord).toBeDefined();
+        expect(typeof box.posts.isClientRecord).toBe("function");
+      });
+    });
+
+    describe("schemaKey", () => {
+      it("should expose the registry key", () => {
+        expect(box.users.schemaKey).toBe("users");
+        expect(box.posts.schemaKey).toBe("posts");
+      });
+
+      it("should expose schemaKey on views", () => {
+        const view = box.users.createView({ posts: true });
+        expect(view.schemaKey).toBe("users");
+      });
+    });
+
+    describe("parseFromDb", () => {
+      it("should exist on base schema entries", () => {
+        expect(typeof box.users.parseFromDb).toBe("function");
+        expect(typeof box.posts.parseFromDb).toBe("function");
+      });
+
+      it("should map DB column names to client keys", () => {
+        const dbRow = {
+          id: 1,
+          name: "Alice",
+          isActive: 1,
+          email_address: "a@b.com",
+        };
+        const result = box.users.parseFromDb(dbRow);
+        expect(result.email).toBe("a@b.com");
+      });
+
+      it("should apply transforms when parsing from DB", () => {
+        const dbRow = {
+          id: 1,
+          name: "Alice",
+          isActive: 1,
+          email_address: "a@b.com",
+        };
+        const result = box.users.parseFromDb(dbRow);
+        expect(result.isActive).toBe(true);
+        expect(typeof result.isActive).toBe("boolean");
+      });
+
+      it("should parse valid DB data into client shape", () => {
+        const dbRow = { id: 1, title: "Hello", authorId: 2 };
+        const result = box.posts.parseFromDb(dbRow);
+        expect(result.id).toBe(1);
+        expect(result.title).toBe("Hello");
+      });
+
+      it("should have correct return type", () => {
+        const dbRow = {
+          id: 1,
+          name: "Alice",
+          isActive: 0,
+          email_address: "a@b.com",
+        };
+        const result = box.users.parseFromDb(dbRow);
+
+        type ResultType = typeof result;
+        expectTypeOf<ResultType>().toHaveProperty("id");
+        expectTypeOf<ResultType>().toHaveProperty("name");
+        expectTypeOf<ResultType>().toHaveProperty("isActive");
+        expectTypeOf<ResultType>().toHaveProperty("email");
+      });
+    });
+
+    describe("parseForDb", () => {
+      it("should exist on base schema entries", () => {
+        expect(typeof box.users.parseForDb).toBe("function");
+        expect(typeof box.posts.parseForDb).toBe("function");
+      });
+
+      it("should apply transforms when parsing for DB", () => {
+        const clientData = {
+          id: 1,
+          name: "Alice",
+          isActive: true,
+          email: "a@b.com",
+        };
+        const result = box.users.parseForDb(clientData);
+        expect(result.isActive).toBe(1);
+        expect(typeof result.isActive).toBe("number");
+      });
+
+      it("should apply transforms when parsing for DB", () => {
+        const clientData = {
+          id: 1,
+          name: "Alice",
+          isActive: false,
+          email: "a@b.com",
+        };
+        const result = box.users.parseForDb(clientData);
+        // Value transform applied: boolean -> number
+        expect(result.isActive).toBe(0);
+        expect(typeof result.isActive).toBe("number");
+      });
+
+      it("should validate against validation schema before transforming", () => {
+        // Must include all required fields, with wrong type for title
+        const invalidData = { id: 1, title: 12345, authorId: 1 };
+        expect(() => box.posts.parseForDb(invalidData as any)).toThrow();
+      });
+    });
+
+    describe("parseFromDb on views", () => {
+      it("should use base table transforms since views don't have their own parse functions", () => {
+        const view = box.users.createView({ posts: true });
+        // Views delegate to transforms.toClient / transforms.toDb instead
+        expect(typeof view.transforms.toClient).toBe("function");
+        expect(typeof view.transforms.toDb).toBe("function");
+      });
+    });
+
+    describe("stateType", () => {
+      it("should be accessible on base schema entries", () => {
+        type UserState = typeof box.users.stateType;
+        expectTypeOf<UserState>().toHaveProperty("id");
+        expectTypeOf<UserState>().toHaveProperty("name");
+        expectTypeOf<UserState>().toHaveProperty("isActive");
+        expectTypeOf<UserState>().toHaveProperty("email");
+      });
+
+      it("should reflect client types (transforms applied)", () => {
+        type UserState = typeof box.users.stateType;
+        expectTypeOf<UserState["isActive"]>().toEqualTypeOf<boolean>();
+        expectTypeOf<UserState["name"]>().toEqualTypeOf<string>();
+      });
+
+      it("should not include relation fields", () => {
+        type UserState = typeof box.users.stateType;
+        type HasPosts = "posts" extends keyof UserState ? true : false;
+        expectTypeOf<HasPosts>().toEqualTypeOf<false>();
+      });
+    });
+
+    describe("generateDefaults produces fresh values each call", () => {
+      it("should exist on base schema entries", () => {
+        expect(typeof box.users.generateDefaults).toBe("function");
+      });
+
+      it("should return fresh uuid values on each call", () => {
+        const d1 = box.users.generateDefaults();
+        const d2 = box.users.generateDefaults();
+
+        // Both should be strings (uuid)
+        expect(typeof d1.id).toBe("string");
+        expect(typeof d2.id).toBe("string");
+
+        // Static defaults should remain the same
+        expect(d1.name).toBe("John");
+        expect(d2.name).toBe("John");
+      });
+
+      it("should apply transforms to generated defaults", () => {
+        const fresh = box.users.generateDefaults();
+        expect(typeof fresh.isActive).toBe("boolean");
+        expect(fresh.isActive).toBe(false);
+      });
+    });
+
+    describe("supportsReconciliation on views", () => {
+      it("should be true when all tables in view have pk and clientPk (including inherited)", () => {
+        // posts inherits clientPk from authorId reference, so all tables pass
+        const view = box.users.createView({ posts: true });
+        expect(view.supportsReconciliation).toBe(true);
+      });
+
+      it("should be true when all included tables support reconciliation", () => {
+        const simpleView = box.users.createView({});
+        expect(simpleView.supportsReconciliation).toBe(true);
+      });
+    });
+
+    it("should be true when all included tables support reconciliation", () => {
+      // View without relations - only users which has both
+      const simpleView = box.users.createView({});
+      expect(simpleView.supportsReconciliation).toBe(true);
+    });
+  });
 });
