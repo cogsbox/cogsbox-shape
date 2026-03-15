@@ -218,7 +218,7 @@ export declare function createSchema<T extends {
     isClientRecord: ((record: any) => boolean) | undefined;
     sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>;
     clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>;
-    validationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>>;
+    serverSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>>;
     defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
     stateType: Prettify<DeriveStateType<TActualSchema>>;
     generateDefaults: () => Prettify<DeriveDefaults<TActualSchema>>;
@@ -288,7 +288,7 @@ type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders
         zodSchemas: {
             sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodSqlSchema">>>;
             clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodClientSchema">>>;
-            validationSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodValidationSchema">>>;
+            serverSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodValidationSchema">>>;
             defaultValues: Prettify<DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>>>;
             stateType: Prettify<DeriveStateType<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>>>;
             toClient: (dbObject: any) => any;
@@ -324,7 +324,7 @@ type GetRelationRegistryKey<Field, TRegistry extends RegistryShape> = Field exte
 type OmitRelationFields<Shape, RawSchema> = Omit<Shape, {
     [K in keyof Shape]: K extends keyof RawSchema ? IsRelationField<RawSchema[K]> extends true ? K : never : never;
 }[keyof Shape]>;
-type _DeriveViewShape<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, TKey extends "clientSchema" | "validationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer BaseShape> ? TSelection extends Record<string, any> ? Prettify<OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> & {
+type _DeriveViewShape<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, TKey extends "clientSchema" | "serverSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<infer BaseShape> ? TSelection extends Record<string, any> ? Prettify<OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> & {
     [K in keyof TSelection & keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<TRegistry[TTableName]["rawSchema"][K]> extends true ? K : never]: GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? TRegistry[TTableName]["rawSchema"][K] extends {
         config: {
             sql: {
@@ -361,13 +361,13 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
     schemas: {
         sql: TRegistry[TTableName]["zodSchemas"]["sqlSchema"];
         client: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>;
-        server: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">>;
+        server: z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">>;
     };
     transforms: {
         toClient: TRegistry[TTableName]["zodSchemas"]["toClient"];
         toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
     };
-    parseForDb: (appData: z.input<TRegistry[TTableName]["zodSchemas"]["validationSchema"]>) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
+    parseForDb: (appData: z.input<TRegistry[TTableName]["zodSchemas"]["serverSchema"]>) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
     parseFromDb: (dbData: Partial<z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>>) => z.infer<TRegistry[TTableName]["zodSchemas"]["clientSchema"]>;
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
     pk: string[] | null;
@@ -405,7 +405,7 @@ type RegistryShape = Record<string, {
     zodSchemas: {
         sqlSchema: z.ZodObject<any>;
         clientSchema: z.ZodObject<any>;
-        validationSchema: z.ZodObject<any>;
+        serverSchema: z.ZodObject<any>;
         defaultValues: any;
         stateType: any;
         toClient: (dbObject: any) => any;
@@ -425,13 +425,13 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         schemas: {
             sql: Resolved[K]["zodSchemas"]["sqlSchema"];
             client: Resolved[K]["zodSchemas"]["clientSchema"];
-            server: Resolved[K]["zodSchemas"]["validationSchema"];
+            server: Resolved[K]["zodSchemas"]["serverSchema"];
         };
         transforms: {
             toClient: Resolved[K]["zodSchemas"]["toClient"];
             toDb: Resolved[K]["zodSchemas"]["toDb"];
         };
-        parseForDb: (appData: z.input<Resolved[K]["zodSchemas"]["validationSchema"]>) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+        parseForDb: (appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
         parseFromDb: (dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
         stateType: Resolved[K]["zodSchemas"]["stateType"];

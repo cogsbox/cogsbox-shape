@@ -635,7 +635,7 @@ function createBuilder<
         throw new Error("validation() can only be called once in the chain");
       }
 
-      const validationSchema = isFunction(assert)
+      const serverSchema = isFunction(assert)
         ? assert({
             sql: config.sqlZod,
             initialState: config.newZod,
@@ -649,7 +649,7 @@ function createBuilder<
       return createBuilder({
         ...config,
         stage: "server",
-        validationZod: validationSchema,
+        validationZod: serverSchema,
         completedStages: newCompletedStages,
       });
     },
@@ -923,7 +923,7 @@ export function createSchema<
   clientSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>
   >;
-  validationSchema: z.ZodObject<
+  serverSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
   >;
   defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
@@ -1135,7 +1135,7 @@ export function createSchema<
     isClientRecord,
     sqlSchema: finalSqlSchema,
     clientSchema: finalClientSchema,
-    validationSchema: finalValidationSchema,
+    serverSchema: finalValidationSchema,
     defaultValues: defaultValues as any,
     stateType: {} as any,
     generateDefaults,
@@ -1295,7 +1295,7 @@ type ResolvedRegistryWithSchemas<
           >
         >
       >;
-      validationSchema: z.ZodObject<
+      serverSchema: z.ZodObject<
         Prettify<
           DeriveSchemaByKey<
             ResolveSchema<
@@ -1387,7 +1387,7 @@ function createViewObject(
 
     const baseSchema =
       schemaType === "server"
-        ? registryEntry.zodSchemas.validationSchema
+        ? registryEntry.zodSchemas.serverSchema
         : registryEntry.zodSchemas.clientSchema;
     const primitiveShape = baseSchema.shape;
 
@@ -1482,7 +1482,7 @@ type _DeriveViewShape<
   TTableName extends keyof TRegistry,
   TSelection,
   TRegistry extends RegistryShape,
-  TKey extends "clientSchema" | "validationSchema",
+  TKey extends "clientSchema" | "serverSchema",
   Depth extends any[] = [],
 > = Depth["length"] extends 10
   ? any
@@ -1590,7 +1590,7 @@ export type DeriveViewResult<
       _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
     >;
     server: z.ZodObject<
-      _DeriveViewShape<TTableName, TSelection, TRegistry, "validationSchema">
+      _DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">
     >;
   };
   transforms: {
@@ -1600,7 +1600,7 @@ export type DeriveViewResult<
 
   // ADD: parse functions on views too
   parseForDb: (
-    appData: z.input<TRegistry[TTableName]["zodSchemas"]["validationSchema"]>,
+    appData: z.input<TRegistry[TTableName]["zodSchemas"]["serverSchema"]>,
   ) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
   parseFromDb: (
     dbData: Partial<z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>>,
@@ -1689,7 +1689,7 @@ type RegistryShape = Record<
     zodSchemas: {
       sqlSchema: z.ZodObject<any>;
       clientSchema: z.ZodObject<any>;
-      validationSchema: z.ZodObject<any>;
+      serverSchema: z.ZodObject<any>;
       defaultValues: any;
       stateType: any;
       toClient: (dbObject: any) => any;
@@ -1721,7 +1721,7 @@ type CreateSchemaBoxReturn<
     schemas: {
       sql: Resolved[K]["zodSchemas"]["sqlSchema"];
       client: Resolved[K]["zodSchemas"]["clientSchema"];
-      server: Resolved[K]["zodSchemas"]["validationSchema"];
+      server: Resolved[K]["zodSchemas"]["serverSchema"];
     };
 
     transforms: {
@@ -1731,7 +1731,7 @@ type CreateSchemaBoxReturn<
 
     // ADD: parse functions with proper types
     parseForDb: (
-      appData: z.input<Resolved[K]["zodSchemas"]["validationSchema"]>,
+      appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>,
     ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
 
     parseFromDb: (
@@ -1924,12 +1924,12 @@ export function createSchemaBox<
 
     cleanerRegistry[tableName] = {
       definition: entry.rawSchema,
-      schemaKey: tableName, // ADD THIS - was missing from runtime
+      schemaKey: tableName,
 
       schemas: {
         sql: entry.zodSchemas.sqlSchema,
         client: entry.zodSchemas.clientSchema,
-        server: entry.zodSchemas.validationSchema,
+        server: entry.zodSchemas.serverSchema,
       },
 
       transforms: {

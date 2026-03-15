@@ -253,7 +253,7 @@ function createBuilder(config) {
             if (completedStages.has("server")) {
                 throw new Error("validation() can only be called once in the chain");
             }
-            const validationSchema = isFunction(assert)
+            const serverSchema = isFunction(assert)
                 ? assert({
                     sql: config.sqlZod,
                     initialState: config.newZod,
@@ -265,7 +265,7 @@ function createBuilder(config) {
             return createBuilder({
                 ...config,
                 stage: "server",
-                validationZod: validationSchema,
+                validationZod: serverSchema,
                 completedStages: newCompletedStages,
             });
         },
@@ -539,7 +539,7 @@ export function createSchema(schema, relations) {
         isClientRecord,
         sqlSchema: finalSqlSchema,
         clientSchema: finalClientSchema,
-        validationSchema: finalValidationSchema,
+        serverSchema: finalValidationSchema,
         defaultValues: defaultValues,
         stateType: {},
         generateDefaults,
@@ -581,7 +581,7 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
             }
         }
         const baseSchema = schemaType === "server"
-            ? registryEntry.zodSchemas.validationSchema
+            ? registryEntry.zodSchemas.serverSchema
             : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
         if (subSelection === true) {
@@ -749,11 +749,11 @@ export function createSchemaBox(schemas, resolver) {
         const entry = finalRegistry[tableName];
         cleanerRegistry[tableName] = {
             definition: entry.rawSchema,
-            schemaKey: tableName, // ADD THIS - was missing from runtime
+            schemaKey: tableName,
             schemas: {
                 sql: entry.zodSchemas.sqlSchema,
                 client: entry.zodSchemas.clientSchema,
-                server: entry.zodSchemas.validationSchema,
+                server: entry.zodSchemas.serverSchema,
             },
             transforms: {
                 toClient: entry.zodSchemas.toClient,
