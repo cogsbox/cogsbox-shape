@@ -297,7 +297,7 @@ interface ShapeAPI {
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
   >;
-  sql: <T extends SQLType>(
+  sql: <const T extends SQLType>(
     sqlConfig: T,
   ) => Builder<
     "sql",
@@ -383,7 +383,7 @@ export const s: ShapeAPI = {
     relationType: "manyToMany" as const,
     defaultCount: config?.defaultCount ?? 0,
   }),
-  sql: <T extends SQLType>(sqlConfig: T) => {
+  sql: <const T extends SQLType>(sqlConfig: T) => {
     const sqlZodType = (() => {
       let baseType: z.ZodTypeAny;
       if (sqlConfig.pk) {
@@ -929,8 +929,27 @@ export function createSchema<
   defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
   stateType: Prettify<DeriveStateType<TActualSchema>>;
   generateDefaults: () => Prettify<DeriveDefaults<TActualSchema>>;
-  toClient: (dbObject: any) => any;
-  toDb: (clientObject: any) => any;
+  toClient: (
+    dbObject: Partial<
+      z.infer<
+        z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+      >
+    >,
+  ) => z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>
+  >;
+
+  toDb: (
+    clientObject: Partial<
+      z.infer<
+        z.ZodObject<
+          Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>
+        >
+      >
+    >,
+  ) => z.infer<
+    z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+  >;
   parseForDb: (
     appData: z.input<
       z.ZodObject<
@@ -994,7 +1013,7 @@ export function createSchema<
         dbToClientKeys[dbFieldName] = key;
 
         // ALL SCHEMAS STRICTLY USE THE JS KEY
-        sqlFields[key] = config.zodSqlSchema;
+        sqlFields[dbFieldName] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
 
@@ -1036,7 +1055,7 @@ export function createSchema<
         dbToClientKeys[dbFieldName] = key;
 
         // ALL SCHEMAS STRICTLY USE THE JS KEY
-        sqlFields[key] = config.zodSqlSchema;
+        sqlFields[dbFieldName] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
 
@@ -1725,8 +1744,13 @@ type CreateSchemaBoxReturn<
     };
 
     transforms: {
-      toClient: Resolved[K]["zodSchemas"]["toClient"];
-      toDb: Resolved[K]["zodSchemas"]["toDb"];
+      toClient: (
+        dbData: z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>,
+      ) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
+
+      toDb: (
+        clientData: z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>,
+      ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
     };
 
     // ADD: parse functions with proper types
@@ -2104,6 +2128,22 @@ type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
 };
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
+type GetDbKey<K, Field> =
+  Field extends Reference<infer TGetter>
+    ? ReturnType<TGetter> extends {
+        config: { sql: { field: infer F extends string } };
+      }
+      ? string extends F
+        ? K
+        : F // fallback to K if string was widened
+      : K
+    : Field extends { config: { sql: { field: infer F extends string } } }
+      ? string extends F
+        ? K
+        : F // fallback to K if string was widened
+      : K;
+
+// --- UPDATE DeriveSchemaByKey ---
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
@@ -2111,18 +2151,19 @@ type DeriveSchemaByKey<
 > = Depth["length"] extends 10 // Recursion guard
   ? any
   : {
-      [K in keyof T as K extends  // === START: ADDED KEYS TO EXCLUDE ===
+      [K in keyof T as K extends
         | "_tableName"
         | typeof SchemaWrapperBrand
         | "__primaryKeySQL"
         | "__isClientChecker"
         | "primaryKeySQL"
         | "isClient"
-        ? // === END: ADDED KEYS TO EXCLUDE ===
-          never
+        ? never
         : K extends keyof T
           ? T[K] extends Reference<any>
-            ? K // Keep reference keys
+            ? Key extends "zodSqlSchema"
+              ? GetDbKey<K, T[K]>
+              : K // <-- CHANGED
             : T[K] extends {
                   config: {
                     sql: {
@@ -2131,7 +2172,9 @@ type DeriveSchemaByKey<
                   };
                 }
               ? never // EXCLUDE relation keys from base schema
-              : K // Keep non-relation keys
+              : Key extends "zodSqlSchema"
+                ? GetDbKey<K, T[K]>
+                : K // <-- CHANGED
           : never]: T[K] extends Reference<infer TGetter>
         ? ReturnType<TGetter> extends {
             config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };

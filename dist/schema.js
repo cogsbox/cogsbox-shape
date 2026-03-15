@@ -417,7 +417,7 @@ export function createSchema(schema, relations) {
                 clientToDbKeys[key] = dbFieldName;
                 dbToClientKeys[dbFieldName] = key;
                 // ALL SCHEMAS STRICTLY USE THE JS KEY
-                sqlFields[key] = config.zodSqlSchema;
+                sqlFields[dbFieldName] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
                 const initialValueOrFn = config.initialValue;
@@ -450,7 +450,7 @@ export function createSchema(schema, relations) {
                 clientToDbKeys[key] = dbFieldName;
                 dbToClientKeys[dbFieldName] = key;
                 // ALL SCHEMAS STRICTLY USE THE JS KEY
-                sqlFields[key] = config.zodSqlSchema;
+                sqlFields[dbFieldName] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
                 if (config.transforms) {
