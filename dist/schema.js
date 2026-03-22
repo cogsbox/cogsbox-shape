@@ -103,7 +103,6 @@ export const s = {
         });
     },
 };
-// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createBuilder
 function createBuilder(config) {
     const completedStages = config.completedStages || new Set([config.stage]);
     const builderObject = {
@@ -115,8 +114,8 @@ function createBuilder(config) {
                 inferDefaultFromZod(config.clientZod, config.sqlConfig),
             zodClientSchema: config.clientZod,
             zodValidationSchema: config.validationZod,
-            clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
-            validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
+            clientTransform: config.clientTransform,
+            validationTransform: config.validationTransform,
         },
         initialState: (options) => {
             if (completedStages.has("new")) {
@@ -169,11 +168,10 @@ function createBuilder(config) {
             const newCompletedStages = new Set(completedStages);
             newCompletedStages.add("new");
             const newConfig = { ...config.sqlConfig };
-            if (clientPk) {
-                newConfig.isClientPk = true;
+            if (clientPk !== undefined) {
+                // Store the boolean OR the function directly into the config
+                newConfig.isClientPk = clientPk;
             }
-            // When clientPk is true, ALWAYS union the SQL type with the client type
-            // because records can be either DB-sourced (number) or client-created (string)
             let clientAndServerSchema;
             if (clientPk) {
                 // Always union for clientPk fields
@@ -221,11 +219,8 @@ function createBuilder(config) {
                     ...config,
                     stage: "client",
                     completedStages: newCompletedStages,
-                    // Store the transform function to be used later
                     clientTransform: (baseSchema) => {
                         if (isFunction(assert)) {
-                            // We use `as any` here to resolve the complex generic type error.
-                            // It's safe because we know the baseSchema will have the necessary Zod methods.
                             return assert({
                                 sql: baseSchema,
                                 initialState: config.newZod,
@@ -235,7 +230,6 @@ function createBuilder(config) {
                     },
                 });
             }
-            // This is the original logic for non-relation fields
             const clientSchema = isFunction(assert)
                 ? assert({ sql: config.sqlZod, initialState: config.newZod })
                 : assert;
@@ -247,9 +241,7 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
-        server: (
-        // ... this validation function remains unchanged ...
-        assert) => {
+        server: (assert) => {
             if (completedStages.has("server")) {
                 throw new Error("validation() can only be called once in the chain");
             }
@@ -305,13 +297,9 @@ export function schema(schema) {
         }
     }
     enrichedSchema[SchemaWrapperBrand] = true;
-    // Add private properties
     enrichedSchema.__primaryKeySQL = undefined;
-    enrichedSchema.__isClientChecker = undefined;
-    // Add methods directly
     enrichedSchema.primaryKeySQL = function (definer) {
         const pkFieldsOnly = {};
-        // Find all PK fields
         for (const key in schema) {
             const field = schema[key];
             if (field &&
@@ -323,29 +311,21 @@ export function schema(schema) {
         enrichedSchema.__primaryKeySQL = definer(pkFieldsOnly);
         return enrichedSchema;
     };
-    enrichedSchema.isClient = function (checker) {
-        enrichedSchema.__isClientChecker = checker;
-        return enrichedSchema;
-    };
     return enrichedSchema;
 }
 function inferDefaultFromZod(zodType, sqlConfig) {
-    // --- START OF FIX ---
-    // If the database is responsible for the default, the client shouldn't generate a value.
     if (sqlConfig &&
         "default" in sqlConfig &&
         sqlConfig.default === "CURRENT_TIMESTAMP") {
         return undefined;
     }
-    // --- END OF FIX ---
     if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
         if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-            // This part now runs only if default is not CURRENT_TIMESTAMP
             return sqlConfig.default;
         }
         if (typeof sqlConfig.type === "string" &&
             ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
-            // ... (rest of the function is unchanged)
+            // ...
         }
         const sqlTypeConfig = sqlConfig;
         if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
@@ -361,7 +341,7 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                     return false;
                 case "date":
                 case "datetime":
-                case "timestamp": // Added timestamp here for completeness
+                case "timestamp":
                     return new Date();
             }
         }
@@ -381,7 +361,6 @@ function inferDefaultFromZod(zodType, sqlConfig) {
     }
     return undefined;
 }
-// Helper to check if something is a reference
 function isReference(value) {
     return value && typeof value === "object" && value.__type === "reference";
 }
@@ -392,7 +371,6 @@ export function createSchema(schema, relations) {
     const defaultValues = {};
     const defaultGenerators = {};
     const fieldTransforms = {};
-    // NEW: Track the runtime mappings
     const clientToDbKeys = {};
     const dbToClientKeys = {};
     const fullSchema = { ...schema, ...(relations || {}) };
@@ -403,7 +381,6 @@ export function createSchema(schema, relations) {
         if (key === "_tableName" ||
             key.startsWith("__") ||
             key === String(SchemaWrapperBrand) ||
-            key === "isClient" ||
             key === "primaryKeySQL" ||
             typeof value === "function")
             continue;
@@ -412,11 +389,9 @@ export function createSchema(schema, relations) {
             const targetField = definition.getter();
             if (targetField && targetField.config) {
                 const config = targetField.config;
-                // Track mapping
                 const dbFieldName = config.sql?.field || key;
                 clientToDbKeys[key] = dbFieldName;
                 dbToClientKeys[dbFieldName] = key;
-                // ALL SCHEMAS STRICTLY USE THE JS KEY
                 sqlFields[dbFieldName] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
@@ -445,11 +420,9 @@ export function createSchema(schema, relations) {
                 continue;
             }
             else {
-                // Track mapping
                 const dbFieldName = sqlConfig?.field || key;
                 clientToDbKeys[key] = dbFieldName;
                 dbToClientKeys[dbFieldName] = key;
-                // ALL SCHEMAS STRICTLY USE THE JS KEY
                 sqlFields[dbFieldName] = config.zodSqlSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
@@ -470,23 +443,51 @@ export function createSchema(schema, relations) {
             }
         }
     }
-    let isClientRecord;
-    const explicitChecker = fullSchema.__isClientChecker;
-    if (explicitChecker) {
-        isClientRecord = explicitChecker;
-    }
-    else if (clientPkKeys.length > 0) {
-        const autoChecks = [];
+    // --- NEW: SMART CHECKER BUILDER ---
+    let isClientRecord = () => false;
+    if (clientPkKeys.length > 0) {
+        const checkers = [];
         for (const key of clientPkKeys) {
             const field = fullSchema[key];
-            const sqlType = field?.config?.sql?.type;
-            const initialValue = field?.config?.initialValue;
-            if (sqlType === "int" && typeof initialValue === "string") {
-                autoChecks.push({ key, check: (val) => typeof val === "string" });
+            const sqlConfig = field?.config?.sql;
+            const dbKey = sqlConfig?.field || key;
+            const isClientPkVal = sqlConfig?.isClientPk;
+            if (typeof isClientPkVal === "function") {
+                // Explicit checker provided directly in the field!
+                checkers.push({ clientKey: key, dbKey, check: isClientPkVal });
+            }
+            else {
+                // Fallback auto-detection: If they just passed `true`
+                const initialValueOrFn = field?.config?.initialValue;
+                let sampleValue = initialValueOrFn;
+                // Safely execute the function once to figure out its return type!
+                if (isFunction(initialValueOrFn)) {
+                    try {
+                        sampleValue = initialValueOrFn({ uuid });
+                    }
+                    catch (e) {
+                        // Ignore if the factory fails with a dummy payload
+                    }
+                }
+                if (sqlConfig?.type === "int" && typeof sampleValue === "string") {
+                    checkers.push({
+                        clientKey: key,
+                        dbKey,
+                        check: (val) => typeof val === "string",
+                    });
+                }
             }
         }
-        if (autoChecks.length > 0) {
-            isClientRecord = (record) => autoChecks.some(({ key, check }) => check(record[key]));
+        if (checkers.length > 0) {
+            isClientRecord = (record) => {
+                if (!record || typeof record !== "object")
+                    return false;
+                return checkers.some(({ clientKey, dbKey, check }) => {
+                    // Look at both the client shape key AND the db shape key safely
+                    const val = record[clientKey] !== undefined ? record[clientKey] : record[dbKey];
+                    return check(val);
+                });
+            };
         }
     }
     const generateDefaults = () => {
@@ -502,7 +503,6 @@ export function createSchema(schema, relations) {
         }
         return freshDefaults;
     };
-    // --- RUNTIME TRANSFORMERS: Map keys and apply value transforms ---
     const toClient = (dbObject) => {
         const clientObject = {};
         for (const dbKey in dbObject) {
@@ -529,7 +529,6 @@ export function createSchema(schema, relations) {
         }
         return dbObject;
     };
-    // Create the final Zod objects once
     const finalSqlSchema = z.object(sqlFields);
     const finalClientSchema = z.object(clientFields);
     const finalValidationSchema = z.object(serverFields);
@@ -556,16 +555,13 @@ export function createSchema(schema, relations) {
     };
 }
 function createViewObject(initialRegistryKey, selection, registry, tableNameToRegistryKeyMap) {
-    // Add a flag to track if all tables support reconciliation
     let allTablesSupportsReconciliation = true;
-    // Debug: track which tables are checked
     const checkedTables = {};
     function buildView(currentRegistryKey, subSelection, schemaType) {
         const registryEntry = registry[currentRegistryKey];
         if (!registryEntry) {
             throw new Error(`Schema with key "${currentRegistryKey}" not found in the registry.`);
         }
-        // FIX: Check at the correct path - registryEntry.zodSchemas
         if (!(currentRegistryKey in checkedTables)) {
             const hasPks = !!(registryEntry.zodSchemas?.pk &&
                 registryEntry.zodSchemas.pk.length > 0 &&
@@ -599,7 +595,6 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
                     if (!nextRegistryKey) {
                         throw new Error(`Could not resolve registry key for table "${targetTableName}"`);
                     }
-                    // Recursive call will also check that table's pk/clientPk
                     const relationSchema = buildView(nextRegistryKey, subSelection[relationKey], schemaType);
                     if (["hasMany", "manyToMany"].includes(relationConfig.type)) {
                         selectedRelationShapes[relationKey] = z.array(relationSchema);
@@ -621,7 +616,6 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
     };
 }
 export function createSchemaBox(schemas, resolver) {
-    // Your existing implementation stays exactly the same
     const schemaProxy = new Proxy({}, {
         get(target, tableName) {
             const schema = schemas[tableName];
@@ -647,14 +641,12 @@ export function createSchemaBox(schemas, resolver) {
     });
     const resolutionConfig = resolver(schemaProxy);
     const resolvedSchemas = schemas;
-    // STAGE 1: Resolve references
     for (const tableName in schemas) {
         for (const fieldName in schemas[tableName]) {
             const field = schemas[tableName][fieldName];
             if (isReference(field)) {
                 const targetField = field.getter();
                 if (targetField && targetField.config) {
-                    // FIX: Shallow copy preserving Zod instances
                     const newConfig = {
                         ...targetField.config,
                         sql: { ...targetField.config.sql, isForeignKey: true },
@@ -670,7 +662,6 @@ export function createSchemaBox(schemas, resolver) {
             }
         }
     }
-    // STAGE 2: Resolve relations
     for (const tableName in schemas) {
         const tableConfig = resolutionConfig[tableName];
         if (!tableConfig)
@@ -744,7 +735,6 @@ export function createSchemaBox(schemas, resolver) {
         const tableName = finalRegistry[key].rawSchema._tableName;
         tableNameToRegistryKeyMap[tableName] = key;
     }
-    // Inside createSchemaBox, in the cleanerRegistry loop:
     for (const tableName in finalRegistry) {
         const entry = finalRegistry[tableName];
         cleanerRegistry[tableName] = {
@@ -759,13 +749,11 @@ export function createSchemaBox(schemas, resolver) {
                 toClient: entry.zodSchemas.toClient,
                 toDb: entry.zodSchemas.toDb,
             },
-            // ADD: parse functions
             parseForDb: entry.zodSchemas.parseForDb,
             parseFromDb: entry.zodSchemas.parseFromDb,
             defaults: entry.zodSchemas.defaultValues,
             stateType: entry.zodSchemas.stateType,
             generateDefaults: entry.zodSchemas.generateDefaults,
-            // ADD: PK info
             pk: entry.zodSchemas.pk,
             clientPk: entry.zodSchemas.clientPk,
             isClientRecord: entry.zodSchemas.isClientRecord,
@@ -773,6 +761,32 @@ export function createSchemaBox(schemas, resolver) {
             createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
+                const deepToClient = (dbData, currentSelection, currentKey) => {
+                    if (!dbData)
+                        return dbData;
+                    if (Array.isArray(dbData))
+                        return dbData.map((item) => deepToClient(item, currentSelection, currentKey));
+                    const regEntry = finalRegistry[currentKey];
+                    const baseMapped = regEntry.zodSchemas.toClient(dbData);
+                    if (typeof currentSelection === "object") {
+                        for (const relKey in currentSelection) {
+                            if (currentSelection[relKey] &&
+                                dbData[relKey] !== undefined &&
+                                dbData[relKey] !== null) {
+                                const relField = regEntry.rawSchema[relKey];
+                                if (relField?.config?.sql?.schema) {
+                                    const targetTableName = relField.config.sql.schema()._tableName;
+                                    const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+                                    if (nextRegKey) {
+                                        baseMapped[relKey] = deepToClient(dbData[relKey], currentSelection[relKey], nextRegKey);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return baseMapped;
+                };
+                const viewToClient = (dbData) => deepToClient(dbData, selection, tableName);
                 return {
                     definition: entry.rawSchema,
                     schemaKey: tableName,
@@ -782,10 +796,13 @@ export function createSchemaBox(schemas, resolver) {
                         server: view.server,
                     },
                     transforms: {
-                        toClient: entry.zodSchemas.toClient,
+                        toClient: viewToClient,
                         toDb: entry.zodSchemas.toDb,
-                        parseForDb: entry.zodSchemas.parseForDb,
-                        parseFromDb: entry.zodSchemas.parseFromDb,
+                    },
+                    parseForDb: entry.zodSchemas.parseForDb,
+                    parseFromDb: (dbData) => {
+                        const mapped = viewToClient(dbData);
+                        return view.client.parse(mapped);
                     },
                     defaults: defaults,
                     pk: entry.zodSchemas.pk,
@@ -798,23 +815,18 @@ export function createSchemaBox(schemas, resolver) {
                 };
             },
             RelationSelection: {},
-            __registry: finalRegistry, // ADD THIS - was in type but not runtime
+            __registry: finalRegistry,
         };
     }
     return cleanerRegistry;
 }
-function computeViewDefaults(currentRegistryKey, // Renamed for clarity, e.g., "users"
-selection, registry, tableNameToRegistryKeyMap, // Accept the map
-visited = new Set()) {
+function computeViewDefaults(currentRegistryKey, selection, registry, tableNameToRegistryKeyMap, visited = new Set()) {
     if (visited.has(currentRegistryKey)) {
-        return undefined; // Prevent circular references
+        return undefined;
     }
     visited.add(currentRegistryKey);
-    // This lookup now uses the correct key every time.
     const entry = registry[currentRegistryKey];
-    // This check prevents the crash.
     if (!entry) {
-        // This case should ideally not be hit if the map is correct, but it's safe to have.
         console.warn(`Could not find entry for key "${currentRegistryKey}" in registry while computing defaults.`);
         return {};
     }
@@ -823,7 +835,6 @@ visited = new Set()) {
     if (selection === true || typeof selection !== "object") {
         return baseDefaults;
     }
-    // Add relation defaults based on selection
     for (const key in selection) {
         if (!selection[key])
             continue;
@@ -831,14 +842,10 @@ visited = new Set()) {
         if (!field?.config?.sql?.schema)
             continue;
         const relationConfig = field.config.sql;
-        // --- THE CORE FIX ---
-        // 1. Get the internal _tableName of the related schema (e.g., "post_table")
         const targetTableName = relationConfig.schema()._tableName;
-        // 2. Use the map to find the correct registry key for it (e.g., "posts")
         const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
         if (!nextRegistryKey)
-            continue; // Could not resolve, skip this relation
-        // Handle different default configurations
+            continue;
         const defaultConfig = relationConfig.defaultConfig;
         if (defaultConfig === undefined) {
             delete baseDefaults[key];
@@ -852,17 +859,10 @@ visited = new Set()) {
         else if (relationConfig.type === "hasMany" ||
             relationConfig.type === "manyToMany") {
             const count = defaultConfig?.count || relationConfig.defaultCount || 1;
-            baseDefaults[key] = Array.from({ length: count }, () => 
-            // 3. Make the recursive call with the CORRECT key
-            computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, // Pass the map along
-            new Set(visited)));
+            baseDefaults[key] = Array.from({ length: count }, () => computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, new Set(visited)));
         }
         else {
-            // hasOne or belongsTo
-            baseDefaults[key] =
-                // 3. Make the recursive call with the CORRECT key
-                computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, // Pass the map along
-                new Set(visited));
+            baseDefaults[key] = computeViewDefaults(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, new Set(visited));
         }
     }
     return baseDefaults;

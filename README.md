@@ -36,13 +36,13 @@ Define a field by chaining methods. Each step is optional — use only what you 
 s.sql()  →  .initialState()  →  .client()  →  .server()  →  .transform()
 ```
 
-| Method                             | Purpose                                                        |
-| ---------------------------------- | -------------------------------------------------------------- |
-| `s.sql({ type })`                  | Database column type. The starting point for every field.      |
-| `.initialState({ value, schema })` | Default value and type for new records created on the client.  |
-| `.client(fn)`                      | Client-side validation. Overrides the client type if needed.   |
-| `.server(fn)`                      | Server-side validation. Stricter rules before database writes. |
-| `.transform({ toClient, toDb })`   | Converts between database and client representations.          |
+| Method                                       | Purpose                                                        |
+| -------------------------------------------- | -------------------------------------------------------------- |
+| `s.sql({ type })`                            | Database column type. The starting point for every field.      |
+| `.initialState({ value, schema, clientPk })` | Default value and type for new records created on the client.  |
+| `.client(fn)`                                | Client-side validation. Overrides the client type if needed.   |
+| `.server(fn)`                                | Server-side validation. Stricter rules before database writes. |
+| `.transform({ toClient, toDb })`             | Converts between database and client representations.          |
 
 ### 1. SQL — Define Your Database Schema
 
@@ -72,6 +72,7 @@ const userSchema = schema({
   id: s.sql({ type: "int", pk: true }).initialState({
     value: () => crypto.randomUUID(),
     schema: z.string(),
+    clientPk: true, // Explicitly marks this as a client PK, auto-creating a union type
   }),
   // Client type becomes: string | number (union of SQL + initialState)
   // Default value: a generated UUID string
@@ -175,6 +176,7 @@ const contactSchema = schema({
   id: s.sql({ type: "int", pk: true }).initialState({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
+    clientPk: true,
   }),
   name: s.sql({ type: "varchar" }).server(({ sql }) => sql.min(2)),
   email: s.sql({ type: "varchar" }).server(({ sql }) => sql.email()),
@@ -189,23 +191,24 @@ const contactSchema = schema({
 
 const {
   clientSchema, // Zod schema for client-side validation
-  validationSchema, // Zod schema with .server() rules
+  serverSchema, // Zod schema with .server() rules
   sqlSchema, // Zod schema matching DB column types
   defaultValues, // Typed defaults matching clientSchema
-  toClient, // DB row → client object
-  toDb, // Client object → DB row
+  generateDefaults, // Generates fresh defaults (executes randomizers/dates)
+  parseForDb, // Validates client app data & transforms to DB format
+  parseFromDb, // Transforms DB data & validates to Client format
 } = createSchema(contactSchema);
 
 // Use in a form
-const [data, setData] = useState(defaultValues);
+const [data, setData] = useState(generateDefaults());
 // { id: "new_a1b2c3d4", name: "", email: "", isArchived: false }
 
-// Validate
-const result = validationSchema.safeParse(data);
+// Validate explicitly
+const result = serverSchema.safeParse(data);
 
-// Transform (on the server)
-const dbRow = toDb(data); // { isArchived: 0, ... }
-const clientObj = toClient(row); // { isArchived: true, ... }
+// Or handle validation & transformation in a single step!
+const safeDbRow = parseForDb(data);
+// Validates using serverSchema, outputs { isArchived: 0, ... }
 ```
 
 ## Relationships and Views
@@ -258,7 +261,7 @@ type UserClient = z.infer<typeof schemas.client>;
 
 ### 4. Create Views to Include Relations
 
-Explicitly select which relations to include:
+Explicitly select which relations to include. The resulting views automatically apply nested transforms and deep schema validations.
 
 ```typescript
 const userWithPosts = box.users.createView({
@@ -273,92 +276,5 @@ type UserWithPosts = z.infer<typeof userWithPosts.schemas.client>;
 // }
 
 const defaults = userWithPosts.defaults;
-// { id: 0, name: '', posts: [] }
+// { id: 0, name: '', posts:
 ```
-
-## Complete Example
-
-```typescript
-import { s, schema, createSchemaBox } from "cogsbox-shape";
-import { z } from "zod";
-
-const users = schema({
-  _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).initialState({
-    value: () => `user_${crypto.randomUUID()}`,
-    schema: z.string(),
-  }),
-  email: s
-    .sql({ type: "varchar", length: 255 })
-    .server(({ sql }) => sql.email()),
-  isActive: s
-    .sql({ type: "int" })
-    .client(() => z.boolean())
-    .transform({
-      toClient: (val) => val === 1,
-      toDb: (val) => (val ? 1 : 0),
-    }),
-  posts: s.hasMany({ count: 0 }),
-});
-
-const posts = schema({
-  _tableName: "posts",
-  id: s.sql({ type: "int", pk: true }),
-  title: s.sql({ type: "varchar" }),
-  authorId: s.reference(() => users.id),
-});
-
-const box = createSchemaBox({ users, posts }, (s) => ({
-  users: {
-    posts: { fromKey: "id", toKey: s.posts.authorId },
-  },
-}));
-
-// Base schema (no relations)
-const { schemas, defaults, transforms } = box.users;
-
-// View with relations
-const userView = box.users.createView({ posts: true });
-const { client, server } = userView.schemas;
-
-// Type inference
-type User = z.infer<typeof client>;
-
-// Validation
-const result = server.safeParse(formData);
-
-// Transformation (server-side)
-const dbRow = transforms.toDb(validated);
-const apiResponse = transforms.toClient(dbRow);
-```
-
-## API Reference
-
-### Schema Definition
-
-- `s.sql(config)` — Define SQL column type. The starting point for every field.
-- `.initialState({ value, schema })` — Set default value for new records. Optionally provide a Zod schema to widen or narrow the client type.
-- `.client(schema | fn)` — Define the client-side Zod schema for validation. Use when the client type differs from SQL.
-- `.server(schema | fn)` — Add server-side validation rules. Receives the previous schema in the chain for refinement.
-- `.transform({ toClient, toDb })` — Define bidirectional conversion between SQL and client types. Runs on the server.
-
-### Relationships
-
-- `s.reference(getter)` — Create a foreign key reference to another schema's field.
-- `s.hasMany(config)` — Declare a one-to-many relationship placeholder.
-- `s.hasOne(config)` — Declare a one-to-one relationship placeholder.
-- `s.manyToMany(config)` — Declare a many-to-many relationship placeholder.
-
-### Schema Processing
-
-- `schema(definition)` — Create a schema definition from field declarations.
-- `createSchema(schema)` — Process a single schema. Returns `clientSchema`, `validationSchema`, `sqlSchema`, `defaultValues`, `toClient`, `toDb`.
-- `createSchemaBox(schemas, resolver)` — Process multiple schemas with relationships. Returns a registry with:
-  - `.schemas` — Base Zod schemas (excludes relations).
-  - `.defaults` — Typed default values.
-  - `.transforms` — `toClient` and `toDb` functions.
-  - `.createView(selection)` — Create a view including selected relations.
-
-## License
-
-MIT

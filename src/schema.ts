@@ -91,6 +91,7 @@ type CollapsedUnion<
   A extends z.ZodTypeAny,
   B extends z.ZodTypeAny,
 > = A extends B ? (B extends A ? A : z.ZodUnion<[A, B]>) : z.ZodUnion<[A, B]>;
+
 export interface IBuilderMethods<
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
@@ -102,7 +103,8 @@ export interface IBuilderMethods<
   initialState<const TValue>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema?: never;
-    clientPk?: boolean;
+    // --- UPDATED: clientPk can now be a checker function ---
+    clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
       "new",
@@ -121,11 +123,11 @@ export interface IBuilderMethods<
     >
   >;
 
-  // Overload 2: Only schema provided
   initialState<const TSchema extends z.ZodTypeAny>(options: {
     value?: never;
     schema: TSchema;
-    clientPk?: boolean;
+    // --- UPDATED: clientPk can now be a checker function ---
+    clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
       "new",
@@ -138,8 +140,6 @@ export interface IBuilderMethods<
     >
   >;
 
-  // Overload 3: Both value and schema provided
-  // THE FIX: Changed TInitialValue from literal value to z.infer<TSchema>
   initialState<const TValue, const TSchema extends z.ZodTypeAny>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema:
@@ -147,14 +147,15 @@ export interface IBuilderMethods<
       | ((
           base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
         ) => TSchema);
-    clientPk?: boolean;
+    // --- UPDATED: clientPk can now be a checker function ---
+    clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
       "new",
       T,
       TSql,
       TSchema,
-      z.infer<TSchema>, // <-- THIS IS THE FIX: Use schema's type, not literal value
+      z.infer<TSchema>,
       CollapsedUnion<TSql, TSchema>,
       CollapsedUnion<TSql, TSchema>
     >
@@ -229,7 +230,6 @@ type StageMethods = {
   done: never;
 };
 
-// === UPDATED: Builder Config to Handle Relations ===
 type BuilderConfig<
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
@@ -247,6 +247,7 @@ type BuilderConfig<
   clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
   validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
 };
+
 export type Builder<
   TStage extends Stage,
   T extends DbConfig,
@@ -268,6 +269,7 @@ export type Builder<
   IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
   StageMethods[TStage]
 >;
+
 type HasManyDefault =
   | true
   | undefined // Don't include in defaults at all
@@ -433,7 +435,6 @@ export const s: ShapeAPI = {
     >;
   },
 };
-// PASTE THIS ENTIRE FUNCTION OVER YOUR EXISTING createBuilder
 
 function createBuilder<
   TStage extends "sql" | "relation" | "new" | "client" | "server",
@@ -471,13 +472,13 @@ function createBuilder<
         ),
       zodClientSchema: config.clientZod,
       zodValidationSchema: config.validationZod,
-      clientTransform: config.clientTransform, // <-- FIX: Make sure transform is passed through
-      validationTransform: config.validationTransform, // <-- FIX: Make sure transform is passed through
+      clientTransform: config.clientTransform,
+      validationTransform: config.validationTransform,
     },
     initialState: (options: {
       value?: any;
       schema?: z.ZodTypeAny | ((base: z.ZodTypeAny) => z.ZodTypeAny);
-      clientPk?: boolean;
+      clientPk?: boolean | ((val: any) => boolean); // <-- ACCEPT FUNCTION HERE
     }) => {
       if (completedStages.has("new")) {
         throw new Error("initialState() can only be called once in the chain");
@@ -531,12 +532,11 @@ function createBuilder<
       newCompletedStages.add("new");
 
       const newConfig = { ...config.sqlConfig };
-      if (clientPk) {
-        (newConfig as any).isClientPk = true;
+      if (clientPk !== undefined) {
+        // Store the boolean OR the function directly into the config
+        (newConfig as any).isClientPk = clientPk;
       }
 
-      // When clientPk is true, ALWAYS union the SQL type with the client type
-      // because records can be either DB-sourced (number) or client-created (string)
       let clientAndServerSchema: z.ZodTypeAny;
 
       if (clientPk) {
@@ -592,11 +592,8 @@ function createBuilder<
           ...config,
           stage: "client",
           completedStages: newCompletedStages,
-          // Store the transform function to be used later
           clientTransform: (baseSchema: z.ZodTypeAny) => {
             if (isFunction(assert)) {
-              // We use `as any` here to resolve the complex generic type error.
-              // It's safe because we know the baseSchema will have the necessary Zod methods.
               return assert({
                 sql: baseSchema as any,
                 initialState: config.newZod,
@@ -607,7 +604,6 @@ function createBuilder<
         });
       }
 
-      // This is the original logic for non-relation fields
       const clientSchema = isFunction(assert)
         ? assert({ sql: config.sqlZod, initialState: config.newZod })
         : assert;
@@ -622,7 +618,6 @@ function createBuilder<
     },
 
     server: <TValidationNext extends z.ZodTypeAny>(
-      // ... this validation function remains unchanged ...
       assert:
         | ((tools: {
             sql: TSql;
@@ -655,7 +650,6 @@ function createBuilder<
     },
 
     transform: (transforms: {
-      // ... this transform function remains unchanged ...
       toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
       toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
     }) => {
@@ -706,20 +700,13 @@ type PickPrimaryKeys<T extends ShapeSchema> = {
     ? K
     : never]: T[K];
 };
+
+// --- REMOVED: .isClient() method from SchemaBuilder ---
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
   __primaryKeySQL?: string;
-  __isClientChecker?: (record: any) => boolean;
 
   primaryKeySQL: (
     definer: (pkFields: PickPrimaryKeys<T>) => string,
-  ) => SchemaBuilder<T>;
-  isClient: (
-    checker: (
-      record: Prettify<
-        | z.infer<z.ZodObject<DeriveSchemaByKey<T, "zodSqlSchema">>>
-        | z.infer<z.ZodObject<DeriveSchemaByKey<T, "zodClientSchema">>>
-      >,
-    ) => boolean,
   ) => SchemaBuilder<T>;
 };
 
@@ -744,18 +731,13 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
   }
 
   enrichedSchema[SchemaWrapperBrand] = true;
-
-  // Add private properties
   enrichedSchema.__primaryKeySQL = undefined;
-  enrichedSchema.__isClientChecker = undefined;
 
-  // Add methods directly
   enrichedSchema.primaryKeySQL = function (
     definer: (pkFields: PickPrimaryKeys<U>) => string,
   ): SchemaBuilder<U> {
     const pkFieldsOnly: any = {};
 
-    // Find all PK fields
     for (const key in schema) {
       const field = schema[key];
       if (
@@ -773,17 +755,11 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
     return enrichedSchema;
   };
 
-  enrichedSchema.isClient = function (
-    checker: (record: any) => boolean,
-  ): SchemaBuilder<U> {
-    enrichedSchema.__isClientChecker = checker;
-    return enrichedSchema;
-  };
-
   return enrichedSchema as SchemaBuilder<U>;
 }
+
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";
-// Updated SchemaField to use server/client instead of dbType/toClient/toDb
+
 type BaseSchemaField<T extends SQLType = SQLType> = {
   type: "field";
   sql: T;
@@ -797,7 +773,6 @@ type BaseSchemaField<T extends SQLType = SQLType> = {
 
 type SchemaField<T extends SQLType = SQLType> = BaseSchemaField<T>;
 
-// Update Schema type to include references
 export type Schema<
   T extends Record<string, SchemaField | (() => Relation<any>)>,
 > = {
@@ -836,8 +811,6 @@ function inferDefaultFromZod(
   zodType: z.ZodTypeAny,
   sqlConfig?: SQLType | RelationConfig<any>,
 ): any {
-  // --- START OF FIX ---
-  // If the database is responsible for the default, the client shouldn't generate a value.
   if (
     sqlConfig &&
     "default" in sqlConfig &&
@@ -845,11 +818,9 @@ function inferDefaultFromZod(
   ) {
     return undefined;
   }
-  // --- END OF FIX ---
 
   if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
     if ("default" in sqlConfig && sqlConfig.default !== undefined) {
-      // This part now runs only if default is not CURRENT_TIMESTAMP
       return sqlConfig.default;
     }
 
@@ -857,7 +828,7 @@ function inferDefaultFromZod(
       typeof sqlConfig.type === "string" &&
       ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)
     ) {
-      // ... (rest of the function is unchanged)
+      // ...
     }
 
     const sqlTypeConfig = sqlConfig as SQLType;
@@ -874,7 +845,7 @@ function inferDefaultFromZod(
           return false;
         case "date":
         case "datetime":
-        case "timestamp": // Added timestamp here for completeness
+        case "timestamp":
           return new Date();
       }
     }
@@ -898,7 +869,6 @@ function inferDefaultFromZod(
   return undefined;
 }
 
-// Helper to check if something is a reference
 function isReference<T extends () => any>(value: any): value is Reference<T> {
   return value && typeof value === "object" && value.__type === "reference";
 }
@@ -916,7 +886,7 @@ export function createSchema<
 ): {
   pk: string[] | null;
   clientPk: string[] | null;
-  isClientRecord: ((record: any) => boolean) | undefined;
+  isClientRecord: (record: any) => boolean;
   sqlSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
   >;
@@ -980,7 +950,6 @@ export function createSchema<
     { toClient: (val: any) => any; toDb: (val: any) => any }
   > = {};
 
-  // NEW: Track the runtime mappings
   const clientToDbKeys: Record<string, string> = {};
   const dbToClientKeys: Record<string, string> = {};
 
@@ -994,7 +963,6 @@ export function createSchema<
       key === "_tableName" ||
       key.startsWith("__") ||
       key === String(SchemaWrapperBrand) ||
-      key === "isClient" ||
       key === "primaryKeySQL" ||
       typeof value === "function"
     )
@@ -1007,12 +975,10 @@ export function createSchema<
       if (targetField && targetField.config) {
         const config = targetField.config;
 
-        // Track mapping
         const dbFieldName = config.sql?.field || key;
         clientToDbKeys[key] = dbFieldName;
         dbToClientKeys[dbFieldName] = key;
 
-        // ALL SCHEMAS STRICTLY USE THE JS KEY
         sqlFields[dbFieldName] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
@@ -1049,12 +1015,10 @@ export function createSchema<
       ) {
         continue;
       } else {
-        // Track mapping
         const dbFieldName = sqlConfig?.field || key;
         clientToDbKeys[key] = dbFieldName;
         dbToClientKeys[dbFieldName] = key;
 
-        // ALL SCHEMAS STRICTLY USE THE JS KEY
         sqlFields[dbFieldName] = config.zodSqlSchema;
         clientFields[key] = config.zodClientSchema;
         serverFields[key] = config.zodValidationSchema;
@@ -1079,24 +1043,59 @@ export function createSchema<
     }
   }
 
-  let isClientRecord: ((record: any) => boolean) | undefined;
-  const explicitChecker = (fullSchema as any).__isClientChecker;
+  // --- NEW: SMART CHECKER BUILDER ---
+  let isClientRecord: (record: any) => boolean = () => false;
 
-  if (explicitChecker) {
-    isClientRecord = explicitChecker;
-  } else if (clientPkKeys.length > 0) {
-    const autoChecks: Array<{ key: string; check: (val: any) => boolean }> = [];
+  if (clientPkKeys.length > 0) {
+    const checkers: Array<{
+      clientKey: string;
+      dbKey: string;
+      check: (val: any) => boolean;
+    }> = [];
+
     for (const key of clientPkKeys) {
       const field = (fullSchema as any)[key];
-      const sqlType = field?.config?.sql?.type;
-      const initialValue = field?.config?.initialValue;
-      if (sqlType === "int" && typeof initialValue === "string") {
-        autoChecks.push({ key, check: (val) => typeof val === "string" });
+      const sqlConfig = field?.config?.sql;
+      const dbKey = sqlConfig?.field || key;
+      const isClientPkVal = (sqlConfig as any)?.isClientPk;
+
+      if (typeof isClientPkVal === "function") {
+        // Explicit checker provided directly in the field!
+        checkers.push({ clientKey: key, dbKey, check: isClientPkVal });
+      } else {
+        // Fallback auto-detection: If they just passed `true`
+        const initialValueOrFn = field?.config?.initialValue;
+        let sampleValue = initialValueOrFn;
+
+        // Safely execute the function once to figure out its return type!
+        if (isFunction(initialValueOrFn)) {
+          try {
+            sampleValue = initialValueOrFn({ uuid });
+          } catch (e) {
+            // Ignore if the factory fails with a dummy payload
+          }
+        }
+
+        if (sqlConfig?.type === "int" && typeof sampleValue === "string") {
+          checkers.push({
+            clientKey: key,
+            dbKey,
+            check: (val) => typeof val === "string",
+          });
+        }
       }
     }
-    if (autoChecks.length > 0) {
-      isClientRecord = (record: any) =>
-        autoChecks.some(({ key, check }) => check(record[key]));
+
+    if (checkers.length > 0) {
+      isClientRecord = (record: any) => {
+        if (!record || typeof record !== "object") return false;
+        return checkers.some(({ clientKey, dbKey, check }) => {
+          // Look at both the client shape key AND the db shape key safely
+          const val =
+            record[clientKey] !== undefined ? record[clientKey] : record[dbKey];
+          return check(val);
+        });
+      };
     }
   }
 
@@ -1114,7 +1113,6 @@ export function createSchema<
     return freshDefaults;
   };
 
-  // --- RUNTIME TRANSFORMERS: Map keys and apply value transforms ---
   const toClient = (dbObject: any) => {
     const clientObject: any = {};
     for (const dbKey in dbObject) {
@@ -1144,7 +1142,7 @@ export function createSchema<
     }
     return dbObject;
   };
-  // Create the final Zod objects once
+
   const finalSqlSchema = z.object(sqlFields) as any;
   const finalClientSchema = z.object(clientFields) as any;
   const finalValidationSchema = z.object(serverFields) as any;
@@ -1193,48 +1191,26 @@ type KnownKeys<T> = keyof {
 };
 
 type ResolutionMap<S extends Record<string, SchemaWithPlaceholders>> = {
-  // Level 1: Table Names. IntelliSense will suggest `users`, `pets`, etc.
   [TableName in keyof S]?: {
-    // Level 2: Field Names. Only suggests fields that are placeholders.
     [FieldName in keyof S[TableName] as S[TableName][FieldName] extends
       | PlaceholderReference
       | PlaceholderRelation<any>
       ? FieldName
       : never]?: S[TableName][FieldName] extends PlaceholderRelation<any>
-      ? // If it's a relation (hasMany, etc.)
-        {
-          /**
-           * The key on the current table (`users`) to join from.
-           * Autocompletes with: 'id', 'name', etc.
-           */
+      ? {
           fromKey: KnownKeys<S[TableName]>;
-          /**
-           * The target key on the related table.
-           * Must be a field reference from the proxy, e.g., `s.pets.userId`
-           */
-          toKey: { __meta: any; __parentTableType: any }; // Expecting an enriched field from the proxy
+          toKey: { __meta: any; __parentTableType: any };
           defaultCount?: number;
         }
       : S[TableName][FieldName] extends PlaceholderReference
-        ? // If it's a direct reference
-          { __meta: any; __parentTableType: any } // Expecting an enriched field from the proxy
+        ? { __meta: any; __parentTableType: any }
         : never;
   };
 };
 
-// ============================================
-// createSchemaBox function
-// ============================================
-// Add this to your existing code
-
-// ============================================
-// Properly Typed Schema Box Implementation
-// ============================================
-
-// Helper type to resolve a placeholder field
 type ResolveField<Field, Resolution> = Field extends PlaceholderReference
-  ? Resolution // The resolved reference (like s.pets.id)
-  : Field extends Reference<any> // ADD THIS
+  ? Resolution
+  : Field extends Reference<any>
     ? Resolution
     : Field extends PlaceholderRelation<infer RelType>
       ? Resolution extends { toKey: infer ToKey }
@@ -1270,8 +1246,8 @@ type ResolveField<Field, Resolution> = Field extends PlaceholderReference
             >
           : never
         : never
-      : Field; // Non-placeholder fields pass through unchanged
-// Type to resolve all fields in a schema
+      : Field;
+
 type ResolveSchema<
   Schema extends SchemaWithPlaceholders,
   Resolutions extends Record<string, any>,
@@ -1281,7 +1257,6 @@ type ResolveSchema<
     : Schema[K];
 };
 
-// Type for the final resolved registry
 type ResolvedRegistryWithSchemas<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
@@ -1347,7 +1322,7 @@ type ResolvedRegistryWithSchemas<
       parseFromDb: (dbData: any) => any;
       pk: string[] | null;
       clientPk: string[] | null;
-      isClientRecord: ((record: any) => boolean) | undefined;
+      isClientRecord: (record: any) => boolean;
       generateDefaults: () => Prettify<
         DeriveDefaults<
           ResolveSchema<
@@ -1366,10 +1341,7 @@ function createViewObject(
   registry: any,
   tableNameToRegistryKeyMap: Record<string, string>,
 ) {
-  // Add a flag to track if all tables support reconciliation
   let allTablesSupportsReconciliation = true;
-
-  // Debug: track which tables are checked
   const checkedTables: Record<string, boolean> = {};
 
   function buildView(
@@ -1384,7 +1356,6 @@ function createViewObject(
       );
     }
 
-    // FIX: Check at the correct path - registryEntry.zodSchemas
     if (!(currentRegistryKey in checkedTables)) {
       const hasPks = !!(
         registryEntry.zodSchemas?.pk &&
@@ -1431,7 +1402,6 @@ function createViewObject(
             );
           }
 
-          // Recursive call will also check that table's pk/clientPk
           const relationSchema = buildView(
             nextRegistryKey,
             subSelection[relationKey],
@@ -1459,7 +1429,6 @@ function createViewObject(
   };
 }
 
-// Move all nested types outside the function
 type IsRelationField<Field> = Field extends {
   config: {
     sql: {
@@ -1486,7 +1455,6 @@ type GetRelationRegistryKey<
     : never
   : never;
 
-// Helper to omit relation fields. This was already correct but is included for completeness.
 type OmitRelationFields<Shape, RawSchema> = Omit<
   Shape,
   {
@@ -1497,6 +1465,7 @@ type OmitRelationFields<Shape, RawSchema> = Omit<
       : never;
   }[keyof Shape]
 >;
+
 type _DeriveViewShape<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -1617,7 +1586,6 @@ export type DeriveViewResult<
     toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
   };
 
-  // ADD: parse functions on views too
   parseForDb: (
     appData: z.input<TRegistry[TTableName]["zodSchemas"]["serverSchema"]>,
   ) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
@@ -1627,7 +1595,6 @@ export type DeriveViewResult<
 
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 
-  // ADD: pk info
   pk: string[] | null;
   clientPk: string[] | null;
   supportsReconciliation: boolean;
@@ -1687,7 +1654,7 @@ type NavigationToSelection<T> =
   IsEffectivelyEmpty<T> extends true
     ? never
     : { [K in keyof T]?: boolean | NavigationToSelection<T[K]> };
-// Helper type to omit relation fields from a shape
+
 export type OmitRelations<Shape, RawSchema> = Omit<
   Shape,
   {
@@ -1698,8 +1665,6 @@ export type OmitRelations<Shape, RawSchema> = Omit<
       : never;
   }[keyof Shape]
 >;
-
-// Helper type to ensure proper shape
 
 type RegistryShape = Record<
   string,
@@ -1717,13 +1682,12 @@ type RegistryShape = Record<
       parseFromDb: (dbData: any) => any;
       pk: string[] | null;
       clientPk: string[] | null;
-      isClientRecord: ((record: any) => boolean) | undefined;
+      isClientRecord: (record: any) => boolean;
       generateDefaults: () => any;
     };
   }
 >;
 
-// The main return type - moved outside and made generic
 type CreateSchemaBoxReturn<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
@@ -1753,7 +1717,6 @@ type CreateSchemaBoxReturn<
       ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
     };
 
-    // ADD: parse functions with proper types
     parseForDb: (
       appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>,
     ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
@@ -1766,10 +1729,9 @@ type CreateSchemaBoxReturn<
     stateType: Resolved[K]["zodSchemas"]["stateType"];
     generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
 
-    // ADD: pk info
     pk: string[] | null;
     clientPk: string[] | null;
-    isClientRecord: ((record: any) => boolean) | undefined;
+    isClientRecord: (record: any) => boolean;
 
     nav: NavigationProxy<K & string, Resolved>;
     RelationSelection: NavigationToSelection<
@@ -1793,7 +1755,6 @@ export function createSchemaBox<
   schemas: S,
   resolver: (proxy: SchemaProxy<S>) => R,
 ): CreateSchemaBoxReturn<S, R> {
-  // Your existing implementation stays exactly the same
   const schemaProxy = new Proxy({} as SchemaProxy<S>, {
     get(target, tableName: string) {
       const schema = schemas[tableName as keyof S];
@@ -1824,14 +1785,12 @@ export function createSchemaBox<
   const resolutionConfig = resolver(schemaProxy);
   const resolvedSchemas = schemas;
 
-  // STAGE 1: Resolve references
   for (const tableName in schemas) {
     for (const fieldName in schemas[tableName]) {
       const field = schemas[tableName][fieldName];
       if (isReference(field)) {
         const targetField = field.getter();
         if (targetField && targetField.config) {
-          // FIX: Shallow copy preserving Zod instances
           const newConfig = {
             ...targetField.config,
             sql: { ...targetField.config.sql, isForeignKey: true },
@@ -1849,7 +1808,6 @@ export function createSchemaBox<
     }
   }
 
-  // STAGE 2: Resolve relations
   for (const tableName in schemas) {
     const tableConfig = resolutionConfig[tableName];
     if (!tableConfig) continue;
@@ -1942,7 +1900,7 @@ export function createSchemaBox<
     const tableName = finalRegistry[key].rawSchema._tableName;
     tableNameToRegistryKeyMap[tableName] = key;
   }
-  // Inside createSchemaBox, in the cleanerRegistry loop:
+
   for (const tableName in finalRegistry) {
     const entry = finalRegistry[tableName];
 
@@ -1961,7 +1919,6 @@ export function createSchemaBox<
         toDb: entry.zodSchemas.toDb,
       },
 
-      // ADD: parse functions
       parseForDb: entry.zodSchemas.parseForDb,
       parseFromDb: entry.zodSchemas.parseFromDb,
 
@@ -1969,7 +1926,6 @@ export function createSchemaBox<
       stateType: entry.zodSchemas.stateType,
       generateDefaults: entry.zodSchemas.generateDefaults,
 
-      // ADD: PK info
       pk: entry.zodSchemas.pk,
       clientPk: entry.zodSchemas.clientPk,
       isClientRecord: entry.zodSchemas.isClientRecord,
@@ -1990,6 +1946,49 @@ export function createSchemaBox<
           tableNameToRegistryKeyMap,
         );
 
+        const deepToClient = (
+          dbData: any,
+          currentSelection: any,
+          currentKey: string,
+        ): any => {
+          if (!dbData) return dbData;
+          if (Array.isArray(dbData))
+            return dbData.map((item) =>
+              deepToClient(item, currentSelection, currentKey),
+            );
+
+          const regEntry = finalRegistry[currentKey];
+          const baseMapped = regEntry.zodSchemas.toClient(dbData);
+
+          if (typeof currentSelection === "object") {
+            for (const relKey in currentSelection) {
+              if (
+                currentSelection[relKey] &&
+                dbData[relKey] !== undefined &&
+                dbData[relKey] !== null
+              ) {
+                const relField = regEntry.rawSchema[relKey];
+                if (relField?.config?.sql?.schema) {
+                  const targetTableName =
+                    relField.config.sql.schema()._tableName;
+                  const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+                  if (nextRegKey) {
+                    baseMapped[relKey] = deepToClient(
+                      dbData[relKey],
+                      currentSelection[relKey],
+                      nextRegKey,
+                    );
+                  }
+                }
+              }
+            }
+          }
+          return baseMapped;
+        };
+
+        const viewToClient = (dbData: any) =>
+          deepToClient(dbData, selection, tableName);
+
         return {
           definition: entry.rawSchema,
           schemaKey: tableName,
@@ -1999,10 +1998,13 @@ export function createSchemaBox<
             server: view.server,
           },
           transforms: {
-            toClient: entry.zodSchemas.toClient,
+            toClient: viewToClient,
             toDb: entry.zodSchemas.toDb,
-            parseForDb: entry.zodSchemas.parseForDb,
-            parseFromDb: entry.zodSchemas.parseFromDb,
+          },
+          parseForDb: entry.zodSchemas.parseForDb,
+          parseFromDb: (dbData: any) => {
+            const mapped = viewToClient(dbData);
+            return view.client.parse(mapped);
           },
 
           defaults: defaults,
@@ -2016,29 +2018,26 @@ export function createSchemaBox<
         };
       },
       RelationSelection: {} as NavigationToSelection<any>,
-      __registry: finalRegistry, // ADD THIS - was in type but not runtime
+      __registry: finalRegistry,
     };
   }
 
   return cleanerRegistry as CreateSchemaBoxReturn<S, R>;
 }
 function computeViewDefaults(
-  currentRegistryKey: string, // Renamed for clarity, e.g., "users"
+  currentRegistryKey: string,
   selection: Record<string, any> | boolean,
   registry: any,
-  tableNameToRegistryKeyMap: Record<string, string>, // Accept the map
+  tableNameToRegistryKeyMap: Record<string, string>,
   visited = new Set<string>(),
 ): any {
   if (visited.has(currentRegistryKey)) {
-    return undefined; // Prevent circular references
+    return undefined;
   }
   visited.add(currentRegistryKey);
 
-  // This lookup now uses the correct key every time.
   const entry = registry[currentRegistryKey];
-  // This check prevents the crash.
   if (!entry) {
-    // This case should ideally not be hit if the map is correct, but it's safe to have.
     console.warn(
       `Could not find entry for key "${currentRegistryKey}" in registry while computing defaults.`,
     );
@@ -2052,7 +2051,6 @@ function computeViewDefaults(
     return baseDefaults;
   }
 
-  // Add relation defaults based on selection
   for (const key in selection) {
     if (!selection[key]) continue;
 
@@ -2061,15 +2059,11 @@ function computeViewDefaults(
 
     const relationConfig = field.config.sql;
 
-    // --- THE CORE FIX ---
-    // 1. Get the internal _tableName of the related schema (e.g., "post_table")
     const targetTableName = relationConfig.schema()._tableName;
 
-    // 2. Use the map to find the correct registry key for it (e.g., "posts")
     const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
-    if (!nextRegistryKey) continue; // Could not resolve, skip this relation
+    if (!nextRegistryKey) continue;
 
-    // Handle different default configurations
     const defaultConfig = relationConfig.defaultConfig;
 
     if (defaultConfig === undefined) {
@@ -2085,32 +2079,28 @@ function computeViewDefaults(
       const count =
         (defaultConfig as any)?.count || relationConfig.defaultCount || 1;
       baseDefaults[key] = Array.from({ length: count }, () =>
-        // 3. Make the recursive call with the CORRECT key
         computeViewDefaults(
           nextRegistryKey,
           selection[key],
           registry,
-          tableNameToRegistryKeyMap, // Pass the map along
+          tableNameToRegistryKeyMap,
           new Set(visited),
         ),
       );
     } else {
-      // hasOne or belongsTo
-      baseDefaults[key] =
-        // 3. Make the recursive call with the CORRECT key
-        computeViewDefaults(
-          nextRegistryKey,
-          selection[key],
-          registry,
-          tableNameToRegistryKeyMap, // Pass the map along
-          new Set(visited),
-        );
+      baseDefaults[key] = computeViewDefaults(
+        nextRegistryKey,
+        selection[key],
+        registry,
+        tableNameToRegistryKeyMap,
+        new Set(visited),
+      );
     }
   }
 
   return baseDefaults;
 }
-// Type for the schema proxy used in resolver
+
 type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
   [K in keyof S]: {
     [F in keyof S[K] as F extends "_tableName" ? never : F]: S[K][F] extends {
@@ -2135,35 +2125,33 @@ type GetDbKey<K, Field> =
       }
       ? string extends F
         ? K
-        : F // fallback to K if string was widened
+        : F
       : K
     : Field extends { config: { sql: { field: infer F extends string } } }
       ? string extends F
         ? K
-        : F // fallback to K if string was widened
+        : F
       : K;
 
-// --- UPDATE DeriveSchemaByKey ---
+// UPDATED: Removed `isClient` and `__isClientChecker` omissions since they no longer exist
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
   Depth extends any[] = [],
-> = Depth["length"] extends 10 // Recursion guard
+> = Depth["length"] extends 10
   ? any
   : {
       [K in keyof T as K extends
         | "_tableName"
         | typeof SchemaWrapperBrand
         | "__primaryKeySQL"
-        | "__isClientChecker"
         | "primaryKeySQL"
-        | "isClient"
         ? never
         : K extends keyof T
           ? T[K] extends Reference<any>
             ? Key extends "zodSqlSchema"
               ? GetDbKey<K, T[K]>
-              : K // <-- CHANGED
+              : K
             : T[K] extends {
                   config: {
                     sql: {
@@ -2171,10 +2159,10 @@ type DeriveSchemaByKey<
                     };
                   };
                 }
-              ? never // EXCLUDE relation keys from base schema
+              ? never
               : Key extends "zodSqlSchema"
                 ? GetDbKey<K, T[K]>
-                : K // <-- CHANGED
+                : K
           : never]: T[K] extends Reference<infer TGetter>
         ? ReturnType<TGetter> extends {
             config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
@@ -2189,7 +2177,7 @@ type DeriveSchemaByKey<
           ? ZodSchema
           : never;
     };
-// DeriveDefaults — uses initialValue (what you actually generate)
+
 type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
   Depth["length"] extends 10
     ? any
@@ -2198,9 +2186,7 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
           | "_tableName"
           | typeof SchemaWrapperBrand
           | "__primaryKeySQL"
-          | "__isClientChecker"
           | "primaryKeySQL"
-          | "isClient"
           ? never
           : K extends keyof T
             ? T[K] extends Reference<any>
@@ -2239,7 +2225,6 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
       }
 >;
 
-// DeriveStateType — uses zodClientSchema (what state can hold: client OR server records)
 type DeriveStateType<T, Depth extends any[] = []> = Prettify<
   Depth["length"] extends 10
     ? any
@@ -2248,9 +2233,7 @@ type DeriveStateType<T, Depth extends any[] = []> = Prettify<
           | "_tableName"
           | typeof SchemaWrapperBrand
           | "__primaryKeySQL"
-          | "__isClientChecker"
           | "primaryKeySQL"
-          | "isClient"
           ? never
           : K extends keyof T
             ? T[K] extends Reference<any>

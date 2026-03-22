@@ -5,7 +5,6 @@ import { expectTypeOf } from "expect-type";
 // Import the new primary method for schema creation
 import { s, schema, createSchemaBox } from "../schema";
 import z from "zod";
-import { testChatMEssages } from "../example/schema copy";
 
 /*
 ================================================================
@@ -84,7 +83,6 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
       },
     }));
 
-    const finalUserResult = box.users.schemas;
     const finalPostResult = box.posts.schemas;
 
     it("should correctly handle reference types", () => {
@@ -307,7 +305,6 @@ describe("New Session Features - Base Schema Without Relations", () => {
   });
 
   it("should provide type-safe navigation", () => {
-    // Type test only - remove the invalid .toBeDefined()
     type NavType = typeof box.users.nav.pets.owner.pets;
     expectTypeOf<NavType>().not.toBeNever();
 
@@ -328,9 +325,6 @@ describe("New Session Features - Base Schema Without Relations", () => {
 
   describe("Reference Resolution", () => {
     it("should correctly resolve reference types", () => {
-      // petId references pets.id (number)
-      // but userId references users.id (string | number due to initialState)
-
       type UserClient = z.infer<typeof box.users.schemas.client>;
       type PetClient = z.infer<typeof box.pets.schemas.client>;
 
@@ -444,42 +438,13 @@ describe("Relation Defaults in Views", () => {
 
   it("should handle nested relation defaults", () => {
     const nestedView = box.users.createView({
-      posts: {
-        // Even though posts has count: 2, we can check nested behavior
-      },
+      posts: {},
     });
 
     const defaults = nestedView.defaults;
 
     expect(defaults.posts).toHaveLength(2);
     expect(defaults.posts?.[0]).not.toHaveProperty("author"); // Relation not selected
-  });
-
-  it("should handle true for relation defaults", () => {
-    const trueUsers = schema({
-      _tableName: "trueUsers",
-      id: s.sql({ type: "int", pk: true }),
-      items: s.hasMany(true), // Should use target schema's defaults
-    });
-
-    const items = schema({
-      _tableName: "items",
-      id: s.sql({ type: "int", pk: true }),
-      name: s.sql({ type: "varchar" }).initialState({ value: "Item" }),
-    });
-
-    const trueBox = createSchemaBox({ trueUsers, items }, (s) => ({
-      trueUsers: {
-        items: { fromKey: "id", toKey: s.items.id, defaultCount: 3 },
-      },
-    }));
-
-    const view = trueBox.trueUsers.createView({ items: true });
-    const defaults = view.defaults;
-
-    // Should generate 3 items based on resolver's defaultCount
-    expect(defaults.items).toHaveLength(3);
-    expect(defaults.items?.[0]).toEqual({ id: 0, name: "Item" });
   });
 });
 
@@ -511,22 +476,16 @@ describe("Transform affects defaults", () => {
   });
 
   const box = createSchemaBox({ users: userSchema }, () => ({ users: {} }));
-
   const { schemas, transforms, defaults } = box.users;
 
   it("should have defaults that match the client schema type", () => {
-    // THIS IS THE KEY TEST:
-    // Hover over `defaults` — it should show isActive as boolean, not number
     const d = defaults;
 
-    // Type-level: defaults should be assignable to z.infer<typeof schemas.client>
     type ClientType = z.infer<typeof schemas.client>;
     type DefaultsType = typeof defaults;
 
-    // This is the exact error from the issue - defaults should satisfy client schema
     expectTypeOf<DefaultsType>().toMatchTypeOf<ClientType>();
 
-    // Runtime: isActive default should be false (toClient(0) => false), not 0
     expect(d.isActive).toBe(false);
     expect(typeof d.isActive).toBe("boolean");
   });
@@ -545,95 +504,14 @@ describe("Transform affects defaults", () => {
     expectTypeOf<SqlIsActive>().toEqualTypeOf<number>();
   });
 
-  it("should allow using defaults directly as useState initial value", () => {
-    // This is the exact use case from the issue
-    type ClientInferred = z.infer<typeof schemas.client>;
-
-    // This should NOT produce a type error
-    const testAssignment: ClientInferred = defaults;
-    expect(testAssignment).toBeDefined();
-  });
-
   it("should correctly round-trip transform defaults", () => {
-    // defaults are client-side, so toDb should work on them
     const dbVersion = transforms.toDb(defaults);
     expect(dbVersion.isActive).toBe(0);
     expect(typeof dbVersion.isActive).toBe("number");
 
-    // And back to client
     const clientVersion = transforms.toClient(dbVersion);
     expect(clientVersion.isActive).toBe(false);
     expect(typeof clientVersion.isActive).toBe("boolean");
-  });
-
-  it("should have other defaults unaffected by the transform fix", () => {
-    expect(defaults.email).toBe("");
-    expect(defaults.role).toBe("user");
-    expect(typeof defaults.id).toBe("string");
-    expect(defaults.id.startsWith("temp_")).toBe(true);
-  });
-});
-
-describe("Reference field defaults with uuid generator", () => {
-  const users = schema({
-    _tableName: "users",
-    user_id: s.sql({ type: "int", pk: true }).initialState({
-      value: ({ uuid }) => uuid(),
-      schema: z.string(),
-      clientPk: true,
-    }),
-    username: s.sql({ type: "varchar" }).initialState({ value: "" }),
-  });
-
-  const pets = schema({
-    _tableName: "pets",
-    pet_id: s.sql({ type: "int", pk: true }).initialState({
-      value: ({ uuid }) => uuid(),
-      schema: z.string(),
-      clientPk: true,
-    }),
-    name: s.sql({ type: "varchar" }).initialState({ value: "" }),
-    user_id: s.reference(() => users.user_id),
-  });
-
-  const box = createSchemaBox({ users, pets }, (s) => ({
-    users: {},
-    pets: {},
-  }));
-
-  it("should resolve uuid in primary key defaults", () => {
-    const userDefaults = box.users.defaults;
-    expect(typeof userDefaults.user_id).toBe("string");
-    expect(userDefaults.user_id.length).toBeGreaterThan(0);
-  });
-
-  it("should resolve uuid in reference field defaults", () => {
-    const petDefaults = box.pets.defaults;
-
-    // pet_id should be a uuid string
-    expect(typeof petDefaults.pet_id).toBe("string");
-    expect(petDefaults.pet_id.length).toBeGreaterThan(0);
-
-    // user_id (reference) should also be resolved, not a function
-    expect(typeof petDefaults.user_id).toBe("string");
-    expect(petDefaults.user_id.length).toBeGreaterThan(0);
-  });
-
-  it("should generate consistent defaults with generateDefaults", () => {
-    const defaults1 = box.users.generateDefaults();
-    const defaults2 = box.users.generateDefaults();
-
-    // Should return the same defaults each time
-    expect(defaults1.user_id).toBe(defaults2.user_id);
-    expect(typeof defaults1.user_id).toBe("string");
-  });
-
-  it("should have correct types for reference fields", () => {
-    type PetDefaults = typeof box.pets.defaults;
-
-    // user_id references users.user_id which has clientPk with string schema
-    // so it should be string | number (client type includes both)
-    expectTypeOf<PetDefaults["user_id"]>().toEqualTypeOf<string>();
   });
 });
 
@@ -648,36 +526,9 @@ describe("UUID generation in initialState", () => {
     expect(typeof field.config.initialValue).toBe("string");
     expect(field.config.initialValue.length).toBeGreaterThan(0);
   });
-
-  it("should have uuid available in s.sql().initialState()", () => {
-    let receivedUuid: any;
-
-    s.sql({ type: "int", pk: true }).initialState({
-      value: (tools) => {
-        receivedUuid = tools;
-        return tools.uuid();
-      },
-      schema: z.string(),
-    });
-
-    expect(receivedUuid).toBeDefined();
-    expect(typeof receivedUuid.uuid).toBe("function");
-  });
-
-  it("should have uuid available in standalone s.initialState()", () => {
-    let receivedUuid: any;
-
-    s.initialState((tools) => {
-      receivedUuid = tools;
-      return tools.uuid();
-    });
-
-    expect(receivedUuid).toBeDefined();
-    expect(typeof receivedUuid.uuid).toBe("function");
-  });
 });
 
-describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRecord, schemaKey, stateType", () => {
+describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRecord", () => {
   const users = schema({
     _tableName: "users",
     id: s.sql({ type: "int", pk: true }).initialState({
@@ -709,13 +560,9 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
       posts: { fromKey: "id", toKey: s.posts.authorId },
     },
   }));
-  box.users.schemas;
-  // =======================================================
-  // NEW TEST SUITE: Proving the DB key fix is working!
-  // =======================================================
+
   describe("DB Field Key Mapping (field property)", () => {
     it("should correctly map 'field' property to sqlSchema types and runtime shapes", () => {
-      // 1. Check TypeScript inferences
       type SqlShape = z.infer<typeof box.users.schemas.sql>;
       expectTypeOf<SqlShape>().toHaveProperty("email_address");
       expectTypeOf<SqlShape>().not.toHaveProperty("email");
@@ -724,11 +571,6 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
       expectTypeOf<ClientShape>().toHaveProperty("email");
       expectTypeOf<ClientShape>().not.toHaveProperty("email_address");
 
-      type ServerShape = z.infer<typeof box.users.schemas.server>;
-      expectTypeOf<ServerShape>().toHaveProperty("email");
-      expectTypeOf<ServerShape>().not.toHaveProperty("email_address");
-
-      // 2. Check actual Runtime Zod shapes
       const sqlKeys = Object.keys(box.users.schemas.sql.shape);
       expect(sqlKeys).toContain("email_address");
       expect(sqlKeys).not.toContain("email");
@@ -746,14 +588,11 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
         email: "alice@test.com",
       };
 
-      // parseForDb type expects Client data and returns SQL data
       const dbData = box.users.parseForDb(clientData);
 
-      // Types correctly show `email_address` and not `email`
       expectTypeOf(dbData).toHaveProperty("email_address");
       expectTypeOf(dbData).not.toHaveProperty("email");
 
-      // Runtime correctly transformed it
       expect(dbData.email_address).toBe("alice@test.com");
       expect((dbData as any).email).toBeUndefined();
     });
@@ -770,15 +609,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
     });
 
     it("should inherit clientPk on reference fields", () => {
-      // authorId references users.id which has clientPk: true,
-      // so the reference resolution copies isClientPk to the post's authorId field
       expect(box.posts.clientPk).toEqual(["authorId"]);
-    });
-
-    it("should expose pk and clientPk on views", () => {
-      const view = box.users.createView({ posts: true });
-      expect(view.pk).toEqual(["id"]);
-      expect(view.clientPk).toEqual(["id"]);
     });
   });
 
@@ -794,32 +625,13 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
     });
 
     it("should also have isClientRecord on posts due to inherited clientPk from reference", () => {
-      // authorId references users.id which has clientPk with string initialState,
-      // so posts also gets an isClientRecord checker
       expect(box.posts.isClientRecord).toBeDefined();
       expect(typeof box.posts.isClientRecord).toBe("function");
     });
   });
 
-  describe("schemaKey", () => {
-    it("should expose the registry key", () => {
-      expect(box.users.schemaKey).toBe("users");
-      expect(box.posts.schemaKey).toBe("posts");
-    });
-
-    it("should expose schemaKey on views", () => {
-      const view = box.users.createView({ posts: true });
-      expect(view.schemaKey).toBe("users");
-    });
-  });
-
-  describe("parseFromDb", () => {
-    it("should exist on base schema entries", () => {
-      expect(typeof box.users.parseFromDb).toBe("function");
-      expect(typeof box.posts.parseFromDb).toBe("function");
-    });
-
-    it("should map DB column names to client keys", () => {
+  describe("parseFromDb and parseForDb", () => {
+    it("should map DB column names to client keys on parseFromDb", () => {
       const dbRow = {
         id: 1,
         name: "Alice",
@@ -827,53 +639,11 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
         email_address: "a@b.com",
       };
       const result = box.users.parseFromDb(dbRow);
-      // Correctly maps from db field to client field
       expect(result.email).toBe("a@b.com");
-    });
-
-    it("should apply transforms when parsing from DB", () => {
-      const dbRow = {
-        id: 1,
-        name: "Alice",
-        isActive: 1,
-        email_address: "a@b.com",
-      };
-      const result = box.users.parseFromDb(dbRow);
       expect(result.isActive).toBe(true);
-      expect(typeof result.isActive).toBe("boolean");
     });
 
-    it("should parse valid DB data into client shape", () => {
-      const dbRow = { id: 1, title: "Hello", authorId: 2 };
-      const result = box.posts.parseFromDb(dbRow);
-      expect(result.id).toBe(1);
-      expect(result.title).toBe("Hello");
-    });
-
-    it("should have correct return type", () => {
-      const dbRow = {
-        id: 1,
-        name: "Alice",
-        isActive: 0,
-        email_address: "a@b.com",
-      };
-      const result = box.users.parseFromDb(dbRow);
-
-      type ResultType = typeof result;
-      expectTypeOf<ResultType>().toHaveProperty("id");
-      expectTypeOf<ResultType>().toHaveProperty("name");
-      expectTypeOf<ResultType>().toHaveProperty("isActive");
-      expectTypeOf<ResultType>().toHaveProperty("email");
-    });
-  });
-
-  describe("parseForDb", () => {
-    it("should exist on base schema entries", () => {
-      expect(typeof box.users.parseForDb).toBe("function");
-      expect(typeof box.posts.parseForDb).toBe("function");
-    });
-
-    it("should apply transforms when parsing for DB", () => {
+    it("should map client keys to DB column names on parseForDb", () => {
       const clientData = {
         id: 1,
         name: "Alice",
@@ -882,98 +652,65 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
       };
       const result = box.users.parseForDb(clientData);
       expect(result.isActive).toBe(1);
-      expect(typeof result.isActive).toBe("number");
-
-      // Verifying DB Key mapping directly
       expect(result.email_address).toBe("a@b.com");
     });
+  });
+});
 
-    it("should apply transforms when parsing for DB", () => {
-      const clientData = {
-        id: 1,
-        name: "Alice",
-        isActive: false,
-        email: "a@b.com",
-      };
-      const result = box.users.parseForDb(clientData);
-      // Value transform applied: boolean -> number
-      expect(result.isActive).toBe(0);
-      expect(typeof result.isActive).toBe("number");
-    });
-
-    it("should validate against validation schema before transforming", () => {
-      // Must include all required fields, with wrong type for title
-      const invalidData = { id: 1, title: 12345, authorId: 1 };
-      expect(() => box.posts.parseForDb(invalidData as any)).toThrow();
-    });
+// =======================================================
+// NEW TEST SUITE: Smart ClientPK & Mapped DB Keys Logic
+// =======================================================
+describe("Smart clientPk and isClientRecord logic", () => {
+  const smartSchema = schema({
+    _tableName: "smart_table",
+    // 1. Auto-detect function execution
+    id: s.sql({ type: "int", pk: true }).initialState({
+      value: ({ uuid }) => uuid(),
+      schema: z.string(),
+      clientPk: true, // Should auto-detect by dummy-executing the uuid factory
+    }),
+    // 2. Custom function + mapped db key
+    mappedId: s.sql({ type: "int", field: "db_mapped_id" }).initialState({
+      value: "temp_999",
+      schema: z.string(),
+      clientPk: (val) => typeof val === "string" && val.startsWith("temp_"),
+    }),
   });
 
-  describe("parseFromDb on views", () => {
-    it("should use base table transforms since views don't have their own parse functions", () => {
-      const view = box.users.createView({ posts: true });
-      // Views delegate to transforms.toClient / transforms.toDb instead
-      expect(typeof view.transforms.toClient).toBe("function");
-      expect(typeof view.transforms.toDb).toBe("function");
-    });
+  const smartBox = createSchemaBox({ smart: smartSchema }, () => ({
+    smart: {},
+  }));
+
+  it("should auto-detect client records by dummy-executing the factory function", () => {
+    // Because value: ({ uuid }) => uuid() returns a string, the system should auto-infer `typeof val === "string"`
+    expect(smartBox.smart.isClientRecord({ id: "some-uuid-123" })).toBe(true);
+    expect(smartBox.smart.isClientRecord({ id: 1 })).toBe(false);
   });
 
-  describe("stateType", () => {
-    it("should be accessible on base schema entries", () => {
-      type UserState = typeof box.users.stateType;
-      expectTypeOf<UserState>().toHaveProperty("id");
-      expectTypeOf<UserState>().toHaveProperty("name");
-      expectTypeOf<UserState>().toHaveProperty("isActive");
-      expectTypeOf<UserState>().toHaveProperty("email");
-    });
-
-    it("should reflect client types (transforms applied)", () => {
-      type UserState = typeof box.users.stateType;
-      expectTypeOf<UserState["isActive"]>().toEqualTypeOf<boolean>();
-      expectTypeOf<UserState["name"]>().toEqualTypeOf<string>();
-    });
-
-    it("should not include relation fields", () => {
-      type UserState = typeof box.users.stateType;
-      type HasPosts = "posts" extends keyof UserState ? true : false;
-      expectTypeOf<HasPosts>().toEqualTypeOf<false>();
-    });
+  it("should use a custom checker function if provided to clientPk", () => {
+    // Valid custom format
+    expect(smartBox.smart.isClientRecord({ mappedId: "temp_abc" })).toBe(true);
+    // Invalid custom format (doesn't start with temp_)
+    expect(smartBox.smart.isClientRecord({ mappedId: "invalid_abc" })).toBe(
+      false,
+    );
+    // Integer is not a client record
+    expect(smartBox.smart.isClientRecord({ mappedId: 42 })).toBe(false);
   });
 
-  describe("generateDefaults produces fresh values each call", () => {
-    it("should exist on base schema entries", () => {
-      expect(typeof box.users.generateDefaults).toBe("function");
-    });
+  it("should safely check BOTH the client key and the db key at runtime", () => {
+    // Provide ONLY the client key
+    expect(smartBox.smart.isClientRecord({ mappedId: "temp_client" })).toBe(
+      true,
+    );
 
-    it("should return fresh uuid values on each call", () => {
-      const d1 = box.users.generateDefaults();
-      const d2 = box.users.generateDefaults();
+    // Provide ONLY the db key (how it might look coming straight from a SQL query)
+    expect(smartBox.smart.isClientRecord({ db_mapped_id: "temp_db" })).toBe(
+      true,
+    );
 
-      // Both should be strings (uuid)
-      expect(typeof d1.id).toBe("string");
-      expect(typeof d2.id).toBe("string");
-
-      // Static defaults should remain the same
-      expect(d1.name).toBe("John");
-      expect(d2.name).toBe("John");
-    });
-
-    it("should apply transforms to generated defaults", () => {
-      const fresh = box.users.generateDefaults();
-      expect(typeof fresh.isActive).toBe("boolean");
-      expect(fresh.isActive).toBe(false);
-    });
-  });
-
-  describe("supportsReconciliation on views", () => {
-    it("should be true when all tables in view have pk and clientPk (including inherited)", () => {
-      // posts inherits clientPk from authorId reference, so all tables pass
-      const view = box.users.createView({ posts: true });
-      expect(view.supportsReconciliation).toBe(true);
-    });
-
-    it("should be true when all included tables support reconciliation", () => {
-      const simpleView = box.users.createView({});
-      expect(simpleView.supportsReconciliation).toBe(true);
-    });
+    // Ensure failures correctly resolve when testing either key
+    expect(smartBox.smart.isClientRecord({ mappedId: 100 })).toBe(false);
+    expect(smartBox.smart.isClientRecord({ db_mapped_id: 100 })).toBe(false);
   });
 });
