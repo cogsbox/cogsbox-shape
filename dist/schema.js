@@ -786,7 +786,35 @@ export function createSchemaBox(schemas, resolver) {
                     }
                     return baseMapped;
                 };
+                // --- NEW: Implement recursive toDb ---
+                const deepToDb = (clientData, currentSelection, currentKey) => {
+                    if (!clientData)
+                        return clientData;
+                    if (Array.isArray(clientData))
+                        return clientData.map((item) => deepToDb(item, currentSelection, currentKey));
+                    const regEntry = finalRegistry[currentKey];
+                    const baseMapped = regEntry.zodSchemas.toDb(clientData);
+                    if (typeof currentSelection === "object") {
+                        for (const relKey in currentSelection) {
+                            if (currentSelection[relKey] &&
+                                clientData[relKey] !== undefined &&
+                                clientData[relKey] !== null) {
+                                const relField = regEntry.rawSchema[relKey];
+                                if (relField?.config?.sql?.schema) {
+                                    const targetTableName = relField.config.sql.schema()._tableName;
+                                    const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+                                    if (nextRegKey) {
+                                        baseMapped[relKey] = deepToDb(clientData[relKey], currentSelection[relKey], nextRegKey);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return baseMapped;
+                };
                 const viewToClient = (dbData) => deepToClient(dbData, selection, tableName);
+                // --- NEW: View To Db ---
+                const viewToDb = (clientData) => deepToDb(clientData, selection, tableName);
                 return {
                     definition: entry.rawSchema,
                     schemaKey: tableName,
@@ -797,9 +825,13 @@ export function createSchemaBox(schemas, resolver) {
                     },
                     transforms: {
                         toClient: viewToClient,
-                        toDb: entry.zodSchemas.toDb,
+                        toDb: viewToDb, // <--- UPDATED: now uses the recursive function
                     },
-                    parseForDb: entry.zodSchemas.parseForDb,
+                    // --- UPDATED: uses view.server.parse to retain relation arrays/objects instead of stripping them
+                    parseForDb: (appData) => {
+                        const validData = view.server.parse(appData);
+                        return viewToDb(validData);
+                    },
                     parseFromDb: (dbData) => {
                         const mapped = viewToClient(dbData);
                         return view.client.parse(mapped);

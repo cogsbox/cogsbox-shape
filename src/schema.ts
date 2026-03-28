@@ -1986,8 +1986,53 @@ export function createSchemaBox<
           return baseMapped;
         };
 
+        // --- NEW: Implement recursive toDb ---
+        const deepToDb = (
+          clientData: any,
+          currentSelection: any,
+          currentKey: string,
+        ): any => {
+          if (!clientData) return clientData;
+          if (Array.isArray(clientData))
+            return clientData.map((item) =>
+              deepToDb(item, currentSelection, currentKey),
+            );
+
+          const regEntry = finalRegistry[currentKey];
+          const baseMapped = regEntry.zodSchemas.toDb(clientData);
+
+          if (typeof currentSelection === "object") {
+            for (const relKey in currentSelection) {
+              if (
+                currentSelection[relKey] &&
+                clientData[relKey] !== undefined &&
+                clientData[relKey] !== null
+              ) {
+                const relField = regEntry.rawSchema[relKey];
+                if (relField?.config?.sql?.schema) {
+                  const targetTableName =
+                    relField.config.sql.schema()._tableName;
+                  const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+                  if (nextRegKey) {
+                    baseMapped[relKey] = deepToDb(
+                      clientData[relKey],
+                      currentSelection[relKey],
+                      nextRegKey,
+                    );
+                  }
+                }
+              }
+            }
+          }
+          return baseMapped;
+        };
+
         const viewToClient = (dbData: any) =>
           deepToClient(dbData, selection, tableName);
+
+        // --- NEW: View To Db ---
+        const viewToDb = (clientData: any) =>
+          deepToDb(clientData, selection, tableName);
 
         return {
           definition: entry.rawSchema,
@@ -1999,9 +2044,13 @@ export function createSchemaBox<
           },
           transforms: {
             toClient: viewToClient,
-            toDb: entry.zodSchemas.toDb,
+            toDb: viewToDb, // <--- UPDATED: now uses the recursive function
           },
-          parseForDb: entry.zodSchemas.parseForDb,
+          // --- UPDATED: uses view.server.parse to retain relation arrays/objects instead of stripping them
+          parseForDb: (appData: any) => {
+            const validData = view.server.parse(appData);
+            return viewToDb(validData);
+          },
           parseFromDb: (dbData: any) => {
             const mapped = viewToClient(dbData);
             return view.client.parse(mapped);
