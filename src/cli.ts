@@ -19,7 +19,7 @@ program
   .option(
     "-o, --output <path>",
     "Output SQL file path",
-    "./cogsbox-shape-sql.sql"
+    "./cogsbox-shape-sql.sql",
   )
   .option("--no-foreign-keys", "Generate SQL without foreign key constraints")
   .action(async (file, options) => {
@@ -40,7 +40,7 @@ program
         // Write this to a temporary file
         const tmpFile = path.join(
           path.dirname(fullPath),
-          ".tmp-schema-loader.ts"
+          ".tmp-schema-loader.ts",
         );
         await writeFile(tmpFile, virtualModule, "utf8");
 
