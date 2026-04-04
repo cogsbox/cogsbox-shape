@@ -1472,14 +1472,30 @@ type _DeriveViewShape<
   TTableName extends keyof TRegistry,
   TSelection,
   TRegistry extends RegistryShape,
-  TKey extends "clientSchema" | "serverSchema",
+  TKey extends "clientSchema" | "serverSchema" | "sqlSchema",
   Depth extends any[] = [],
 > = Depth["length"] extends 10
   ? any
+  : TKey extends "sqlSchema"
+  ? TRegistry[TTableName]["zodSchemas"]["sqlSchema"] extends z.ZodObject<
+        infer BaseShape
+      >
+    ? _DeriveViewShapeInner<BaseShape, TTableName, TSelection, TRegistry, TKey, Depth>
+    : never
   : TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<
         infer BaseShape
       >
-    ? TSelection extends Record<string, any>
+  ? _DeriveViewShapeInner<BaseShape, TTableName, TSelection, TRegistry, TKey, Depth>
+  : never;
+
+type _DeriveViewShapeInner<
+  BaseShape,
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends RegistryShape,
+  TKey extends "clientSchema" | "serverSchema" | "sqlSchema",
+  Depth extends any[] = [],
+> = TSelection extends Record<string, any>
       ? Prettify<
           OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> & {
             [K in keyof TSelection &
@@ -1523,8 +1539,7 @@ type _DeriveViewShape<
               : never;
           }
         >
-      : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>
-    : never;
+      : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>;
 
 type DeriveViewDefaults<
   TTableName extends keyof TRegistry,
@@ -1586,14 +1601,31 @@ export type DeriveViewResult<
   transforms: {
     toClient: TRegistry[TTableName]["transforms"]["toClient"];
     toDb: TRegistry[TTableName]["transforms"]["toDb"];
+    parseForDb: (
+      appData: z.input<
+        z.ZodObject<
+          _DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">
+        >
+      >,
+    ) => z.infer<
+      z.ZodObject<
+        _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
+      >
+    >;
+    parseFromDb: (
+      dbData: Partial<
+        z.infer<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
+          >
+        >
+      >,
+    ) => z.infer<
+      z.ZodObject<
+        _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+      >
+    >;
   };
-
-  parseForDb: (
-    appData: z.input<TRegistry[TTableName]["zodSchemas"]["serverSchema"]>,
-  ) => z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>;
-  parseFromDb: (
-    dbData: Partial<z.infer<TRegistry[TTableName]["zodSchemas"]["sqlSchema"]>>,
-  ) => z.infer<TRegistry[TTableName]["zodSchemas"]["clientSchema"]>;
 
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
 
@@ -1944,8 +1976,8 @@ export function createSchemaBox<
             );
 
           const regEntry = finalRegistry[currentKey];
-          const baseMapped = regEntry.transforms.toClient(dbData);
-
+          const baseMapped = { ...regEntry.transforms.toClient(dbData) };
+          
           if (typeof currentSelection === "object") {
             for (const relKey in currentSelection) {
               if (
@@ -2030,16 +2062,13 @@ export function createSchemaBox<
           },
           transforms: {
             toClient: viewToClient,
-            toDb: viewToDb, // <--- UPDATED: now uses the recursive function
-          },
-          // --- UPDATED: uses view.server.parse to retain relation arrays/objects instead of stripping them
-          parseForDb: (appData: any) => {
-            const validData = view.server.parse(appData);
-            return viewToDb(validData);
-          },
-          parseFromDb: (dbData: any) => {
-            const mapped = viewToClient(dbData);
-            return view.client.parse(mapped);
+            toDb: viewToDb,
+            parseForDb: (appData: any) => {
+              return viewToDb(appData);
+            },
+            parseFromDb: (dbData: any) => {
+              return viewToClient(dbData);
+            },
           },
 
           defaults: defaults,

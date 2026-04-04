@@ -735,3 +735,187 @@ describe("Smart clientPk and isClientRecord logic", () => {
     expect(smartBox.smart.isClientRecord({ db_mapped_id: 100 })).toBe(false);
   });
 });
+
+describe("Nested relations with transforms", () => {
+  const users = schema({
+    _tableName: "users",
+    id: s
+      .sql({ type: "int", pk: true })
+      .initialState({ value: () => "user-123", schema: z.string() }),
+    name: s.sql({ type: "varchar" }).initialState({ value: "John" }),
+    posts: s.hasMany({ count: 1 }),
+  });
+
+  const posts = schema({
+    _tableName: "posts",
+    id: s.sql({ type: "int", pk: true }),
+    title: s.sql({ type: "varchar" }).initialState({ value: "Default Post" }),
+    isPublished: s
+      .sql({ type: "int" })
+      .client(() => z.boolean())
+      .transform({
+        toClient: (val) => val === 1,
+        toDb: (val) => (val ? 1 : 0),
+      }),
+    authorId: s.reference(() => users.id),
+    comments: s.hasMany({ count: 1 }),
+  });
+
+  const comments = schema({
+    _tableName: "comments",
+    id: s.sql({ type: "int", pk: true }),
+    text: s.sql({ type: "varchar" }).initialState({ value: "Comment" }),
+    isDeleted: s
+      .sql({ type: "int" })
+      .client(() => z.boolean())
+      .transform({
+        toClient: (val) => val === 1,
+        toDb: (val) => (val ? 1 : 0),
+      }),
+    postId: s.reference(() => posts.id),
+  });
+
+  const box = createSchemaBox(
+    { users, posts, comments },
+    {
+      users: {
+        posts: { fromKey: "id", toKey: posts.authorId },
+      },
+      posts: {
+        comments: { fromKey: "id", toKey: comments.postId },
+      },
+    },
+  );
+
+  it("should transform nested relation fields in defaults", () => {
+    const view = box.users.createView({
+      posts: { comments: true },
+    } as const);
+
+    const defaults = view.defaults;
+
+    expect(defaults.posts).toHaveLength(1);
+    const post = defaults.posts?.[0];
+    expect(post).toBeDefined();
+
+    expect(post!.isPublished).toBe(false);
+    expect(typeof post!.isPublished).toBe("boolean");
+
+    expect(post!.comments).toHaveLength(1);
+    const comment = post!.comments?.[0];
+    expect(comment!.isDeleted).toBe(false);
+    expect(typeof comment!.isDeleted).toBe("boolean");
+  });
+
+  it("should transform nested relation fields in toClient", () => {
+    const view = box.users.createView({
+      posts: { comments: true },
+    } as const);
+
+    const { toClient } = view.transforms;
+
+    const dbData = {
+      id: 1,
+      name: "John",
+      posts: [
+        {
+          id: 10,
+          title: "My Post",
+          isPublished: 1,
+          authorId: 1,
+          comments: [
+            {
+              id: 100,
+              text: "Comment text",
+              isDeleted: 0,
+              postId: 10,
+            },
+          ],
+        },
+      ],
+    };
+
+    const clientData = toClient(dbData);
+
+    expect(clientData.posts![0].isPublished).toBe(true);
+    expect(typeof clientData.posts![0].isPublished).toBe("boolean");
+
+    expect(clientData.posts![0].comments![0].isDeleted).toBe(false);
+    expect(typeof clientData.posts![0].comments![0].isDeleted).toBe("boolean");
+  });
+
+  it("should transform nested relation fields in toDb", () => {
+    const view = box.users.createView({
+      posts: { comments: true },
+    } as const);
+
+    const { toDb } = view.transforms;
+
+    const clientData = {
+      id: "user-123",
+      name: "John",
+      posts: [
+        {
+          id: 10,
+          title: "My Post",
+          isPublished: true,
+          authorId: "user-123",
+          comments: [
+            {
+              id: 100,
+              text: "Comment text",
+              isDeleted: true,
+              postId: 10,
+            },
+          ],
+        },
+      ],
+    };
+
+    const dbData = toDb(clientData);
+
+    expect(dbData.posts![0].isPublished).toBe(1);
+    expect(typeof dbData.posts![0].isPublished).toBe("number");
+
+    expect(dbData.posts![0].comments![0].isDeleted).toBe(1);
+    expect(typeof dbData.posts![0].comments![0].isDeleted).toBe("number");
+  });
+
+  it("should work with parseFromDb and parseForDb", () => {
+    const view = box.users.createView({
+      posts: { comments: true },
+    } as const);
+
+    const { parseFromDb, parseForDb } = view.transforms;
+
+    const dbRow = {
+      id: 1,
+      name: "John",
+      posts: [
+        {
+          id: 10,
+          title: "My Post",
+          isPublished: 1,
+          authorId: 1,
+          comments: [
+            {
+              id: 100,
+              text: "Comment text",
+              isDeleted: 0,
+              postId: 10,
+            },
+          ],
+        },
+      ],
+    };
+
+    const clientResult = parseFromDb(dbRow);
+    expect(clientResult.id).toBe(1);
+    expect(clientResult.posts![0].isPublished).toBe(true);
+    expect(clientResult.posts![0].comments![0].isDeleted).toBe(false);
+
+    const dbResult = parseForDb(clientResult);
+    expect(dbResult.posts![0].isPublished).toBe(1);
+    expect(dbResult.posts![0].comments![0].isDeleted).toBe(0);
+  });
+});
