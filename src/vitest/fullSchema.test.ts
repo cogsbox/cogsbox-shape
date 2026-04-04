@@ -1042,7 +1042,7 @@ describe("sqlOnly with derive in relations", () => {
     const defaults = view.defaults;
 
     expect(defaults.preview).toBe("Post");
-  });
+  }); 
 
   it("should apply toClient transforms correctly with derived", () => {
     const view = box.users.createView({ posts: true });

@@ -1062,11 +1062,11 @@ export function createSchema<
         )
       ) {
         continue;
-      } else {
-        const dbFieldName = sqlConfig?.field || key;
+      } else if (sqlConfig) {
+        const dbFieldName = sqlConfig.field || key;
         sqlFields[dbFieldName] = config.zodSqlSchema;
 
-        if (sqlConfig?.sqlOnly) {
+        if (sqlConfig.sqlOnly) {
           sqlOnlyDbKeys.add(dbFieldName);
         } else {
           clientToDbKeys[key] = dbFieldName;
@@ -1090,6 +1090,26 @@ export function createSchema<
           } else {
             defaultValues[key] = rawDefault;
           }
+        }
+      } else {
+        clientFields[key] = config.zodClientSchema;
+        serverFields[key] = config.zodValidationSchema;
+
+        if (config.transforms) {
+          fieldTransforms[key] = config.transforms;
+        }
+
+        const initialValueOrFn = config.initialValue;
+        defaultGenerators[key] = initialValueOrFn;
+
+        let rawDefault = isFunction(initialValueOrFn)
+          ? initialValueOrFn({ uuid })
+          : initialValueOrFn;
+
+        if (config.transforms?.toClient && rawDefault !== undefined) {
+          defaultValues[key] = config.transforms.toClient(rawDefault);
+        } else {
+          defaultValues[key] = rawDefault;
         }
       }
     }
@@ -2010,7 +2030,7 @@ export function createSchemaBox<
         parseFromDb: entry.transforms.parseFromDb,
       },
 
-      defaults: entry.zodSchemas.defaultValues,
+      defaults: entry.generateDefaults(),
       stateType: entry.zodSchemas.stateType,
       generateDefaults: entry.generateDefaults,
 
@@ -2184,7 +2204,7 @@ function computeViewDefaults(
   }
 
   const rawSchema = entry.rawSchema;
-  const baseDefaults = { ...entry.zodSchemas.defaultValues };
+  const baseDefaults = entry.generateDefaults();
 
   if (selection === true || typeof selection !== "object") {
     return baseDefaults;
