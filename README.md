@@ -33,16 +33,18 @@ Traditional approaches require defining these layers separately, leading to type
 Define a field by chaining methods. Each step is optional — use only what you need.
 
 ```
-s.sql()  →  .initialState()  →  .client()  →  .server()  →  .transform()
+s.sql()  →  .client()  →  .server()  →  .transform()
+        →  .derive()   →  .sqlOnly()
 ```
 
 | Method                                       | Purpose                                                        |
 | -------------------------------------------- | -------------------------------------------------------------- |
 | `s.sql({ type })`                            | Database column type. The starting point for every field.      |
-| `.initialState({ value, schema, clientPk })` | Default value and type for new records created on the client.  |
-| `.client(fn)`                                | Client-side validation. Overrides the client type if needed.   |
+| `.client({ value, schema })`                 | Client-side validation and default value for new records.      |
 | `.server(fn)`                                | Server-side validation. Stricter rules before database writes. |
-| `.transform({ toClient, toDb })`             | Converts between database and client representations.          |
+| `.transform({ toClient, toDb })`              | Converts between database and client representations.          |
+| `.derive({ field: (row) => computedValue })` | Adds computed fields based on other field values.              |
+| `.sqlOnly`                                   | Marks a field as server-only (not sent to client).             |
 
 ### 1. SQL — Define Your Database Schema
 
@@ -61,66 +63,34 @@ const userSchema = schema({
 
 This generates a Zod schema matching your SQL types exactly.
 
-### 2. Initial State — Defaults for New Records
+### 2. Client — Defaults and Client-Side Validation
 
-When creating new records on the client, you often need different types than what the database stores. `.initialState()` sets the default value and optionally narrows or widens the client type.
+`.client()` sets the default value and client-side validation type for new records. It combines what was previously done with `.initialState()`.
 
 ```typescript
 const userSchema = schema({
   _tableName: "users",
   // DB stores auto-increment integers, but new records need a temp string ID
-  id: s.sql({ type: "int", pk: true }).initialState({
+  id: s.sql({ type: "int", pk: true }).client({
     value: () => crypto.randomUUID(),
     schema: z.string(),
-    clientPk: true, // Explicitly marks this as a client PK, auto-creating a union type
   }),
-  // Client type becomes: string | number (union of SQL + initialState)
+  // Client type becomes: string | number (union of SQL + client)
   // Default value: a generated UUID string
+
+  // Simple default without type override
+  name: s.sql({ type: "varchar" }).client({ value: "Anonymous" }),
+  // Client type: string (inherits from SQL)
+  // Default value: "Anonymous"
+
+  // Type-only override (no default value change)
+  count: s.sql({ type: "int" }).client(() => z.number().min(0)),
+  // Client type: number (with min validation)
+  // Default value: inferred from type (0 for number)
 });
 ```
 
-If the type you pass to `.initialState()` matches the SQL type, no union is created:
-
-```typescript
-count: s.sql({ type: "int" }).initialState({ value: 0 }),
-// Client type: number (no union, same type)
-// Default value: 0
-```
-
-### 3. Client — Client-Side Validation
-
-The client schema is automatically derived as a union of the SQL type (data fetched from the database) and the initial state type (data created on the client). `.client()` lets you override this to add client-side validation rules or declare a completely different type.
-
-```typescript
-// Without .client() — the type is inferred automatically
-id: s.sql({ type: "int", pk: true }).initialState({
-  value: () => crypto.randomUUID(),
-  schema: z.string(),
-}),
-// Client type: string | number
-// (string from initialState + number from SQL)
-
-// With .client() — add validation rules
-name: s
-  .sql({ type: "varchar" })
-  .client(({ sql }) => sql.min(2).max(100)),
-// Client type: string (with min/max validation)
-
-// With .client() — declare a different type entirely
-// Pair with .transform() to convert between them
-isActive: s
-  .sql({ type: "int" })
-  .client(() => z.boolean())
-  .transform({
-    toClient: (dbValue) => dbValue === 1,
-    toDb: (clientValue) => (clientValue ? 1 : 0),
-  }),
-// Client type: boolean (DB stores 0/1, client works with true/false)
-```
-
-When `.client()` overrides the type without `.initialState()`, the default value is inferred from the client schema (e.g., `boolean` → `false`, `string` → `""`).
-
-### 4. Server — Server-Side Validation
+### 3. Server — Server-Side Validation
 
 `.server()` adds validation rules that run at the server boundary before database writes. It builds on the client schema, adding stricter constraints.
 
@@ -146,7 +116,7 @@ name: s
   .server(({ client }) => client.min(2, "Too short")),
 ```
 
-### 5. Transform — Convert Between Layers
+### 4. Transform — Convert Between Layers
 
 `.transform()` defines bidirectional conversion functions. These run on the server when reading from or writing to the database.
 
@@ -161,6 +131,68 @@ status: s
 ```
 
 Transforms are optional — only needed when the client type differs from the SQL type.
+
+### 6. Derive — Computed Fields
+
+`.derive()` adds computed fields that are calculated from other values in the row. These are:
+- Available in client schema and defaults
+- NOT stored in the database (computed at runtime)
+- Useful for display-only fields, combinations, or formatted values
+
+```typescript
+const userSchema = schema({
+  _tableName: "users",
+  firstName: s.sql({ type: "varchar" }).client({ value: "John" }),
+  lastName: s.sql({ type: "varchar" }).client({ value: "Doe" }),
+  // Define placeholder for derived field
+  fullName: s.client(""),  // Required: tells schema this field exists on client
+}).derive({
+  fullName: (row) => `${row.firstName} ${row.lastName}`,
+});
+
+// Now defaults and toClient include the computed value
+const defaults = box.users.defaults;
+// { firstName: "John", lastName: "Doe", fullName: "John Doe" }
+```
+
+The derived field's default value is computed from other defaults at initialization time.
+
+### 7. sqlOnly — Server-Only Fields
+
+`.sql({ sqlOnly: true })` marks a field as server-only:
+- Included in SQL schema (stored in DB)
+- Excluded from client schema (not sent to client)
+- Useful for internal tokens, computed scores, or sensitive data
+
+```typescript
+const userSchema = schema({
+  _tableName: "users",
+  id: s.sql({ type: "int", pk: true }),
+  email: s.sql({ type: "varchar" }),
+  internalToken: s.sql({ type: "varchar", sqlOnly: true }),
+  trustScore: s.sql({ type: "int", sqlOnly: true }),
+});
+
+// Client schema: { id, email } — internalToken and trustScore excluded
+// SQL schema: { id, email, internalToken, trustScore } — all fields
+// Defaults: { id: 0, email: "" } — sqlOnly fields excluded
+```
+
+### 8. Client-Only Fields
+
+Use `s.client()` without `s.sql()` to define fields that exist only on the client:
+
+```typescript
+const orderSchema = schema({
+  _tableName: "orders",
+  id: s.sql({ type: "int", pk: true }),
+  total: s.sql({ type: "int" }).client({ value: 0 }),
+  // Client-only: computed from other fields, not stored
+  formattedTotal: s.client(""),
+}).derive({
+  formattedTotal: (row) => `$${(row.total / 100).toFixed(2)}`,
+});
+```
 
 ### Schema Object Structure
 
@@ -189,10 +221,9 @@ import { s, schema, createSchema } from "cogsbox-shape";
 
 const contactSchema = schema({
   _tableName: "contacts",
-  id: s.sql({ type: "int", pk: true }).initialState({
+  id: s.sql({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
-    clientPk: true,
   }),
   name: s.sql({ type: "varchar" }).server(({ sql }) => sql.min(2)),
   email: s.sql({ type: "varchar" }).server(({ sql }) => sql.email()),
