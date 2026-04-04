@@ -65,7 +65,7 @@ This generates a Zod schema matching your SQL types exactly.
 
 ### 2. Client — Defaults and Client-Side Validation
 
-`.client()` sets the default value and client-side validation type for new records. It combines what was previously done with `.initialState()`.
+`.client()` sets the default value and client-side validation type for new records.
 
 ```typescript
 const userSchema = schema({
