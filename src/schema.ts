@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
+
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
   defaultValue: Date;
 };
+
 export const isFunction = (fn: unknown): fn is Function =>
   typeof fn === "function";
 
-// Function to create a properly typed current timestamp config
 export function currentTimeStamp(): CurrentTimestampConfig {
   return {
     default: "CURRENT_TIMESTAMP",
@@ -17,7 +18,6 @@ export function currentTimeStamp(): CurrentTimestampConfig {
 
 type DbConfig = SQLType | RelationConfig<any> | null;
 
-// Add this to your SQLType union
 export type SQLType = (
   | { type: "int"; nullable?: boolean; default?: number }
   | { type: "boolean"; nullable?: boolean; default?: boolean }
@@ -48,8 +48,8 @@ type SQLToZodType<
   TDefault extends boolean,
 > = T["pk"] extends true
   ? TDefault extends true
-    ? z.ZodString // Client-side: PKs are always strings
-    : z.ZodNumber // Database-side: PKs are always numbers
+    ? z.ZodString
+    : z.ZodNumber
   : T["nullable"] extends true
     ? T["type"] extends "varchar" | "char" | "text" | "longtext"
       ? z.ZodNullable<z.ZodString>
@@ -77,6 +77,7 @@ type SQLToZodType<
                 : z.ZodDate
               : z.ZodDate
             : never;
+
 type ZodTypeFromPrimitive<T> = T extends string
   ? z.ZodString
   : T extends number
@@ -95,22 +96,19 @@ type CollapsedUnion<
 export interface IBuilderMethods<
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
   TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > {
-  initialState<const TValue>(options: {
+  client<const TValue>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema?: never;
-    // --- UPDATED: clientPk can now be a checker function ---
     clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
-      "new",
+      "client",
       T,
       TSql,
-      ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
       TValue extends () => infer R ? R : TValue,
       CollapsedUnion<
         TSql,
@@ -123,72 +121,104 @@ export interface IBuilderMethods<
     >
   >;
 
-  initialState<const TSchema extends z.ZodTypeAny>(options: {
+  client<const TSchema extends z.ZodTypeAny>(options: {
     value?: never;
     schema: TSchema;
-    // --- UPDATED: clientPk can now be a checker function ---
     clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
-      "new",
+      "client",
       T,
       TSql,
-      TSchema,
       z.infer<TSchema>,
       CollapsedUnion<TSql, TSchema>,
       CollapsedUnion<TSql, TSchema>
     >
   >;
 
-  initialState<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+  client<const TSchema extends z.ZodTypeAny>(options: {
+    value?: never;
+    schema: TSchema | ((tools: any) => TSchema);
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Prettify<
+    Builder<
+      "client",
+      T,
+      TSql,
+      z.infer<TSchema>,
+      CollapsedUnion<TSql, TSchema>,
+      CollapsedUnion<TSql, TSchema>
+    >
+  >;
+
+  client<const TValue>(options: {
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
+    schema?: never;
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Prettify<
+    Builder<
+      "client",
+      T,
+      TSql,
+      TValue extends () => infer R ? R : TValue,
+      CollapsedUnion<
+        TSql,
+        ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
+      >,
+      CollapsedUnion<
+        TSql,
+        ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
+      >
+    >
+  >;
+
+  client(options: {
+    value?: never;
+    schema: (tools: any) => z.ZodTypeAny;
+  }): Prettify<Builder<"client", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>>;
+
+  client<const TValue, const TSchema extends z.ZodTypeAny>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema:
       | TSchema
       | ((
           base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
         ) => TSchema);
-    // --- UPDATED: clientPk can now be a checker function ---
     clientPk?: boolean | ((val: any) => boolean);
   }): Prettify<
     Builder<
-      "new",
+      "client",
       T,
       TSql,
-      TSchema,
-      z.infer<TSchema>,
+      TValue extends () => infer R ? R : TValue,
       CollapsedUnion<TSql, TSchema>,
       CollapsedUnion<TSql, TSchema>
     >
   >;
+
+  client<TClientNext extends z.ZodTypeAny>(
+    schema: ((tools: { sql: TSql }) => TClientNext) | TClientNext,
+  ): Prettify<
+    Builder<"client", T, TSql, TInitialValue, TClientNext, TClientNext>
+  >;
+
   reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any,
   ) => Builder<
     "sql",
     T & { references: typeof fieldGetter },
     TSql,
-    TNew,
     TInitialValue,
     TClient,
     TValidation
   >;
-  client: <TClientNext extends z.ZodTypeAny>(
-    schema:
-      | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
-      | TClientNext,
-  ) => Prettify<
-    Builder<"client", T, TSql, TNew, TInitialValue, TClientNext, TClientNext>
-  >;
 
   server: <TValidationNext extends z.ZodTypeAny>(
     schema:
-      | ((tools: {
-          sql: TSql;
-          initialState: TNew;
-          client: TClient;
-        }) => TValidationNext)
+      | ((tools: { sql: TSql; client: TClient }) => TValidationNext)
       | TValidationNext,
   ) => Prettify<
-    Builder<"server", T, TSql, TNew, TInitialValue, TClient, TValidationNext>
+    Builder<"server", T, TSql, TInitialValue, TClient, TValidationNext>
   >;
 
   transform: (transforms: {
@@ -196,7 +226,7 @@ export interface IBuilderMethods<
     toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
   }) => {
     config: Prettify<
-      BuilderConfig<T, TSql, TNew, TInitialValue, TClient, TValidation>
+      BuilderConfig<T, TSql, TInitialValue, TClient, TValidation>
     > & {
       transforms: typeof transforms;
     };
@@ -205,26 +235,22 @@ export interface IBuilderMethods<
 
 type BaseRelationConfig<T extends Schema<any>> = {
   fromKey: string;
-  toKey: () => any; // Will be resolved to specific field
+  toKey: () => any;
   schema: () => T;
   defaultCount?: number;
 };
 
-// Extended relation types
 export type RelationConfig<T extends Schema<any>> =
   | (BaseRelationConfig<T> & { type: "hasMany" })
   | (BaseRelationConfig<T> & { type: "hasOne" })
   | (BaseRelationConfig<T> & { type: "belongsTo" })
   | (BaseRelationConfig<T> & { type: "manyToMany" });
 
-// Unified builder stage - now includes relations
-type Stage = "sql" | "relation" | "new" | "client" | "server" | "done";
+type Stage = "sql" | "relation" | "client" | "server" | "done";
 
-// Updated stage methods to include relation
 type StageMethods = {
-  sql: "initialState" | "client" | "server" | "transform" | "reference";
-  relation: "server" | "transform";
-  new: "client" | "server" | "transform";
+  sql: "client" | "server" | "transform" | "reference";
+  relation: "client" | "server" | "transform";
   client: "server" | "transform";
   server: "transform";
   done: never;
@@ -233,14 +259,12 @@ type StageMethods = {
 type BuilderConfig<
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
   TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > = {
   sql: T;
   zodSqlSchema: TSql;
-  zodNewSchema: TNew;
   initialValue: TInitialValue;
   zodClientSchema: TClient;
   zodValidationSchema: TValidation;
@@ -252,7 +276,6 @@ export type Builder<
   TStage extends Stage,
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
   TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
@@ -260,27 +283,18 @@ export type Builder<
   config: {
     sql: T;
     zodSqlSchema: TSql;
-    zodNewSchema: TNew;
     initialValue: TInitialValue;
     zodClientSchema: TClient;
     zodValidationSchema: TValidation;
   };
 } & Pick<
-  IBuilderMethods<T, TSql, TNew, TInitialValue, TClient, TValidation>,
+  IBuilderMethods<T, TSql, TInitialValue, TClient, TValidation>,
   StageMethods[TStage]
 >;
 
-type HasManyDefault =
-  | true
-  | undefined // Don't include in defaults at all
-  | [] // Include as empty array
-  | { count: number }; // Generate N items
+type HasManyDefault = true | undefined | [] | { count: number };
 
-// For hasOne/belongsTo
-type HasOneDefault =
-  | true
-  | undefined // Don't include in defaults at all
-  | null; // Include as null
+type HasOneDefault = true | undefined | null;
 
 export type Reference<TGetter extends () => any> = {
   __type: "reference";
@@ -288,13 +302,12 @@ export type Reference<TGetter extends () => any> = {
 };
 
 interface ShapeAPI {
-  initialState: <const TValue>(
+  client: <const TValue>(
     value: TValue | ((tools: { uuid: () => string }) => TValue),
   ) => Builder<
-    "new",
+    "client",
     null,
     z.ZodUndefined, // No SQL schema
-    ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
     TValue extends () => infer R ? R : TValue,
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
@@ -304,7 +317,6 @@ interface ShapeAPI {
   ) => Builder<
     "sql",
     T,
-    SQLToZodType<T, false>,
     SQLToZodType<T, false>,
     z.infer<SQLToZodType<T, false>>,
     SQLToZodType<T, false>,
@@ -324,12 +336,11 @@ interface ShapeAPI {
 }
 
 export const s: ShapeAPI = {
-  initialState: <const TValue>(
+  client: <const TValue>(
     value: TValue | ((tools: { uuid: () => string }) => TValue),
   ) => {
     const actualValue = isFunction(value) ? value({ uuid }) : value;
 
-    // Infer the Zod type from the primitive value
     let inferredZodType: z.ZodTypeAny;
     if (typeof actualValue === "string") {
       inferredZodType = z.string();
@@ -346,12 +357,9 @@ export const s: ShapeAPI = {
     }
 
     return createBuilder({
-      stage: "new",
-
+      stage: "client",
       sqlConfig: null,
       sqlZod: z.undefined(),
-
-      newZod: inferredZodType,
       initialValue: actualValue,
       clientZod: inferredZodType,
       validationZod: inferredZodType,
@@ -377,7 +385,7 @@ export const s: ShapeAPI = {
   hasOne: (config?: HasOneDefault) => ({
     __type: "placeholder-relation" as const,
     relationType: "hasOne" as const,
-    defaultConfig: config, // This line is the crucial fix
+    defaultConfig: config,
   }),
 
   manyToMany: (config?: { defaultCount?: number }) => ({
@@ -418,7 +426,6 @@ export const s: ShapeAPI = {
       stage: "sql",
       sqlConfig: sqlConfig,
       sqlZod: sqlZodType as SQLToZodType<T, false>,
-      newZod: sqlZodType as SQLToZodType<T, false>,
       initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
       clientZod: sqlZodType as SQLToZodType<T, false>,
       validationZod: sqlZodType as SQLToZodType<T, false>,
@@ -426,7 +433,6 @@ export const s: ShapeAPI = {
       Builder<
         "sql",
         T,
-        SQLToZodType<T, false>,
         SQLToZodType<T, false>,
         z.infer<SQLToZodType<T, false>>,
         SQLToZodType<T, false>,
@@ -437,10 +443,9 @@ export const s: ShapeAPI = {
 };
 
 function createBuilder<
-  TStage extends "sql" | "relation" | "new" | "client" | "server",
+  TStage extends "sql" | "relation" | "client" | "server",
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
-  TNew extends z.ZodTypeAny,
   TInitialValue,
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
@@ -448,14 +453,13 @@ function createBuilder<
   stage: TStage;
   sqlConfig: T;
   sqlZod: TSql;
-  newZod: TNew;
   initialValue: TInitialValue;
   clientZod: TClient;
   validationZod: TValidation;
   completedStages?: Set<string>;
   clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
   validationTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
-}): Builder<TStage, T, TSql, TNew, TInitialValue, TClient, TValidation> {
+}): Builder<TStage, T, TSql, TInitialValue, TClient, TValidation> {
   const completedStages =
     config.completedStages || new Set<string>([config.stage]);
 
@@ -463,7 +467,6 @@ function createBuilder<
     config: {
       sql: config.sqlConfig,
       zodSqlSchema: config.sqlZod,
-      zodNewSchema: config.newZod,
       initialValue:
         config.initialValue ||
         inferDefaultFromZod(
@@ -475,92 +478,7 @@ function createBuilder<
       clientTransform: config.clientTransform,
       validationTransform: config.validationTransform,
     },
-    initialState: (options: {
-      value?: any;
-      schema?: z.ZodTypeAny | ((base: z.ZodTypeAny) => z.ZodTypeAny);
-      clientPk?: boolean | ((val: any) => boolean); // <-- ACCEPT FUNCTION HERE
-    }) => {
-      if (completedStages.has("new")) {
-        throw new Error("initialState() can only be called once in the chain");
-      }
 
-      const { value, schema: schemaOrModifier, clientPk } = options;
-
-      let actualValue: any;
-      let finalSchema: z.ZodTypeAny;
-
-      // 1. Determine the actual value
-      if (value !== undefined) {
-        actualValue = isFunction(value) ? value({ uuid }) : value;
-      } else if (
-        schemaOrModifier &&
-        typeof schemaOrModifier === "object" &&
-        "_def" in schemaOrModifier
-      ) {
-        // If only a schema is provided, infer the default from it
-        actualValue = inferDefaultFromZod(schemaOrModifier, config.sqlConfig!);
-      }
-
-      // 2. Determine the final schema
-      let baseSchema: z.ZodTypeAny;
-      if (
-        schemaOrModifier &&
-        typeof schemaOrModifier === "object" &&
-        "_def" in schemaOrModifier
-      ) {
-        // A raw Zod schema was passed
-        finalSchema = schemaOrModifier;
-      } else {
-        // Base schema must be inferred from the value type
-        if (typeof actualValue === "string") baseSchema = z.string();
-        else if (typeof actualValue === "number") baseSchema = z.number();
-        else if (typeof actualValue === "boolean") baseSchema = z.boolean();
-        else if (actualValue instanceof Date) baseSchema = z.date();
-        else if (actualValue === null) baseSchema = z.null();
-        else baseSchema = z.any();
-
-        if (isFunction(schemaOrModifier)) {
-          // A modifier function was passed
-          finalSchema = schemaOrModifier(baseSchema);
-        } else {
-          // No schema/modifier, use the inferred base schema
-          finalSchema = baseSchema;
-        }
-      }
-
-      const newCompletedStages = new Set(completedStages);
-      newCompletedStages.add("new");
-
-      const newConfig = { ...config.sqlConfig };
-      if (clientPk !== undefined) {
-        // Store the boolean OR the function directly into the config
-        (newConfig as any).isClientPk = clientPk;
-      }
-
-      let clientAndServerSchema: z.ZodTypeAny;
-
-      if (clientPk) {
-        // Always union for clientPk fields
-        clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
-      } else if (schemaOrModifier) {
-        // Schema provided without clientPk — use as-is
-        clientAndServerSchema = finalSchema;
-      } else {
-        // No schema provided — union with SQL type
-        clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
-      }
-
-      return createBuilder({
-        ...config,
-        stage: "new",
-        sqlConfig: newConfig as T,
-        newZod: finalSchema,
-        initialValue: actualValue,
-        clientZod: clientAndServerSchema,
-        validationZod: clientAndServerSchema,
-        completedStages: newCompletedStages,
-      }) as any;
-    },
     reference: <TRefSchema extends { _tableName: string }>(
       fieldGetter: () => any,
     ) => {
@@ -572,68 +490,173 @@ function createBuilder<
         } as T & { reference: typeof fieldGetter },
       });
     },
-    client: <TClientNext extends z.ZodTypeAny>(
-      assert:
-        | ((tools: { sql: TSql; initialState: TNew }) => TClientNext)
-        | TClientNext,
-    ) => {
+
+    client: (...args: any[]) => {
       if (completedStages.has("client")) {
         throw new Error("client() can only be called once in the chain");
       }
       if (completedStages.has("server")) {
-        throw new Error("client() must be called before validation()");
+        throw new Error("client() must be called before server()");
       }
 
       const newCompletedStages = new Set(completedStages);
       newCompletedStages.add("client");
 
+      let optionsOrSchema = args[0];
+
       if (config.stage === "relation") {
+        const assert =
+          typeof optionsOrSchema === "function" ||
+          optionsOrSchema instanceof z.ZodType
+            ? optionsOrSchema
+            : optionsOrSchema?.schema;
         return createBuilder({
           ...config,
           stage: "client",
           completedStages: newCompletedStages,
           clientTransform: (baseSchema: z.ZodTypeAny) => {
             if (isFunction(assert)) {
-              return assert({
-                sql: baseSchema as any,
-                initialState: config.newZod,
-              });
+              return assert({ sql: baseSchema as any });
             }
             return assert;
           },
         });
       }
 
-      const clientSchema = isFunction(assert)
-        ? assert({ sql: config.sqlZod, initialState: config.newZod })
-        : assert;
+      let isDirectShortcut = false;
+      let isValueAndSchemaShortcut = false;
+      let options: any = {};
+
+      if (
+        optionsOrSchema !== undefined &&
+        typeof optionsOrSchema === "function"
+      ) {
+        if (args.length === 2 && isFunction(args[1])) {
+          isValueAndSchemaShortcut = true;
+          options = {
+            schema: optionsOrSchema,
+            value: args[1],
+          };
+        } else {
+          options = { schema: optionsOrSchema };
+          isDirectShortcut = true;
+        }
+      } else if (
+        optionsOrSchema !== undefined &&
+        typeof optionsOrSchema === "object" &&
+        !("_def" in optionsOrSchema) &&
+        !("parse" in optionsOrSchema) &&
+        (optionsOrSchema.value !== undefined ||
+          optionsOrSchema.schema !== undefined ||
+          optionsOrSchema.clientPk !== undefined)
+      ) {
+        options = optionsOrSchema;
+      } else if (optionsOrSchema !== undefined) {
+        options = { schema: optionsOrSchema };
+        isDirectShortcut = true;
+      }
+
+      const { value, schema: schemaOrModifier, clientPk } = options;
+
+      let actualValue = config.initialValue;
+      let finalSchema: z.ZodTypeAny;
+
+      // 1. Determine actual value
+      if (value !== undefined) {
+        actualValue = isFunction(value) ? value({ uuid }) : value;
+      } else if (
+        schemaOrModifier &&
+        typeof schemaOrModifier === "object" &&
+        "_def" in schemaOrModifier
+      ) {
+        if (
+          config.sqlZod instanceof z.ZodUndefined ||
+          actualValue === undefined
+        ) {
+          actualValue = inferDefaultFromZod(
+            schemaOrModifier,
+            config.sqlConfig!,
+          );
+        }
+      }
+
+      // 2. Determine final schema
+      let baseSchema: z.ZodTypeAny;
+      if (
+        schemaOrModifier &&
+        typeof schemaOrModifier === "object" &&
+        "_def" in schemaOrModifier
+      ) {
+        finalSchema = schemaOrModifier;
+      } else {
+        if (value !== undefined) {
+          if (typeof actualValue === "string") baseSchema = z.string();
+          else if (typeof actualValue === "number") baseSchema = z.number();
+          else if (typeof actualValue === "boolean") baseSchema = z.boolean();
+          else if (actualValue instanceof Date) baseSchema = z.date();
+          else if (actualValue === null) baseSchema = z.null();
+          else baseSchema = z.any();
+        } else {
+          baseSchema = config.clientZod;
+        }
+
+        if (isFunction(schemaOrModifier)) {
+          if (isDirectShortcut) {
+            finalSchema = schemaOrModifier({ sql: config.sqlZod });
+          } else {
+            finalSchema = schemaOrModifier(baseSchema);
+          }
+        } else {
+          finalSchema = baseSchema;
+        }
+      }
+
+      const newConfig = { ...config.sqlConfig };
+      if (clientPk !== undefined) {
+        (newConfig as any).isClientPk = clientPk;
+      }
+
+      let clientAndServerSchema: z.ZodTypeAny;
+
+      if (clientPk) {
+        clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
+      } else if (schemaOrModifier !== undefined) {
+        if (isDirectShortcut) {
+          clientAndServerSchema = finalSchema;
+        } else {
+          clientAndServerSchema = finalSchema;
+        }
+      } else {
+        if (config.sqlZod instanceof z.ZodUndefined) {
+          clientAndServerSchema = finalSchema;
+        } else {
+          clientAndServerSchema = z.union([config.sqlZod, finalSchema]);
+        }
+      }
 
       return createBuilder({
         ...config,
         stage: "client",
-        clientZod: clientSchema,
-        validationZod: clientSchema,
+        sqlConfig: newConfig as T,
+        initialValue: actualValue,
+        clientZod: clientAndServerSchema,
+        validationZod: clientAndServerSchema,
         completedStages: newCompletedStages,
-      });
+      }) as any;
     },
 
     server: <TValidationNext extends z.ZodTypeAny>(
       assert:
-        | ((tools: {
-            sql: TSql;
-            initialState: TNew;
-            client: TClient;
-          }) => TValidationNext)
+        | ((tools: { sql: TSql; client: TClient }) => TValidationNext)
         | TValidationNext,
     ) => {
       if (completedStages.has("server")) {
-        throw new Error("validation() can only be called once in the chain");
+        throw new Error("server() can only be called once in the chain");
       }
 
       const serverSchema = isFunction(assert)
         ? assert({
             sql: config.sqlZod,
-            initialState: config.newZod,
             client: config.clientZod,
           })
         : assert;
@@ -655,7 +678,7 @@ function createBuilder<
     }) => {
       if (!completedStages.has("server") && !completedStages.has("client")) {
         throw new Error(
-          "transform() requires at least client() or validation() to be called first",
+          "transform() requires at least client() or server() to be called first",
         );
       }
 
@@ -687,21 +710,19 @@ export type EnrichedField<
 };
 export type EnrichFields<T extends ShapeSchema> = {
   [K in keyof T]: K extends "_tableName"
-    ? T[K] // Keep _tableName as is
+    ? T[K]
     : K extends string
       ? EnrichedField<K, T[K], T>
       : T[K];
 };
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
-// Helper type to filter the schema for PK fields
 type PickPrimaryKeys<T extends ShapeSchema> = {
   [K in keyof T as T[K] extends { config: { sql: { pk: true } } }
     ? K
     : never]: T[K];
 };
 
-// --- REMOVED: .isClient() method from SchemaBuilder ---
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
   __primaryKeySQL?: string;
 
@@ -713,7 +734,6 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
 export function schema<T extends string, U extends ShapeSchema<T>>(
   schema: U,
 ): SchemaBuilder<U> {
-  // Create the enriched schema with all fields
   const enrichedSchema: any = {};
 
   for (const key in schema) {
@@ -791,7 +811,7 @@ type ValidShapeField = ReturnType<typeof s.sql>;
 
 export type ShapeSchema<T extends string = string> = {
   _tableName: T;
-  [SchemaWrapperBrand]?: true; // Use symbol as optional property
+  [SchemaWrapperBrand]?: true;
   [key: string]:
     | string
     | ((id: number) => string)
@@ -822,13 +842,6 @@ function inferDefaultFromZod(
   if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
     if ("default" in sqlConfig && sqlConfig.default !== undefined) {
       return sqlConfig.default;
-    }
-
-    if (
-      typeof sqlConfig.type === "string" &&
-      ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)
-    ) {
-      // ...
     }
 
     const sqlTypeConfig = sqlConfig as SQLType;
@@ -990,7 +1003,11 @@ export function createSchema<
           ? initialValueOrFn({ uuid })
           : initialValueOrFn;
 
-        defaultValues[key] = rawDefault;
+        if (config.transforms?.toClient && rawDefault !== undefined) {
+          defaultValues[key] = config.transforms.toClient(rawDefault);
+        } else {
+          defaultValues[key] = rawDefault;
+        }
 
         if (config.transforms) {
           fieldTransforms[key] = config.transforms;
@@ -1043,7 +1060,6 @@ export function createSchema<
     }
   }
 
-  // --- NEW: SMART CHECKER BUILDER ---
   let isClientRecord: (record: any) => boolean = () => false;
 
   if (clientPkKeys.length > 0) {
@@ -1060,20 +1076,15 @@ export function createSchema<
       const isClientPkVal = (sqlConfig as any)?.isClientPk;
 
       if (typeof isClientPkVal === "function") {
-        // Explicit checker provided directly in the field!
         checkers.push({ clientKey: key, dbKey, check: isClientPkVal });
       } else {
-        // Fallback auto-detection: If they just passed `true`
         const initialValueOrFn = field?.config?.initialValue;
         let sampleValue = initialValueOrFn;
 
-        // Safely execute the function once to figure out its return type!
         if (isFunction(initialValueOrFn)) {
           try {
             sampleValue = initialValueOrFn({ uuid });
-          } catch (e) {
-            // Ignore if the factory fails with a dummy payload
-          }
+          } catch (e) {}
         }
 
         if (sqlConfig?.type === "int" && typeof sampleValue === "string") {
@@ -1090,7 +1101,6 @@ export function createSchema<
       isClientRecord = (record: any) => {
         if (!record || typeof record !== "object") return false;
         return checkers.some(({ clientKey, dbKey, check }) => {
-          // Look at both the client shape key AND the db shape key safely
           const val =
             record[clientKey] !== undefined ? record[clientKey] : record[dbKey];
           return check(val);
@@ -1230,9 +1240,6 @@ type ResolveField<Field, Resolution> = Field extends PlaceholderReference
                           type: "manyToMany";
                         }
                       : never,
-              RelType extends "hasMany" | "manyToMany"
-                ? z.ZodArray<z.ZodObject<any>>
-                : z.ZodObject<any>,
               RelType extends "hasMany" | "manyToMany"
                 ? z.ZodArray<z.ZodObject<any>>
                 : z.ZodObject<any>,
@@ -1477,16 +1484,30 @@ type _DeriveViewShape<
 > = Depth["length"] extends 10
   ? any
   : TKey extends "sqlSchema"
-  ? TRegistry[TTableName]["zodSchemas"]["sqlSchema"] extends z.ZodObject<
+    ? TRegistry[TTableName]["zodSchemas"]["sqlSchema"] extends z.ZodObject<
         infer BaseShape
       >
-    ? _DeriveViewShapeInner<BaseShape, TTableName, TSelection, TRegistry, TKey, Depth>
-    : never
-  : TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<
-        infer BaseShape
-      >
-  ? _DeriveViewShapeInner<BaseShape, TTableName, TSelection, TRegistry, TKey, Depth>
-  : never;
+      ? _DeriveViewShapeInner<
+          BaseShape,
+          TTableName,
+          TSelection,
+          TRegistry,
+          TKey,
+          Depth
+        >
+      : never
+    : TRegistry[TTableName]["zodSchemas"][TKey] extends z.ZodObject<
+          infer BaseShape
+        >
+      ? _DeriveViewShapeInner<
+          BaseShape,
+          TTableName,
+          TSelection,
+          TRegistry,
+          TKey,
+          Depth
+        >
+      : never;
 
 type _DeriveViewShapeInner<
   BaseShape,
@@ -1495,51 +1516,52 @@ type _DeriveViewShapeInner<
   TRegistry extends RegistryShape,
   TKey extends "clientSchema" | "serverSchema" | "sqlSchema",
   Depth extends any[] = [],
-> = TSelection extends Record<string, any>
-      ? Prettify<
-          OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> & {
-            [K in keyof TSelection &
-              keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<
-              TRegistry[TTableName]["rawSchema"][K]
-            > extends true
-              ? K
-              : never]: GetRelationRegistryKey<
-              TRegistry[TTableName]["rawSchema"][K],
-              TRegistry
-            > extends infer TargetKey
-              ? TargetKey extends keyof TRegistry
-                ? TRegistry[TTableName]["rawSchema"][K] extends {
-                    config: { sql: { type: infer RelType } };
-                  }
-                  ? RelType extends "hasMany" | "manyToMany"
-                    ? z.ZodArray<
-                        z.ZodObject<
-                          _DeriveViewShape<
-                            TargetKey,
-                            TSelection[K],
-                            TRegistry,
-                            TKey,
-                            [...Depth, 1]
-                          >
+> =
+  TSelection extends Record<string, any>
+    ? Prettify<
+        OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]> & {
+          [K in keyof TSelection &
+            keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<
+            TRegistry[TTableName]["rawSchema"][K]
+          > extends true
+            ? K
+            : never]: GetRelationRegistryKey<
+            TRegistry[TTableName]["rawSchema"][K],
+            TRegistry
+          > extends infer TargetKey
+            ? TargetKey extends keyof TRegistry
+              ? TRegistry[TTableName]["rawSchema"][K] extends {
+                  config: { sql: { type: infer RelType } };
+                }
+                ? RelType extends "hasMany" | "manyToMany"
+                  ? z.ZodArray<
+                      z.ZodObject<
+                        _DeriveViewShape<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          TKey,
+                          [...Depth, 1]
                         >
                       >
-                    : z.ZodNullable<
-                        z.ZodObject<
-                          _DeriveViewShape<
-                            TargetKey,
-                            TSelection[K],
-                            TRegistry,
-                            TKey,
-                            [...Depth, 1]
-                          >
+                    >
+                  : z.ZodNullable<
+                      z.ZodObject<
+                        _DeriveViewShape<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          TKey,
+                          [...Depth, 1]
                         >
                       >
-                  : never
+                    >
                 : never
-              : never;
-          }
-        >
-      : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>;
+              : never
+            : never;
+        }
+      >
+    : OmitRelationFields<BaseShape, TRegistry[TTableName]["rawSchema"]>;
 
 type DeriveViewDefaults<
   TTableName extends keyof TRegistry,
@@ -1672,6 +1694,7 @@ type NavigationProxy<
           : never;
       }
   : never;
+
 type IsEffectivelyEmpty<T> = [T] extends [never]
   ? true
   : [keyof T] extends [never]
@@ -1787,10 +1810,7 @@ type CreateSchemaBoxReturn<
 export function createSchemaBox<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
->(
-  schemas: S,
-  resolutions: R,
-): CreateSchemaBoxReturn<S, R> {
+>(schemas: S, resolutions: R): CreateSchemaBoxReturn<S, R> {
   const resolutionConfig = resolutions;
   const resolvedSchemas = schemas;
 
@@ -1859,7 +1879,6 @@ export function createSchemaBox<
             defaultConfig: field.defaultConfig,
           } as any,
           sqlZod: zodSchema,
-          newZod: zodSchema,
           initialValue,
           clientZod: zodSchema,
           validationZod: zodSchema,
@@ -1977,7 +1996,7 @@ export function createSchemaBox<
 
           const regEntry = finalRegistry[currentKey];
           const baseMapped = { ...regEntry.transforms.toClient(dbData) };
-          
+
           if (typeof currentSelection === "object") {
             for (const relKey in currentSelection) {
               if (
@@ -2004,7 +2023,6 @@ export function createSchemaBox<
           return baseMapped;
         };
 
-        // --- NEW: Implement recursive toDb ---
         const deepToDb = (
           clientData: any,
           currentSelection: any,
@@ -2048,7 +2066,6 @@ export function createSchemaBox<
         const viewToClient = (dbData: any) =>
           deepToClient(dbData, selection, tableName);
 
-        // --- NEW: View To Db ---
         const viewToDb = (clientData: any) =>
           deepToDb(clientData, selection, tableName);
 
@@ -2197,7 +2214,6 @@ type GetDbKey<K, Field> =
         : F
       : K;
 
-// UPDATED: Removed `isClient` and `__isClientChecker` omissions since they no longer exist
 type DeriveSchemaByKey<
   T,
   Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema",
@@ -2266,25 +2282,18 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
                 : K
             : never]: T[K] extends Reference<infer TGetter>
           ? ReturnType<TGetter> extends {
-              config: { initialValue: infer D };
-            }
-            ? D extends () => infer R
-              ? R
-              : D
-            : never
-          : T[K] extends {
-                config: {
-                  zodNewSchema: infer TNew;
-                  zodSqlSchema: infer TSql;
-                  zodClientSchema: infer TClient extends z.ZodTypeAny;
-                  initialValue: infer D;
-                };
+                config: { initialValue: infer D };
               }
-            ? TNew extends TSql
-              ? z.infer<TClient>
-              : D extends () => infer R
+              ? D extends () => infer R
                 ? R
                 : D
+              : never
+          : T[K] extends {
+                config: {
+                  zodClientSchema: infer TClient extends z.ZodTypeAny;
+                };
+              }
+            ? z.infer<TClient>
             : never;
       }
 >;

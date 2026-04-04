@@ -8,7 +8,7 @@ const users = schema({
   _tableName: "users",
   id: s
     .sql({ type: "int", pk: true })
-    .initialState({ value: ({ uuid }) => uuid() }),
+    .client({ value: ({ uuid }) => uuid() }),
   petId: s.reference(() => pets.id),
   pets: s.hasMany([]),
 });
