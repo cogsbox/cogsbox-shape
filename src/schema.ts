@@ -41,6 +41,7 @@ type BaseConfig = {
   nullable?: boolean;
   pk?: true;
   field?: string;
+  sqlOnly?: true;
 };
 
 type SQLToZodType<
@@ -561,7 +562,6 @@ function createBuilder<
       let actualValue = config.initialValue;
       let finalSchema: z.ZodTypeAny;
 
-      // 1. Determine actual value
       if (value !== undefined) {
         actualValue = isFunction(value) ? value({ uuid }) : value;
       } else if (
@@ -580,7 +580,6 @@ function createBuilder<
         }
       }
 
-      // 2. Determine final schema
       let baseSchema: z.ZodTypeAny;
       if (
         schemaOrModifier &&
@@ -725,9 +724,27 @@ type PickPrimaryKeys<T extends ShapeSchema> = {
 
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
   __primaryKeySQL?: string;
+  __derives?: Record<string, (row: any) => any>;
 
   primaryKeySQL: (
     definer: (pkFields: PickPrimaryKeys<T>) => string,
+  ) => SchemaBuilder<T>;
+
+  derive: <
+    D extends Partial<
+      Record<
+        keyof T,
+        (
+          row: Prettify<
+            z.infer<
+              z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>
+            >
+          >,
+        ) => any
+      >
+    >,
+  >(
+    derivers: D,
   ) => SchemaBuilder<T>;
 };
 
@@ -752,6 +769,7 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
 
   enrichedSchema[SchemaWrapperBrand] = true;
   enrichedSchema.__primaryKeySQL = undefined;
+  enrichedSchema.__derives = undefined;
 
   enrichedSchema.primaryKeySQL = function (
     definer: (pkFields: PickPrimaryKeys<U>) => string,
@@ -772,6 +790,11 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
     enrichedSchema.__primaryKeySQL = definer(
       pkFieldsOnly as PickPrimaryKeys<U>,
     );
+    return enrichedSchema;
+  };
+
+  enrichedSchema.derive = function (derivers: any): SchemaBuilder<U> {
+    enrichedSchema.__derives = derivers;
     return enrichedSchema;
   };
 
@@ -827,6 +850,7 @@ type Relation<U extends Schema<any>> = {
   schema: U;
   defaultCount?: number;
 };
+
 function inferDefaultFromZod(
   zodType: z.ZodTypeAny,
   sqlConfig?: SQLType | RelationConfig<any>,
@@ -965,16 +989,19 @@ export function createSchema<
 
   const clientToDbKeys: Record<string, string> = {};
   const dbToClientKeys: Record<string, string> = {};
+  const sqlOnlyDbKeys = new Set<string>();
 
   const fullSchema = { ...schema, ...(relations || {}) };
   let pkKeys: string[] | null = [];
   let clientPkKeys: string[] | null = [];
+  const derives = (schema as any).__derives;
 
   for (const key in fullSchema) {
     const value = (fullSchema as any)[key];
     if (
       key === "_tableName" ||
       key.startsWith("__") ||
+      key === "derive" ||
       key === String(SchemaWrapperBrand) ||
       key === "primaryKeySQL" ||
       typeof value === "function"
@@ -989,28 +1016,32 @@ export function createSchema<
         const config = targetField.config;
 
         const dbFieldName = config.sql?.field || key;
-        clientToDbKeys[key] = dbFieldName;
-        dbToClientKeys[dbFieldName] = key;
-
         sqlFields[dbFieldName] = config.zodSqlSchema;
-        clientFields[key] = config.zodClientSchema;
-        serverFields[key] = config.zodValidationSchema;
 
-        const initialValueOrFn = config.initialValue;
-        defaultGenerators[key] = initialValueOrFn;
-
-        let rawDefault = isFunction(initialValueOrFn)
-          ? initialValueOrFn({ uuid })
-          : initialValueOrFn;
-
-        if (config.transforms?.toClient && rawDefault !== undefined) {
-          defaultValues[key] = config.transforms.toClient(rawDefault);
+        if (config.sql?.sqlOnly) {
+          sqlOnlyDbKeys.add(dbFieldName);
         } else {
-          defaultValues[key] = rawDefault;
-        }
+          clientToDbKeys[key] = dbFieldName;
+          dbToClientKeys[dbFieldName] = key;
+          clientFields[key] = config.zodClientSchema;
+          serverFields[key] = config.zodValidationSchema;
 
-        if (config.transforms) {
-          fieldTransforms[key] = config.transforms;
+          const initialValueOrFn = config.initialValue;
+          defaultGenerators[key] = initialValueOrFn;
+
+          let rawDefault = isFunction(initialValueOrFn)
+            ? initialValueOrFn({ uuid })
+            : initialValueOrFn;
+
+          if (config.transforms?.toClient && rawDefault !== undefined) {
+            defaultValues[key] = config.transforms.toClient(rawDefault);
+          } else {
+            defaultValues[key] = rawDefault;
+          }
+
+          if (config.transforms) {
+            fieldTransforms[key] = config.transforms;
+          }
         }
       }
       continue;
@@ -1033,28 +1064,32 @@ export function createSchema<
         continue;
       } else {
         const dbFieldName = sqlConfig?.field || key;
-        clientToDbKeys[key] = dbFieldName;
-        dbToClientKeys[dbFieldName] = key;
-
         sqlFields[dbFieldName] = config.zodSqlSchema;
-        clientFields[key] = config.zodClientSchema;
-        serverFields[key] = config.zodValidationSchema;
 
-        if (config.transforms) {
-          fieldTransforms[key] = config.transforms;
-        }
-
-        const initialValueOrFn = config.initialValue;
-        defaultGenerators[key] = initialValueOrFn;
-
-        let rawDefault = isFunction(initialValueOrFn)
-          ? initialValueOrFn({ uuid })
-          : initialValueOrFn;
-
-        if (config.transforms?.toClient && rawDefault !== undefined) {
-          defaultValues[key] = config.transforms.toClient(rawDefault);
+        if (sqlConfig?.sqlOnly) {
+          sqlOnlyDbKeys.add(dbFieldName);
         } else {
-          defaultValues[key] = rawDefault;
+          clientToDbKeys[key] = dbFieldName;
+          dbToClientKeys[dbFieldName] = key;
+          clientFields[key] = config.zodClientSchema;
+          serverFields[key] = config.zodValidationSchema;
+
+          if (config.transforms) {
+            fieldTransforms[key] = config.transforms;
+          }
+
+          const initialValueOrFn = config.initialValue;
+          defaultGenerators[key] = initialValueOrFn;
+
+          let rawDefault = isFunction(initialValueOrFn)
+            ? initialValueOrFn({ uuid })
+            : initialValueOrFn;
+
+          if (config.transforms?.toClient && rawDefault !== undefined) {
+            defaultValues[key] = config.transforms.toClient(rawDefault);
+          } else {
+            defaultValues[key] = rawDefault;
+          }
         }
       }
     }
@@ -1120,6 +1155,13 @@ export function createSchema<
         ? fieldTransforms[key].toClient(rawValue)
         : rawValue;
     }
+
+    if (derives) {
+      for (const key in derives) {
+        freshDefaults[key] = derives[key](freshDefaults);
+      }
+    }
+
     return freshDefaults;
   };
 
@@ -1127,6 +1169,7 @@ export function createSchema<
     const clientObject: any = {};
     for (const dbKey in dbObject) {
       if (dbObject[dbKey] === undefined) continue;
+      if (sqlOnlyDbKeys.has(dbKey)) continue;
 
       const clientKey = dbToClientKeys[dbKey] || dbKey;
       const transform = fieldTransforms[clientKey]?.toClient;
@@ -1135,6 +1178,13 @@ export function createSchema<
         ? transform(dbObject[dbKey])
         : dbObject[dbKey];
     }
+
+    if (derives) {
+      for (const key in derives) {
+        clientObject[key] = derives[key](clientObject);
+      }
+    }
+
     return clientObject;
   };
 
@@ -1604,6 +1654,7 @@ type DeriveViewDefaults<
         }
       : {})
 >;
+
 export type DeriveViewResult<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -2020,6 +2071,13 @@ export function createSchemaBox<
               }
             }
           }
+
+          if (regEntry.rawSchema.__derives) {
+            for (const key in regEntry.rawSchema.__derives) {
+              baseMapped[key] = regEntry.rawSchema.__derives[key](baseMapped);
+            }
+          }
+
           return baseMapped;
         };
 
@@ -2199,6 +2257,7 @@ type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {
 };
 
 type Prettify<T> = { [K in keyof T]: T[K] } & {};
+
 type GetDbKey<K, Field> =
   Field extends Reference<infer TGetter>
     ? ReturnType<TGetter> extends {
@@ -2226,23 +2285,29 @@ type DeriveSchemaByKey<
         | typeof SchemaWrapperBrand
         | "__primaryKeySQL"
         | "primaryKeySQL"
+        | "derive"
+        | "__derives"
         ? never
         : K extends keyof T
-          ? T[K] extends Reference<any>
+          ? T[K] extends { config: { sql: { sqlOnly: true } } }
             ? Key extends "zodSqlSchema"
               ? GetDbKey<K, T[K]>
-              : K
-            : T[K] extends {
-                  config: {
-                    sql: {
-                      type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
-                    };
-                  };
-                }
-              ? never
-              : Key extends "zodSqlSchema"
+              : never
+            : T[K] extends Reference<any>
+              ? Key extends "zodSqlSchema"
                 ? GetDbKey<K, T[K]>
                 : K
+              : T[K] extends {
+                    config: {
+                      sql: {
+                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                      };
+                    };
+                  }
+                ? never
+                : Key extends "zodSqlSchema"
+                  ? GetDbKey<K, T[K]>
+                  : K
           : never]: T[K] extends Reference<infer TGetter>
         ? ReturnType<TGetter> extends {
             config: { [P in Key]: infer ZodSchema extends z.ZodTypeAny };
@@ -2267,27 +2332,35 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
           | typeof SchemaWrapperBrand
           | "__primaryKeySQL"
           | "primaryKeySQL"
+          | "derive"
+          | "__derives"
           ? never
           : K extends keyof T
-            ? T[K] extends Reference<any>
-              ? K
-              : T[K] extends {
-                    config: {
-                      sql: {
-                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+            ? T[K] extends { config: { sql: { sqlOnly: true } } }
+              ? never
+              : T[K] extends Reference<any>
+                ? K
+                : T[K] extends {
+                      config: {
+                        sql: {
+                          type:
+                            | "hasMany"
+                            | "manyToMany"
+                            | "hasOne"
+                            | "belongsTo";
+                        };
                       };
-                    };
-                  }
-                ? never
-                : K
+                    }
+                  ? never
+                  : K
             : never]: T[K] extends Reference<infer TGetter>
           ? ReturnType<TGetter> extends {
-                config: { initialValue: infer D };
-              }
-              ? D extends () => infer R
-                ? R
-                : D
-              : never
+              config: { initialValue: infer D };
+            }
+            ? D extends () => infer R
+              ? R
+              : D
+            : never
           : T[K] extends {
                 config: {
                   zodClientSchema: infer TClient extends z.ZodTypeAny;
@@ -2307,19 +2380,27 @@ type DeriveStateType<T, Depth extends any[] = []> = Prettify<
           | typeof SchemaWrapperBrand
           | "__primaryKeySQL"
           | "primaryKeySQL"
+          | "derive"
+          | "__derives"
           ? never
           : K extends keyof T
-            ? T[K] extends Reference<any>
-              ? K
-              : T[K] extends {
-                    config: {
-                      sql: {
-                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+            ? T[K] extends { config: { sql: { sqlOnly: true } } }
+              ? never
+              : T[K] extends Reference<any>
+                ? K
+                : T[K] extends {
+                      config: {
+                        sql: {
+                          type:
+                            | "hasMany"
+                            | "manyToMany"
+                            | "hasOne"
+                            | "belongsTo";
+                        };
                       };
-                    };
-                  }
-                ? never
-                : K
+                    }
+                  ? never
+                  : K
             : never]: T[K] extends Reference<infer TGetter>
           ? ReturnType<TGetter> extends {
               config: { zodClientSchema: infer TClient extends z.ZodTypeAny };

@@ -894,3 +894,168 @@ describe("Nested relations with transforms", () => {
     expect(dbResult.posts![0].comments![0].isDeleted).toBe(0);
   });
 });
+
+describe("sqlOnly fields", () => {
+  const users = schema({
+    _tableName: "users",
+    id: s.sql({ type: "int", pk: true }).client({
+      value: () => "user-123",
+      schema: z.string(),
+    }),
+    name: s.sql({ type: "varchar" }).client({ value: "John" }),
+    internalToken: s.sql({ type: "varchar", sqlOnly: true }),
+  });
+
+  const box = createSchemaBox({ users }, { users: {} });
+
+  it("should exclude sqlOnly fields from client schema", () => {
+    type ClientShape = z.infer<typeof box.users.schemas.client>;
+    expectTypeOf<ClientShape>().not.toHaveProperty("internalToken");
+
+    const clientKeys = Object.keys(box.users.schemas.client.shape);
+    expect(clientKeys).not.toContain("internalToken");
+  });
+
+  it("should include sqlOnly fields in sql schema", () => {
+    type SqlShape = z.infer<typeof box.users.schemas.sql>;
+    expectTypeOf<SqlShape>().toHaveProperty("internalToken");
+
+    const sqlKeys = Object.keys(box.users.schemas.sql.shape);
+    expect(sqlKeys).toContain("internalToken");
+  });
+
+  it("should exclude sqlOnly fields from defaults", () => {
+    const defaults = box.users.defaults;
+    expect(defaults).not.toHaveProperty("internalToken");
+  });
+
+  it("should exclude sqlOnly fields from toClient output", () => {
+    const { toClient } = box.users.transforms;
+    const dbData = { id: 1, name: "John", internalToken: "secret" };
+    const result = toClient(dbData);
+    expect(result).not.toHaveProperty("internalToken");
+  });
+
+  it("should NOT include sqlOnly fields in toDb output", () => {
+    const { toDb } = box.users.transforms;
+    const clientData = { id: 1, name: "John" };
+    const result = toDb(clientData);
+    expect(result).not.toHaveProperty("internalToken");
+  });
+});
+
+describe("derive - computed fields", () => {
+  const users = schema({
+    _tableName: "users",
+    id: s.sql({ type: "int", pk: true }),
+    fullName: s.client(""),
+    firstName: s.sql({ type: "varchar" }).client({ value: "John" }),
+    lastName: s.sql({ type: "varchar" }).client({ value: "Doe" }),
+  }).derive({
+    fullName: (row) => `${row.firstName} ${row.lastName}`,
+  });
+
+  const box = createSchemaBox({ users }, { users: {} });
+
+  it("should add derived fields to defaults", () => {
+    const defaults = box.users.defaults;
+    expect(defaults.fullName).toBe("John Doe");
+  });
+
+  it("should compute derived fields in toClient", () => {
+    const { toClient } = box.users.transforms;
+    const dbData = { id: 1, firstName: "Jane", lastName: "Smith" };
+    const result = toClient(dbData as any);
+    expect(result.fullName).toBe("Jane Smith");
+  });
+
+  it("should NOT include derived fields in sql schema", () => {
+    const sqlKeys = Object.keys(box.users.schemas.sql.shape);
+    expect(sqlKeys).not.toContain("fullName");
+  });
+
+  it("should include derived fields in client schema", () => {
+    type ClientShape = z.infer<typeof box.users.schemas.client>;
+    expectTypeOf<ClientShape>().toHaveProperty("fullName");
+  });
+
+  it("should work with multiple derived fields", () => {
+    const products = schema({
+      _tableName: "products",
+      id: s.sql({ type: "int", pk: true }),
+      price: s.sql({ type: "int" }).client({ value: 100 }),
+      quantity: s.sql({ type: "int" }).client({ value: 5 }),
+      total: s.client(0),
+      formattedPrice: s.client(""),
+    }).derive({
+      total: (row) => row.price * row.quantity,
+      formattedPrice: (row) => `$${row.price}`,
+    });
+
+    const box = createSchemaBox({ products }, { products: {} });
+    const defaults = box.products.defaults;
+
+    expect(defaults.total).toBe(500);
+    expect(defaults.formattedPrice).toBe("$100");
+  });
+});
+
+describe("sqlOnly with derive in relations", () => {
+  const users = schema({
+    _tableName: "users",
+    id: s.sql({ type: "int", pk: true }).client({
+      value: () => "user-123",
+      schema: z.string(),
+    }),
+    internalScore: s.sql({ type: "int", sqlOnly: true }),
+    posts: s.hasMany({ count: 1 }),
+  });
+
+  const posts = schema({
+    _tableName: "posts",
+    id: s.sql({ type: "int", pk: true }),
+    title: s.sql({ type: "varchar" }).client({ value: "Post" }),
+    authorId: s.reference(() => users.id),
+    preview: s.client(""),
+  }).derive({
+    preview: (row) => row.title.substring(0, 5),
+  });
+
+  const box = createSchemaBox(
+    { users, posts },
+    {
+      users: { posts: { fromKey: "id", toKey: posts.authorId } },
+    },
+  );
+
+  it("should exclude sqlOnly fields from view but include derived", () => {
+    const view = box.users.createView({ posts: true });
+
+    const viewClientKeys = Object.keys(view.schemas.client.shape);
+    expect(viewClientKeys).not.toContain("internalScore");
+    expect(viewClientKeys).toContain("id");
+    expect(viewClientKeys).toContain("posts");
+  });
+
+  it("should include derived fields in view", () => {
+    const view = box.posts.createView({});
+    const defaults = view.defaults;
+
+    expect(defaults.preview).toBe("Post");
+  });
+
+  it("should apply toClient transforms correctly with derived", () => {
+    const view = box.users.createView({ posts: true });
+    const { toClient } = view.transforms;
+
+    const dbData = {
+      id: 1,
+      internalScore: 99,
+      posts: [{ id: 10, title: "Hello World", authorId: 1 }],
+    };
+
+    const result = toClient(dbData);
+    expect(result.internalScore).toBeUndefined();
+    expect(result.posts[0].preview).toBe("Hello");
+  });
+});
