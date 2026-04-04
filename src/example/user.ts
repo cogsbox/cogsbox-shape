@@ -28,18 +28,18 @@ const posts = schema({
 
 const schemas = { users, pets, posts };
 
-const box2 = createSchemaBox(schemas, (s) => ({
+const box2 = createSchemaBox(schemas, {
   users: {
-    pets: { fromKey: "id", toKey: s.pets.userId },
+    pets: { fromKey: "id", toKey: pets.userId },
   },
-  pets: { owner: { toKey: s.users.id, fromKey: "userId" } },
+  pets: { owner: { toKey: users.id, fromKey: "userId" } },
   posts: {
     aboutPet: {
       fromKey: "id",
-      toKey: s.pets.userId,
+      toKey: pets.userId,
     },
   },
-}));
+});
 
 const usersEndSchema = box2.users;
 const petsEndSchema = box2.pets;

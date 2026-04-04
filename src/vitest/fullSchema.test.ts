@@ -77,11 +77,14 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     });
 
     // 2. Create the registry and resolve relations
-    const box = createSchemaBox({ users, posts }, (s) => ({
-      users: {
-        posts: { fromKey: "id", toKey: s.posts.authorId },
+    const box = createSchemaBox(
+      { users, posts },
+      {
+        users: {
+          posts: { fromKey: "id", toKey: posts.authorId },
+        },
       },
-    }));
+    );
 
     const finalPostResult = box.posts.schemas;
 
@@ -115,9 +118,12 @@ describe("Schema Builder Runtime Behavior", () => {
     });
 
     // Process it with the registry
-    const box = createSchemaBox({ defaults: defaultsSchema }, () => ({
-      defaults: {},
-    }));
+    const box = createSchemaBox(
+      { defaults: defaultsSchema },
+      {
+        defaults: {},
+      },
+    );
     const defaults = box.defaults.defaults;
 
     it("should get default from .initialState()", () => {
@@ -154,9 +160,12 @@ describe("Schema Builder Runtime Behavior", () => {
     });
 
     // Use the new registry to process the schema
-    const box = createSchemaBox({ complex: complexSchemaDef }, () => ({
-      complex: {}, // No relations to resolve
-    }));
+    const box = createSchemaBox(
+      { complex: complexSchemaDef },
+      {
+        complex: {},
+      },
+    );
     const { client, sql, server } = box.complex.schemas;
     const { toClient, toDb } = box.complex.transforms;
     it("should correctly transform a DB object to a Client object", () => {
@@ -201,14 +210,17 @@ describe("New Session Features - Base Schema Without Relations", () => {
     owner: s.hasOne(),
   });
 
-  const box = createSchemaBox({ users, pets }, (s) => ({
-    users: {
-      pets: { fromKey: "id", toKey: s.pets.userId },
+  const box = createSchemaBox(
+    { users, pets },
+    {
+      users: {
+        pets: { fromKey: "id", toKey: pets.userId },
+      },
+      pets: {
+        owner: { fromKey: "userId", toKey: users.id },
+      },
     },
-    pets: {
-      owner: { fromKey: "userId", toKey: s.users.id },
-    },
-  }));
+  );
 
   describe("Base Schema Excludes Relations", () => {
     it("should exclude relations from base client schema", () => {
@@ -372,24 +384,27 @@ describe("Relation Defaults in Views", () => {
     user: s.hasOne(true),
   });
 
-  const box = createSchemaBox({ users, posts, comments, profiles }, (s) => ({
-    users: {
-      posts: { fromKey: "id", toKey: s.posts.authorId },
-      comments: { fromKey: "id", toKey: s.comments.userId },
-      profile: { fromKey: "id", toKey: s.profiles.userId },
-      settings: { fromKey: "id", toKey: s.profiles.userId },
-      followers: { fromKey: "id", toKey: s.users.id },
+  const box = createSchemaBox(
+    { users, posts, comments, profiles },
+    {
+      users: {
+        posts: { fromKey: "id", toKey: posts.authorId },
+        comments: { fromKey: "id", toKey: comments.userId },
+        profile: { fromKey: "id", toKey: profiles.userId },
+        settings: { fromKey: "id", toKey: profiles.userId },
+        followers: { fromKey: "id", toKey: users.id },
+      },
+      posts: {
+        user: { fromKey: "id", toKey: users.id },
+      },
+      comments: {
+        user: { fromKey: "id", toKey: users.id },
+      },
+      profiles: {
+        user: { fromKey: "id", toKey: users.id },
+      },
     },
-    posts: {
-      user: { fromKey: "id", toKey: s.users.id },
-    },
-    comments: {
-      user: { fromKey: "id", toKey: s.users.id },
-    },
-    profiles: {
-      user: { fromKey: "id", toKey: s.users.id },
-    },
-  }));
+  );
 
   it("should generate correct defaults based on relation config", () => {
     const view = box.users.createView({
@@ -475,7 +490,7 @@ describe("Transform affects defaults", () => {
     }),
   });
 
-  const box = createSchemaBox({ users: userSchema }, () => ({ users: {} }));
+  const box = createSchemaBox({ users: userSchema }, { users: {} });
   const { schemas, transforms, defaults } = box.users;
 
   it("should have defaults that match the client schema type", () => {
@@ -555,11 +570,14 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
     authorId: s.reference(() => users.id),
   });
 
-  const box = createSchemaBox({ users, posts }, (s) => ({
-    users: {
-      posts: { fromKey: "id", toKey: s.posts.authorId },
+  const box = createSchemaBox(
+    { users, posts },
+    {
+      users: {
+        posts: { fromKey: "id", toKey: posts.authorId },
+      },
     },
-  }));
+  );
 
   describe("DB Field Key Mapping (field property)", () => {
     it("should correctly map 'field' property to sqlSchema types and runtime shapes", () => {
@@ -588,7 +606,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
         email: "alice@test.com",
       };
 
-      const dbData = box.users.parseForDb(clientData);
+      const dbData = box.users.transforms.parseForDb(clientData);
 
       expectTypeOf(dbData).toHaveProperty("email_address");
       expectTypeOf(dbData).not.toHaveProperty("email");
@@ -638,7 +656,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
         isActive: 1,
         email_address: "a@b.com",
       };
-      const result = box.users.parseFromDb(dbRow);
+      const result = box.users.transforms.parseFromDb(dbRow);
       expect(result.email).toBe("a@b.com");
       expect(result.isActive).toBe(true);
     });
@@ -650,7 +668,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
         isActive: true,
         email: "a@b.com",
       };
-      const result = box.users.parseForDb(clientData);
+      const result = box.users.transforms.parseForDb(clientData);
       expect(result.isActive).toBe(1);
       expect(result.email_address).toBe("a@b.com");
     });
@@ -677,9 +695,12 @@ describe("Smart clientPk and isClientRecord logic", () => {
     }),
   });
 
-  const smartBox = createSchemaBox({ smart: smartSchema }, () => ({
-    smart: {},
-  }));
+  const smartBox = createSchemaBox(
+    { smart: smartSchema },
+    {
+      smart: {},
+    },
+  );
 
   it("should auto-detect client records by dummy-executing the factory function", () => {
     // Because value: ({ uuid }) => uuid() returns a string, the system should auto-infer `typeof val === "string"`

@@ -1316,22 +1316,24 @@ type ResolvedRegistryWithSchemas<
           >
         >
       >;
+    };
+    transforms: {
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
       parseForDb: (appData: any) => any;
       parseFromDb: (dbData: any) => any;
-      pk: string[] | null;
-      clientPk: string[] | null;
-      isClientRecord: (record: any) => boolean;
-      generateDefaults: () => Prettify<
-        DeriveDefaults<
-          ResolveSchema<
-            S[K],
-            K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
-          >
-        >
-      >;
     };
+    pk: string[] | null;
+    clientPk: string[] | null;
+    isClientRecord: (record: any) => boolean;
+    generateDefaults: () => Prettify<
+      DeriveDefaults<
+        ResolveSchema<
+          S[K],
+          K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}
+        >
+      >
+    >;
   };
 };
 
@@ -1582,8 +1584,8 @@ export type DeriveViewResult<
     >;
   };
   transforms: {
-    toClient: TRegistry[TTableName]["zodSchemas"]["toClient"];
-    toDb: TRegistry[TTableName]["zodSchemas"]["toDb"];
+    toClient: TRegistry[TTableName]["transforms"]["toClient"];
+    toDb: TRegistry[TTableName]["transforms"]["toDb"];
   };
 
   parseForDb: (
@@ -1676,15 +1678,17 @@ type RegistryShape = Record<
       serverSchema: z.ZodObject<any>;
       defaultValues: any;
       stateType: any;
+    };
+    transforms: {
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
       parseForDb: (appData: any) => any;
       parseFromDb: (dbData: any) => any;
-      pk: string[] | null;
-      clientPk: string[] | null;
-      isClientRecord: (record: any) => boolean;
-      generateDefaults: () => any;
     };
+    pk: string[] | null;
+    clientPk: string[] | null;
+    isClientRecord: (record: any) => boolean;
+    generateDefaults: () => any;
   }
 >;
 
@@ -1715,15 +1719,15 @@ type CreateSchemaBoxReturn<
       toDb: (
         clientData: z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>,
       ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+
+      parseForDb: (
+        appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>,
+      ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+
+      parseFromDb: (
+        dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>,
+      ) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
     };
-
-    parseForDb: (
-      appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>,
-    ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
-
-    parseFromDb: (
-      dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>,
-    ) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
 
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
     stateType: Resolved[K]["zodSchemas"]["stateType"];
@@ -1753,36 +1757,9 @@ export function createSchemaBox<
   R extends ResolutionMap<S>,
 >(
   schemas: S,
-  resolver: (proxy: SchemaProxy<S>) => R,
+  resolutions: R,
 ): CreateSchemaBoxReturn<S, R> {
-  const schemaProxy = new Proxy({} as SchemaProxy<S>, {
-    get(target, tableName: string) {
-      const schema = schemas[tableName as keyof S];
-      if (!schema) return undefined;
-
-      return new Proxy(
-        {},
-        {
-          get(target, fieldName: string) {
-            const field = schema[fieldName];
-            if (field && typeof field === "object") {
-              return {
-                ...field,
-                __meta: {
-                  _key: fieldName,
-                  _fieldType: field,
-                },
-                __parentTableType: schema,
-              };
-            }
-            return field;
-          },
-        },
-      );
-    },
-  }) as any;
-
-  const resolutionConfig = resolver(schemaProxy);
+  const resolutionConfig = resolutions;
   const resolvedSchemas = schemas;
 
   for (const tableName in schemas) {
@@ -1867,6 +1844,16 @@ export function createSchemaBox<
     finalRegistry[tableName] = {
       rawSchema: resolvedSchemas[tableName],
       zodSchemas: zodSchemas,
+      transforms: {
+        toClient: zodSchemas.toClient,
+        toDb: zodSchemas.toDb,
+        parseForDb: zodSchemas.parseForDb,
+        parseFromDb: zodSchemas.parseFromDb,
+      },
+      pk: zodSchemas.pk,
+      clientPk: zodSchemas.clientPk,
+      isClientRecord: zodSchemas.isClientRecord,
+      generateDefaults: zodSchemas.generateDefaults,
     };
   }
 
@@ -1915,20 +1902,19 @@ export function createSchemaBox<
       },
 
       transforms: {
-        toClient: entry.zodSchemas.toClient,
-        toDb: entry.zodSchemas.toDb,
+        toClient: entry.transforms.toClient,
+        toDb: entry.transforms.toDb,
+        parseForDb: entry.transforms.parseForDb,
+        parseFromDb: entry.transforms.parseFromDb,
       },
-
-      parseForDb: entry.zodSchemas.parseForDb,
-      parseFromDb: entry.zodSchemas.parseFromDb,
 
       defaults: entry.zodSchemas.defaultValues,
       stateType: entry.zodSchemas.stateType,
-      generateDefaults: entry.zodSchemas.generateDefaults,
+      generateDefaults: entry.generateDefaults,
 
-      pk: entry.zodSchemas.pk,
-      clientPk: entry.zodSchemas.clientPk,
-      isClientRecord: entry.zodSchemas.isClientRecord,
+      pk: entry.pk,
+      clientPk: entry.clientPk,
+      isClientRecord: entry.isClientRecord,
 
       nav: createNavProxy(tableName, finalRegistry),
 
@@ -1958,7 +1944,7 @@ export function createSchemaBox<
             );
 
           const regEntry = finalRegistry[currentKey];
-          const baseMapped = regEntry.zodSchemas.toClient(dbData);
+          const baseMapped = regEntry.transforms.toClient(dbData);
 
           if (typeof currentSelection === "object") {
             for (const relKey in currentSelection) {
@@ -1999,7 +1985,7 @@ export function createSchemaBox<
             );
 
           const regEntry = finalRegistry[currentKey];
-          const baseMapped = regEntry.zodSchemas.toDb(clientData);
+          const baseMapped = regEntry.transforms.toDb(clientData);
 
           if (typeof currentSelection === "object") {
             for (const relKey in currentSelection) {

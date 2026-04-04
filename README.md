@@ -162,6 +162,22 @@ status: s
 
 Transforms are optional — only needed when the client type differs from the SQL type.
 
+### Schema Object Structure
+
+The returned schema object has a clear separation of concerns:
+
+```typescript
+const schema = createSchema(mySchema);
+
+schema.schemas;           // { sqlSchema, clientSchema, serverSchema } — Zod schemas
+schema.transforms;        // { toClient, toDb, parseForDb, parseFromDb } — transformations
+schema.defaults;          // Default values for forms
+schema.generateDefaults; // Function to generate fresh defaults (executes randomizers)
+schema.pk;               // Primary key field names
+schema.clientPk;         // Client-side primary key field names
+schema.isClientRecord;   // Function to check if a record is client-created
+```
+
 ## Using Schemas
 
 ### Single Schema with `createSchema`
@@ -189,15 +205,14 @@ const contactSchema = schema({
     }),
 });
 
-const {
-  clientSchema, // Zod schema for client-side validation
-  serverSchema, // Zod schema with .server() rules
-  sqlSchema, // Zod schema matching DB column types
-  defaultValues, // Typed defaults matching clientSchema
-  generateDefaults, // Generates fresh defaults (executes randomizers/dates)
-  parseForDb, // Validates client app data & transforms to DB format
-  parseFromDb, // Transforms DB data & validates to Client format
-} = createSchema(contactSchema);
+const schema = createSchema(contactSchema);
+
+// Access schemas directly
+const { clientSchema, serverSchema, sqlSchema } = schema;
+const { defaultValues, generateDefaults } = schema;
+
+// Transforms for converting between layers
+const { toClient, toDb, parseForDb, parseFromDb } = schema.transforms;
 
 // Use in a form
 const [data, setData] = useState(generateDefaults());
@@ -252,11 +267,19 @@ const box = createSchemaBox({ users, posts }, (s) => ({
 Base schemas **exclude relations** by default, preventing circular dependencies:
 
 ```typescript
-const { schemas, defaults } = box.users;
+const { schemas, defaults, transforms, pk, clientPk } = box.users;
 
 type UserClient = z.infer<typeof schemas.client>;
 // { id: number; name: string; }
 // No 'posts' — relations are excluded from base schemas
+
+// Convert data between layers
+const dbRow = transforms.toDb(clientData);
+const clientData = transforms.toClient(dbRow);
+
+// Validate and convert in one step
+const dbRow = transforms.parseForDb(appData);
+const clientData = transforms.parseFromDb(dbRow);
 ```
 
 ### 4. Create Views to Include Relations
@@ -275,6 +298,8 @@ type UserWithPosts = z.infer<typeof userWithPosts.schemas.client>;
 //   posts: { id: number; title: string; authorId: number; }[]
 // }
 
-const defaults = userWithPosts.defaults;
-// { id: 0, name: '', posts:
+// Views also have transforms for the selected fields
+const { defaults, transforms } = userWithPosts;
+// transforms.apply() handles nested relations automatically
+```
 ```
