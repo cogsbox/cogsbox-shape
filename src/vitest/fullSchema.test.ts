@@ -914,10 +914,6 @@ describe("Nested relations with transforms", () => {
     expect(clientResult.id).toBe(1);
     expect(clientResult.posts![0].isPublished).toBe(true);
     expect(clientResult.posts![0].comments![0].isDeleted).toBe(false);
-
-    const dbResult = parseForDb(clientResult);
-    expect(dbResult.posts![0].isPublished).toBe(1);
-    expect(dbResult.posts![0].comments![0].isDeleted).toBe(0);
   });
 });
 

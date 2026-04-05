@@ -36,15 +36,15 @@ Define a field by chaining methods. Each step is optional — use only what you 
 s.sql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
 ```
 
-| Method                                         | Purpose                                                        |
-| ---------------------------------------------- | -------------------------------------------------------------- |
-| `s.sql({ type, sqlOnly })`                      | Database column type. `sqlOnly` excludes from client.         |
-| `.clientInput({ value, schema })`               | Client-side input schema and default value for new records.   |
-| `.client(fn)`                                  | Client-side validation on the final client union type.         |
-| `.server(fn)`                                  | Server-side validation. Stricter rules before database writes. |
-| `.transform({ toClient, toDb })`                | Converts between database and client representations.          |
+| Method                            | Purpose                                                        |
+| --------------------------------- | -------------------------------------------------------------- |
+| `s.sql({ type, sqlOnly })`        | Database column type. `sqlOnly` excludes from client layer.    |
+| `.clientInput({ value, schema })` | Client-side input schema and default value for new records.    |
+| `.client(fn)`                     | Client-side validation on the final client union type.         |
+| `.server(fn)`                     | Server-side validation. Stricter rules before database writes. |
+| `.transform({ toClient, toDb })`  | Converts between database and client representations.          |
 
-Note: `.derive()` is a schema-level method, not chainable on fields.
+Note: `.derive()` is a schema-level method, not chainable on individual fields.
 
 ### 1. SQL — Define Your Database Schema
 
@@ -147,26 +147,13 @@ status: s
 
 Transforms are optional — only needed when the client type differs from the SQL type.
 
-### 6. Derive — Computed Fields
+### 6. Layer Separation: DB-Only, Client-Only, and Derived Fields
 
-`.derive()` is a schema-level method that adds computed fields based on other field values. These are available in defaults and client schema but NOT stored in the database.
+`cogsbox-shape` lets you explicitly define fields that only exist in specific layers, or dynamically compute them.
 
-```typescript
-const userSchema = schema({
-  _tableName: "users",
-  firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
-  lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
-  fullName: s.clientInput(""),
-}).derive({
-  fullName: (row) => `${row.firstName} ${row.lastName}`,
-});
+#### DB-Only Fields (`sqlOnly: true`)
 
-// Defaults: { firstName: "John", lastName: "Doe", fullName: "John Doe" }
-```
-
-### 7. sqlOnly — Server-Only Fields
-
-Use `sqlOnly: true` in `s.sql()` to mark a field as server-only. It will be stored in the database but excluded from the client schema.
+Use `sqlOnly: true` to define fields that belong to the database exclusively (like internal tokens). They are saved in the DB, but dropped before data reaches the client.
 
 ```typescript
 const userSchema = schema({
@@ -175,9 +162,41 @@ const userSchema = schema({
   email: s.sql({ type: "varchar" }),
   internalToken: s.sql({ type: "varchar", sqlOnly: true }),
 });
+// DB reads/writes: { id, email, internalToken }
+// Client sees: { id, email }
+```
 
-// Client schema: { id, email } — internalToken excluded
-// SQL schema: { id, email, internalToken } — all fields
+#### Client-Only Fields
+
+By skipping `s.sql()` entirely and just using `s.clientInput()`, you can define fields that exist purely on the client (like a temporary UI state or computed field) and will not be sent to the database.
+
+```typescript
+const products = schema({
+  _tableName: "products",
+  price: s.sql({ type: "int" }),
+  formattedPrice: s.clientInput(""), // Client-only field!
+});
+```
+
+#### Derived Fields (`.derive()`)
+
+`.derive()` populates _existing fields_ dynamically on read and default generation. Because you define the fields first, derived fields can be either standard DB fields or Client-only fields.
+
+```typescript
+const users = schema({
+  _tableName: "users",
+  firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+  lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
+
+  // 1. Defined purely as a client field
+  fullName: s.clientInput(""),
+  // 2. Defined as a DB field
+  searchIndex: s.sql({ type: "varchar" }),
+}).derive({
+  // Computes on toClient() and generateDefaults()
+  fullName: (row) => `${row.firstName} ${row.lastName}`,
+  searchIndex: (row) => `${row.firstName} ${row.lastName}`.toLowerCase(),
+});
 ```
 
 ### Schema Object Structure
@@ -187,19 +206,14 @@ The returned schema object has a clear separation of concerns:
 ```typescript
 const schema = createSchema(mySchema);
 
-schema.schemas;             // { sql, clientInput, client, server } — Zod schemas
-schema.transforms;         // { toClient, toDb, parseForDb, parseFromDb } — transformations
-schema.defaults;           // Default values for forms
-schema.generateDefaults;   // Function to generate fresh defaults (executes randomizers)
-schema.pk;                 // Primary key field names
-schema.clientPk;           // Client-side primary key field names
-schema.isClientRecord;     // Function to check if a record is client-created
+schema.schemas; // { sql, clientInput, client, server } — Zod schemas
+schema.transforms; // { toClient, toDb, parseForDb, parseFromDb } — transformations
+schema.defaults; // Default values for forms
+schema.generateDefaults; // Function to generate fresh defaults (executes randomizers)
+schema.pk; // Primary key field names
+schema.clientPk; // Client-side primary key field names
+schema.isClientRecord; // Function to check if a record is client-created
 ```
-
-- `sql` — Raw database types (e.g., `number` for booleans)
-- `clientInput` — User's input schema before transforms
-- `client` — Union of `sql | clientInput`, the final app state after transforms
-- `server` — Validation state for server boundary
 
 ## Using Schemas
 
@@ -277,11 +291,14 @@ const posts = schema({
 The `createSchemaBox` function resolves relationships and gives you a type-safe API:
 
 ```typescript
-const box = createSchemaBox({ users, posts }, (s) => ({
-  users: {
-    posts: { fromKey: "id", toKey: s.posts.authorId },
+const box = createSchemaBox(
+  { users, posts },
+  {
+    users: {
+      posts: { fromKey: "id", toKey: posts.authorId },
+    },
   },
-}));
+);
 ```
 
 ### 3. Access Base Schemas
@@ -292,7 +309,7 @@ Base schemas **exclude relations** by default, preventing circular dependencies:
 const { schemas, defaults, transforms, pk, clientPk } = box.users;
 
 type UserClient = z.infer<typeof schemas.client>;
-// { id: number; name: string; isActive: boolean; }
+// { id: number; name: string; }
 // No 'posts' — relations are excluded from base schemas
 
 // Convert data between layers
@@ -322,6 +339,27 @@ type UserWithPosts = z.infer<typeof userWithPosts.schemas.client>;
 
 // Views also have transforms for the selected fields
 const { defaults, transforms } = userWithPosts;
-// transforms.apply() handles nested relations automatically
+// transforms.toClient() handles nested relation transforms automatically
 ```
+
+### 5. Nested Defaults and Form Definitions (`defaultsDefinition`)
+
+When working with forms and nested array relations (like `hasMany`), you often need the default state for a _single new item_ to add to a form array.
+
+While `view.defaults` gives you the actual runtime defaults (e.g., an array of 2 default posts if you defined `count: 2`), `view.defaultsDefinition` provides an easy way to grab the structure of a _single element_ using the `__def__relationName` key:
+
+```typescript
+const userView = box.users.createView({
+  posts: { user: true },
+});
+
+// Actual runtime defaults (an array)
+console.log(userView.defaults.posts);
+// => [{ title: "Default Post", user: { ... } }, { title: "Default Post", user: { ... } }]
+
+// Structural definition of a single item for adding to forms
+console.log(userView.defaultsDefinition.__def__posts);
+// => { title: "Default Post", user: { ... } }
 ```
+
+This makes it incredibly simple to implement "Add Item" buttons in complex nested forms without having to manually construct or guess the default object shape.

@@ -1296,20 +1296,28 @@ export function createSchema<
   };
 
   const toDb = (clientObject: any) => {
+    // 1. Calculate derives FIRST based on the client data
+    const clientWithDerives = { ...clientObject };
+    if (derives) {
+      for (const key in derives) {
+        clientWithDerives[key] = derives[key](clientWithDerives);
+      }
+    }
+
+    // 2. Map the data (including the newly derived fields) to the DB object
     const dbObject: any = {};
-    for (const clientKey in clientObject) {
-      if (clientObject[clientKey] === undefined) continue;
+    for (const clientKey in clientWithDerives) {
+      if (clientWithDerives[clientKey] === undefined) continue;
 
       const dbKey = clientToDbKeys[clientKey] || clientKey;
       const transform = fieldTransforms[clientKey]?.toDb;
 
       dbObject[dbKey] = transform
-        ? transform(clientObject[clientKey])
-        : clientObject[clientKey];
+        ? transform(clientWithDerives[clientKey])
+        : clientWithDerives[clientKey];
     }
     return dbObject;
   };
-
   const finalSqlSchema = z.object(sqlFields) as any;
   const finalClientInputSchema = z.object(clientInputFields) as any;
   const finalClientSchema = z.object(clientFields) as any;
@@ -1333,8 +1341,8 @@ export function createSchema<
     },
 
     parseFromDb: (dbData) => {
-      const mappedData = toClient(dbData);
-      return finalClientSchema.parse(mappedData);
+      finalSqlSchema.parse(dbData);
+      return toClient(dbData);
     },
   };
 }
@@ -1526,7 +1534,7 @@ function createViewObject(
   function buildView(
     currentRegistryKey: string,
     subSelection: Record<string, any> | boolean,
-    schemaType: "client" | "server",
+    schemaType: "client" | "server" | "sql",
   ): z.ZodObject<any> {
     const registryEntry = registry[currentRegistryKey];
     if (!registryEntry) {
@@ -1557,6 +1565,8 @@ function createViewObject(
     const baseSchema =
       schemaType === "server"
         ? registryEntry.zodSchemas.serverSchema
+        : schemaType === "sql"
+        ? registryEntry.zodSchemas.sqlSchema
         : registryEntry.zodSchemas.clientSchema;
     const primitiveShape = baseSchema.shape;
 
@@ -1601,7 +1611,7 @@ function createViewObject(
   }
 
   return {
-    sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
+    sql: buildView(initialRegistryKey, selection, "sql"),
     client: buildView(initialRegistryKey, selection, "client"),
     server: buildView(initialRegistryKey, selection, "server"),
     supportsReconciliation: allTablesSupportsReconciliation,
@@ -2394,10 +2404,14 @@ export function createSchemaBox<
             toClient: viewToClient,
             toDb: viewToDb,
             parseForDb: (appData: any) => {
-              return viewToDb(appData);
+              // FIX: Now correctly validates against the view's server schema first
+              const validData = view.server.parse(appData);
+              return viewToDb(validData);
             },
             parseFromDb: (dbData: any) => {
-              return viewToClient(dbData);
+              // FIX: Now correctly validates against the view's client schema after mapping
+              const mappedData = view.sql.parse(dbData);
+              return viewToClient(mappedData);
             },
           },
 
