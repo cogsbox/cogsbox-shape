@@ -170,7 +170,9 @@ export interface IBuilderMethods<
   clientInput(options: {
     value?: never;
     schema: (tools: any) => z.ZodTypeAny;
-  }): Prettify<Builder<"clientInput", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>>;
+  }): Prettify<
+    Builder<"clientInput", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>
+  >;
 
   clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
@@ -194,15 +196,33 @@ export interface IBuilderMethods<
   clientInput<TClientNext extends z.ZodTypeAny>(
     schema: ((tools: { sql: TSql }) => TClientNext) | TClientNext,
   ): Prettify<
-    Builder<"clientInput", T, TSql, z.infer<TClientNext>, TClientNext, CollapsedUnion<TSql, TClientNext>>
+    Builder<
+      "clientInput",
+      T,
+      TSql,
+      z.infer<TClientNext>,
+      TClientNext,
+      CollapsedUnion<TSql, TClientNext>
+    >
   >;
 
   client: <TClientNext extends z.ZodTypeAny>(
     schema:
-      | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TClientNext)
+      | ((tools: {
+          sql: TSql;
+          clientInput: TClient;
+          client: z.ZodUnion<[TSql, TClient]>;
+        }) => TClientNext)
       | TClientNext,
   ) => Prettify<
-    Builder<"client", T, TSql, TInitialValue, TClient, z.ZodUnion<[TSql, TClientNext]>>
+    Builder<
+      "client",
+      T,
+      TSql,
+      TInitialValue,
+      TClient,
+      z.ZodUnion<[TSql, TClientNext]>
+    >
   >;
 
   reference: <TRefSchema extends { _tableName: string }>(
@@ -218,7 +238,11 @@ export interface IBuilderMethods<
 
   server: <TValidationNext extends z.ZodTypeAny>(
     schema:
-      | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TValidationNext)
+      | ((tools: {
+          sql: TSql;
+          clientInput: TClient;
+          client: z.ZodUnion<[TSql, TClient]>;
+        }) => TValidationNext)
       | TValidationNext,
   ) => Prettify<
     Builder<"server", T, TSql, TInitialValue, TClient, TValidationNext>
@@ -656,7 +680,11 @@ function createBuilder<
 
     client: <TClientNext extends z.ZodTypeAny>(
       assert:
-        | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TClientNext)
+        | ((tools: {
+            sql: TSql;
+            clientInput: TClient;
+            client: z.ZodUnion<[TSql, TClient]>;
+          }) => TClientNext)
         | TClientNext,
     ) => {
       if (completedStages.has("server")) {
@@ -690,7 +718,11 @@ function createBuilder<
 
     server: <TValidationNext extends z.ZodTypeAny>(
       assert:
-        | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TValidationNext)
+        | ((tools: {
+            sql: TSql;
+            clientInput: TClient;
+            client: z.ZodUnion<[TSql, TClient]>;
+          }) => TValidationNext)
         | TValidationNext,
     ) => {
       if (completedStages.has("server")) {
@@ -720,7 +752,10 @@ function createBuilder<
       toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
       toDb: (clientValue: z.infer<TClient>) => z.infer<TSql>;
     }) => {
-      if (!completedStages.has("server") && !completedStages.has("clientInput")) {
+      if (
+        !completedStages.has("server") &&
+        !completedStages.has("clientInput")
+      ) {
         throw new Error(
           "transform() requires at least clientInput() or server() to be called first",
         );
@@ -1740,6 +1775,88 @@ type DeriveViewDefaults<
       : {})
 >;
 
+export type DeriveViewDefaultsDefinition<
+  TTableName extends keyof TRegistry,
+  TSelection,
+  TRegistry extends RegistryShape,
+  Depth extends any[] = [],
+> = Depth["length"] extends 10
+  ? any
+  : Prettify<
+      TRegistry[TTableName]["zodSchemas"]["defaultValues"] & {
+        [K in keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<
+          TRegistry[TTableName]["rawSchema"][K]
+        > extends true
+          ? K
+          : never]: TRegistry[TTableName]["rawSchema"][K] extends {
+          config: { sql: { type: infer RelType; schema: any } };
+        }
+          ? GetRelationRegistryKey<
+              TRegistry[TTableName]["rawSchema"][K],
+              TRegistry
+            > extends infer TargetKey
+            ? TargetKey extends keyof TRegistry
+              ? K extends keyof TSelection
+                ? TSelection[K] extends true
+                  ? RelType extends "hasMany" | "manyToMany"
+                    ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][]
+                    : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] | null
+                  : TSelection[K] extends false | undefined
+                    ? RelType extends "hasMany" | "manyToMany"
+                      ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][]
+                      :
+                          | TRegistry[TargetKey]["zodSchemas"]["defaultValues"]
+                          | null
+                    : RelType extends "hasMany" | "manyToMany"
+                      ? DeriveViewDefaultsDefinition<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          [...Depth, 1]
+                        >[]
+                      : DeriveViewDefaultsDefinition<
+                          TargetKey,
+                          TSelection[K],
+                          TRegistry,
+                          [...Depth, 1]
+                        > | null
+                : RelType extends "hasMany" | "manyToMany"
+                  ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][]
+                  : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] | null
+              : never
+            : never
+          : never;
+      } & {
+        [K in keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<
+          TRegistry[TTableName]["rawSchema"][K]
+        > extends true
+          ? `__def__${K & string}`
+          : never]: TRegistry[TTableName]["rawSchema"][K] extends {
+          config: { sql: { type: any; schema: any } };
+        }
+          ? GetRelationRegistryKey<
+              TRegistry[TTableName]["rawSchema"][K],
+              TRegistry
+            > extends infer TargetKey
+            ? TargetKey extends keyof TRegistry
+              ? K extends keyof TSelection
+                ? TSelection[K] extends true
+                  ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"]
+                  : TSelection[K] extends false | undefined
+                    ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"]
+                    : DeriveViewDefaultsDefinition<
+                        TargetKey,
+                        TSelection[K],
+                        TRegistry,
+                        [...Depth, 1]
+                      >
+                : TRegistry[TargetKey]["zodSchemas"]["defaultValues"]
+              : never
+            : never
+          : never;
+      }
+    >;
+
 export type DeriveViewResult<
   TTableName extends keyof TRegistry,
   TSelection,
@@ -1786,7 +1903,11 @@ export type DeriveViewResult<
   };
 
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
-  defaultsDefinition: any;
+  defaultsDefinition: DeriveViewDefaultsDefinition<
+    TTableName,
+    TSelection,
+    TRegistry
+  >;
 
   pk: string[] | null;
   clientPk: string[] | null;
@@ -1924,7 +2045,7 @@ type CreateSchemaBoxReturn<
     };
 
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
-    defaultsDefinition: any;
+    defaultsDefinition: DeriveViewDefaultsDefinition<K & string, {}, Resolved>;
     stateType: Resolved[K]["zodSchemas"]["stateType"];
     generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
 
@@ -2058,7 +2179,7 @@ export function createSchemaBox<
   for (const tableName in finalRegistry) {
     const entry = finalRegistry[tableName];
     const rawSchema = entry.rawSchema;
-    const tableDef: any = {};
+    const tableDef: any = { ...entry.generateDefaults() };
 
     for (const key in rawSchema) {
       if (key === "_tableName" || key.startsWith("__")) continue;
@@ -2079,12 +2200,13 @@ export function createSchemaBox<
           if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
             const count = (sqlConfig as any)?.defaultCount || 1;
             tableDef[key] = Array.from({ length: count }, () => targetDefaults);
+            tableDef[`__def__${key}`] = targetDefaults;
           } else {
-            tableDef[key] = targetDefaults;
+            tableDef[key] =
+              sqlConfig.defaultConfig === null ? null : targetDefaults;
+            tableDef[`__def__${key}`] = targetDefaults;
           }
         }
-      } else {
-        tableDef[key] = rawSchema[key]?.config?.initialValue;
       }
     }
 
@@ -2391,7 +2513,7 @@ function computeViewDefaultsDefinition(
     return {};
   }
 
-  const baseDef: any = {};
+  const baseDef: any = { ...entry.generateDefaults() };
 
   for (const key in entry.rawSchema) {
     if (key === "_tableName" || key.startsWith("__")) continue;
@@ -2412,11 +2534,11 @@ function computeViewDefaultsDefinition(
       if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
         const count = (sqlConfig as any)?.defaultCount || 1;
         baseDef[key] = Array.from({ length: count }, () => targetDefaults);
-      } else if (sqlConfig.defaultConfig !== null) {
-        baseDef[key] = targetDefaults;
+        baseDef[`__def__${key}`] = targetDefaults;
+      } else {
+        baseDef[key] = sqlConfig.defaultConfig === null ? null : targetDefaults;
+        baseDef[`__def__${key}`] = targetDefaults;
       }
-    } else {
-      baseDef[key] = entry.rawSchema[key]?.config?.initialValue;
     }
   }
 
@@ -2447,6 +2569,15 @@ function computeViewDefaultsDefinition(
 
     if (nestedDef) {
       result[`__def__${key}`] = nestedDef;
+      if (
+        relationConfig.type === "hasMany" ||
+        relationConfig.type === "manyToMany"
+      ) {
+        const count = (relationConfig as any)?.defaultCount || 1;
+        result[key] = Array.from({ length: count }, () => nestedDef);
+      } else {
+        result[key] = relationConfig.defaultConfig === null ? null : nestedDef;
+      }
     }
   }
 
@@ -2488,7 +2619,11 @@ type GetDbKey<K, Field> =
 
 type DeriveSchemaByKey<
   T,
-  Key extends "zodSqlSchema" | "zodClientInputSchema" | "zodClientSchema" | "zodValidationSchema",
+  Key extends
+    | "zodSqlSchema"
+    | "zodClientInputSchema"
+    | "zodClientSchema"
+    | "zodValidationSchema",
   Depth extends any[] = [],
 > = Depth["length"] extends 10
   ? any

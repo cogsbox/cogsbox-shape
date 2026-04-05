@@ -386,7 +386,16 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
     };
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
-    defaultsDefinition: any;
+    defaultsDefinition: Prettify<DeriveViewDefaults<TTableName, TSelection, TRegistry> & {
+        [K2 in keyof TRegistry[TTableName]["rawSchema"] as K2 extends string ? TRegistry[TTableName]["rawSchema"][K2] extends {
+            config: {
+                sql: {
+                    type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                    schema: any;
+                };
+            };
+        } ? `__def__${K2}` : never : never]: any;
+    }>;
     pk: string[] | null;
     clientPk: string[] | null;
     supportsReconciliation: boolean;
@@ -455,7 +464,16 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
             parseFromDb: (dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
-        defaultsDefinition: any;
+        defaultsDefinition: Prettify<Resolved[K]["zodSchemas"]["defaultValues"] & {
+            [K2 in keyof Resolved[K]["rawSchema"] as K2 extends string ? Resolved[K]["rawSchema"][K2] extends {
+                config: {
+                    sql: {
+                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
+                        schema: any;
+                    };
+                };
+            } ? `__def__${K2}` : never : never]: any;
+        }>;
         stateType: Resolved[K]["zodSchemas"]["stateType"];
         generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
         pk: string[] | null;

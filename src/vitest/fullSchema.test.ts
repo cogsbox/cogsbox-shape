@@ -1,4 +1,3 @@
-// Imports at the top - added 'expect' for runtime tests
 import { expect, describe, it } from "vitest";
 import { expectTypeOf } from "expect-type";
 
@@ -1116,12 +1115,20 @@ describe("defaultsDefinition", () => {
 
   it("should have defaultsDefinition on schema box", () => {
     const def = box.users.defaultsDefinition;
+
     expect(def).toBeDefined();
     expect(def.id).toBe("user-123");
     expect(def.name).toBe("John");
+
+    // Check array relation logic
     expect(def.posts).toBeInstanceOf(Array);
     expect(def.posts).toHaveLength(2);
-    expect(def.posts![0].title).toBe("Default Post");
+    expect(def.posts[0].title).toBe("Default Post");
+
+    // Check __def__ single-element logic
+    expect(def.__def__posts).toBeDefined();
+    expect(Array.isArray(def.__def__posts)).toBe(false);
+    expect(def.__def__posts.title).toBe("Default Post");
   });
 
   it("should have defaultsDefinition on views", () => {
@@ -1133,7 +1140,16 @@ describe("defaultsDefinition", () => {
     expect(def).toBeDefined();
     expect(def!.posts).toBeInstanceOf(Array);
     expect(def!.posts).toHaveLength(2);
+
+    // Nested relation array test
+    expect(def.posts[0].user).toBeDefined();
+    expect(def.posts[0].user?.name).toBe("John");
+
+    // Nested __def__ single-element logic
     expect(def!.__def__posts).toBeDefined();
+    expect(Array.isArray(def!.__def__posts)).toBe(false);
     expect(def!.__def__posts.title).toBe("Default Post");
+    expect(def!.__def__posts.user).toBeDefined();
+    expect(def!.__def__posts.user?.name).toBe("John");
   });
 });
