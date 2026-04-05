@@ -33,18 +33,18 @@ Traditional approaches require defining these layers separately, leading to type
 Define a field by chaining methods. Each step is optional — use only what you need.
 
 ```
-s.sql()  →  .client()  →  .server()  →  .transform()
-        →  .derive()   →  .sqlOnly()
+s.sql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
+                                                                 ↑
+                                                              .derive()
 ```
 
-| Method                                       | Purpose                                                        |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| `s.sql({ type })`                            | Database column type. The starting point for every field.      |
-| `.client({ value, schema })`                 | Client-side validation and default value for new records.      |
-| `.server(fn)`                                | Server-side validation. Stricter rules before database writes. |
-| `.transform({ toClient, toDb })`              | Converts between database and client representations.          |
-| `.derive({ field: (row) => computedValue })` | Adds computed fields based on other field values.              |
-| `.sqlOnly`                                   | Marks a field as server-only (not sent to client).             |
+| Method                                         | Purpose                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `s.sql({ type, sqlOnly })`                      | Database column type. `sqlOnly` excludes from client.         |
+| `.clientInput({ value, schema })`               | Client-side input schema and default value for new records.   |
+| `.client(fn)`                                  | Client-side validation on the final client union type.         |
+| `.server(fn)`                                  | Server-side validation. Stricter rules before database writes. |
+| `.transform({ toClient, toDb })`                | Converts between database and client representations.          |
 
 ### 1. SQL — Define Your Database Schema
 
@@ -63,34 +63,49 @@ const userSchema = schema({
 
 This generates a Zod schema matching your SQL types exactly.
 
-### 2. Client — Defaults and Client-Side Validation
+### 2. Client Input — Defaults and Client-Side Validation
 
-`.client()` sets the default value and client-side validation type for new records.
+`.clientInput()` sets the default value and client-side validation type for new records.
 
 ```typescript
 const userSchema = schema({
   _tableName: "users",
   // DB stores auto-increment integers, but new records need a temp string ID
-  id: s.sql({ type: "int", pk: true }).client({
+  id: s.sql({ type: "int", pk: true }).clientInput({
     value: () => crypto.randomUUID(),
     schema: z.string(),
   }),
-  // Client type becomes: string | number (union of SQL + client)
+  // clientInput type: string (just the user's schema)
   // Default value: a generated UUID string
 
   // Simple default without type override
-  name: s.sql({ type: "varchar" }).client({ value: "Anonymous" }),
-  // Client type: string (inherits from SQL)
+  name: s.sql({ type: "varchar" }).clientInput({ value: "Anonymous" }),
+  // clientInput type: string (inherits from SQL)
   // Default value: "Anonymous"
 
   // Type-only override (no default value change)
-  count: s.sql({ type: "int" }).client(() => z.number().min(0)),
-  // Client type: number (with min validation)
+  count: s.sql({ type: "int" }).clientInput(() => z.number().min(0)),
+  // clientInput type: number (with min validation)
   // Default value: inferred from type (0 for number)
 });
 ```
 
-### 3. Server — Server-Side Validation
+**Note:** The final `client` schema is a union of `sql | clientInput` types, representing the complete app state after transforms.
+
+### 3. Client — Client-Side Validation
+
+`.client()` adds validation rules to the final `client` schema (the union of sql | clientInput). Use it for client-side validation that operates on the complete client type.
+
+```typescript
+name: s.sql({ type: "varchar" })
+  .clientInput({ value: "" })
+  .client((tools) => tools.clientInput.min(3, "Too short"))
+  .server((tools) => tools.clientInput.min(5, "Must be at least 5 chars")),
+```
+
+The `.client()` callback receives `tools` with `sql` and `clientInput` schemas.
+
+### 4. Server — Server-Side Validation
 
 `.server()` adds validation rules that run at the server boundary before database writes. It builds on the client schema, adding stricter constraints.
 
@@ -112,18 +127,18 @@ The callback receives the previous schema in the chain so you can refine it:
 ```typescript
 name: s
   .sql({ type: "varchar" })
-  .client(() => z.string().trim())
-  .server(({ client }) => client.min(2, "Too short")),
+  .clientInput(() => z.string().trim())
+  .server(({ clientInput }) => clientInput.min(2, "Too short")),
 ```
 
-### 4. Transform — Convert Between Layers
+### 5. Transform — Convert Between Layers
 
 `.transform()` defines bidirectional conversion functions. These run on the server when reading from or writing to the database.
 
 ```typescript
 status: s
   .sql({ type: "int" })                              // DB: 0 or 1
-  .client(() => z.enum(["active", "inactive"]))       // Client: string enum
+  .clientInput(() => z.enum(["active", "inactive"])) // Client input: string enum
   .transform({
     toClient: (dbValue) => dbValue === 1 ? "active" : "inactive",
     toDb: (clientValue) => clientValue === "active" ? 1 : 0,
@@ -134,35 +149,24 @@ Transforms are optional — only needed when the client type differs from the SQ
 
 ### 6. Derive — Computed Fields
 
-`.derive()` adds computed fields that are calculated from other values in the row. These are:
-- Available in client schema and defaults
-- NOT stored in the database (computed at runtime)
-- Useful for display-only fields, combinations, or formatted values
+`.derive()` is a schema-level method that adds computed fields based on other field values. These are available in defaults and client schema but NOT stored in the database.
 
 ```typescript
 const userSchema = schema({
   _tableName: "users",
-  firstName: s.sql({ type: "varchar" }).client({ value: "John" }),
-  lastName: s.sql({ type: "varchar" }).client({ value: "Doe" }),
-  // Define placeholder for derived field
-  fullName: s.client(""),  // Required: tells schema this field exists on client
+  firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+  lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
+  fullName: s.clientInput(""),
 }).derive({
   fullName: (row) => `${row.firstName} ${row.lastName}`,
 });
 
-// Now defaults and toClient include the computed value
-const defaults = box.users.defaults;
-// { firstName: "John", lastName: "Doe", fullName: "John Doe" }
+// Defaults: { firstName: "John", lastName: "Doe", fullName: "John Doe" }
 ```
-
-The derived field's default value is computed from other defaults at initialization time.
 
 ### 7. sqlOnly — Server-Only Fields
 
-`.sql({ sqlOnly: true })` marks a field as server-only:
-- Included in SQL schema (stored in DB)
-- Excluded from client schema (not sent to client)
-- Useful for internal tokens, computed scores, or sensitive data
+Use `sqlOnly: true` in `s.sql()` to mark a field as server-only. It will be stored in the database but excluded from the client schema.
 
 ```typescript
 const userSchema = schema({
@@ -170,28 +174,10 @@ const userSchema = schema({
   id: s.sql({ type: "int", pk: true }),
   email: s.sql({ type: "varchar" }),
   internalToken: s.sql({ type: "varchar", sqlOnly: true }),
-  trustScore: s.sql({ type: "int", sqlOnly: true }),
 });
 
-// Client schema: { id, email } — internalToken and trustScore excluded
-// SQL schema: { id, email, internalToken, trustScore } — all fields
-// Defaults: { id: 0, email: "" } — sqlOnly fields excluded
-```
-
-### 8. Client-Only Fields
-
-Use `s.client()` without `s.sql()` to define fields that exist only on the client:
-
-```typescript
-const orderSchema = schema({
-  _tableName: "orders",
-  id: s.sql({ type: "int", pk: true }),
-  total: s.sql({ type: "int" }).client({ value: 0 }),
-  // Client-only: computed from other fields, not stored
-  formattedTotal: s.client(""),
-}).derive({
-  formattedTotal: (row) => `$${(row.total / 100).toFixed(2)}`,
-});
+// Client schema: { id, email } — internalToken excluded
+// SQL schema: { id, email, internalToken } — all fields
 ```
 
 ### Schema Object Structure
@@ -201,14 +187,19 @@ The returned schema object has a clear separation of concerns:
 ```typescript
 const schema = createSchema(mySchema);
 
-schema.schemas;           // { sqlSchema, clientSchema, serverSchema } — Zod schemas
-schema.transforms;        // { toClient, toDb, parseForDb, parseFromDb } — transformations
-schema.defaults;          // Default values for forms
-schema.generateDefaults; // Function to generate fresh defaults (executes randomizers)
-schema.pk;               // Primary key field names
-schema.clientPk;         // Client-side primary key field names
-schema.isClientRecord;   // Function to check if a record is client-created
+schema.schemas;             // { sql, clientInput, client, server } — Zod schemas
+schema.transforms;         // { toClient, toDb, parseForDb, parseFromDb } — transformations
+schema.defaults;           // Default values for forms
+schema.generateDefaults;   // Function to generate fresh defaults (executes randomizers)
+schema.pk;                 // Primary key field names
+schema.clientPk;           // Client-side primary key field names
+schema.isClientRecord;     // Function to check if a record is client-created
 ```
+
+- `sql` — Raw database types (e.g., `number` for booleans)
+- `clientInput` — User's input schema before transforms
+- `client` — Union of `sql | clientInput`, the final app state after transforms
+- `server` — Validation state for server boundary
 
 ## Using Schemas
 
@@ -221,17 +212,17 @@ import { s, schema, createSchema } from "cogsbox-shape";
 
 const contactSchema = schema({
   _tableName: "contacts",
-  id: s.sql({ type: "int", pk: true }).client({
+  id: s.sql({ type: "int", pk: true }).clientInput({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
   }),
   name: s.sql({ type: "varchar" }).server(({ sql }) => sql.min(2)),
   email: s.sql({ type: "varchar" }).server(({ sql }) => sql.email()),
-  isArchived: s
-    .sql({ type: "int" })
-    .client(() => z.boolean())
+  isActive: s
+    .sql({ type: "boolean", default: true })
+    .clientInput(() => z.boolean())
     .transform({
-      toClient: (val) => val === 1,
+      toClient: (val) => Boolean(val),
       toDb: (val) => (val ? 1 : 0),
     }),
 });
@@ -239,22 +230,22 @@ const contactSchema = schema({
 const schema = createSchema(contactSchema);
 
 // Access schemas directly
-const { clientSchema, serverSchema, sqlSchema } = schema;
-const { defaultValues, generateDefaults } = schema;
+const { sql, clientInput, client, server } = schema.schemas;
+const { defaults, generateDefaults } = schema;
 
 // Transforms for converting between layers
 const { toClient, toDb, parseForDb, parseFromDb } = schema.transforms;
 
 // Use in a form
 const [data, setData] = useState(generateDefaults());
-// { id: "new_a1b2c3d4", name: "", email: "", isArchived: false }
+// { id: "new_a1b2c3d4", name: "", email: "", isActive: true }
 
 // Validate explicitly
-const result = serverSchema.safeParse(data);
+const result = server.safeParse(data);
 
 // Or handle validation & transformation in a single step!
 const safeDbRow = parseForDb(data);
-// Validates using serverSchema, outputs { isArchived: 0, ... }
+// Validates using server schema, outputs { isActive: 1, ... }
 ```
 
 ## Relationships and Views
@@ -301,7 +292,7 @@ Base schemas **exclude relations** by default, preventing circular dependencies:
 const { schemas, defaults, transforms, pk, clientPk } = box.users;
 
 type UserClient = z.infer<typeof schemas.client>;
-// { id: number; name: string; }
+// { id: number; name: string; isActive: boolean; }
 // No 'posts' — relations are excluded from base schemas
 
 // Convert data between layers

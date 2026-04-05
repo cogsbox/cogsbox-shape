@@ -197,6 +197,14 @@ export interface IBuilderMethods<
     Builder<"clientInput", T, TSql, z.infer<TClientNext>, TClientNext, CollapsedUnion<TSql, TClientNext>>
   >;
 
+  client: <TClientNext extends z.ZodTypeAny>(
+    schema:
+      | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TClientNext)
+      | TClientNext,
+  ) => Prettify<
+    Builder<"client", T, TSql, TInitialValue, TClient, z.ZodUnion<[TSql, TClientNext]>>
+  >;
+
   reference: <TRefSchema extends { _tableName: string }>(
     fieldGetter: () => any,
   ) => Builder<
@@ -241,12 +249,13 @@ export type RelationConfig<T extends Schema<any>> =
   | (BaseRelationConfig<T> & { type: "belongsTo" })
   | (BaseRelationConfig<T> & { type: "manyToMany" });
 
-type Stage = "sql" | "relation" | "clientInput" | "server" | "done";
+type Stage = "sql" | "relation" | "clientInput" | "client" | "server" | "done";
 
 type StageMethods = {
-  sql: "clientInput" | "server" | "transform" | "reference";
-  relation: "clientInput" | "server" | "transform";
-  clientInput: "server" | "transform";
+  sql: "clientInput" | "client" | "server" | "transform" | "reference";
+  relation: "clientInput" | "client" | "server" | "transform";
+  clientInput: "client" | "server" | "transform";
+  client: "server" | "transform";
   server: "transform";
   done: never;
 };
@@ -440,7 +449,7 @@ export const s: ShapeAPI = {
 };
 
 function createBuilder<
-  TStage extends "sql" | "relation" | "clientInput" | "server",
+  TStage extends "sql" | "relation" | "clientInput" | "client" | "server",
   T extends DbConfig,
   TSql extends z.ZodTypeAny,
   TInitialValue,
@@ -643,6 +652,40 @@ function createBuilder<
         validationZod: clientAndServerSchema,
         completedStages: newCompletedStages,
       }) as any;
+    },
+
+    client: <TClientNext extends z.ZodTypeAny>(
+      assert:
+        | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TClientNext)
+        | TClientNext,
+    ) => {
+      if (completedStages.has("server")) {
+        throw new Error("client() must be called before server()");
+      }
+
+      const clientSchema = isFunction(assert)
+        ? assert({
+            sql: config.sqlZod,
+            clientInput: config.clientInputZod || config.clientZod,
+            client: config.clientZod as unknown as z.ZodUnion<[TSql, TClient]>,
+          })
+        : assert;
+
+      const newCompletedStages = new Set(completedStages);
+      newCompletedStages.add("client");
+
+      const newConfig: Parameters<typeof createBuilder>[0] = {
+        ...config,
+        stage: "client" as const,
+        clientZod: clientSchema as TClientNext,
+        validationZod: clientSchema as TClientNext,
+        completedStages: newCompletedStages,
+      };
+      if (config.clientInputZod !== undefined) {
+        newConfig.clientInputZod = config.clientInputZod;
+      }
+
+      return createBuilder(newConfig as any) as any;
     },
 
     server: <TValidationNext extends z.ZodTypeAny>(

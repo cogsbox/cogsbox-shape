@@ -39,7 +39,8 @@ const boxVariant = schema({
   boxName: s
     .sql({ type: "varchar", length: 50 })
     .clientInput({ value: "Standard" })
-    .server(({ clientInput }) => clientInput.min(3, "Name too short")) //;doesnt exist yet but is onyl the clietn type
+    .client(({ sql, clientInput, client }) => client)
+    .server(({ clientInput }) => clientInput.min(3, "Name too short"))
     .transform({ toClient: (v) => v, toDb: (v) => v }),
   color: s.sql({ type: "varchar", length: 20 }).clientInput({ value: "brown" }),
   size: s.sql({ type: "varchar", length: 10 }).clientInput({ value: "medium" }),

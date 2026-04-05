@@ -60,6 +60,29 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
       expectTypeOf<InferredClientInput>().toEqualTypeOf<boolean>();
       expectTypeOf<InferredClient>().toEqualTypeOf<number | boolean>();
     });
+
+    it("should add validation to client schema with .client()", () => {
+      const nameField = s
+        .sql({ type: "varchar" })
+        .clientInput({ value: "John" })
+        .client((tools) => tools.clientInput.min(3));
+      type InferredClient = z.infer<typeof nameField.config.zodClientSchema>;
+      expectTypeOf<InferredClient>().toEqualTypeOf<string>();
+    });
+
+    it("should chain .clientInput().client().server() correctly", () => {
+      const nameField = s
+        .sql({ type: "varchar" })
+        .clientInput({ value: "" })
+        .client((tools) => tools.clientInput.min(3))
+        .server((tools) => tools.clientInput.min(5));
+      type InferredClient = z.infer<typeof nameField.config.zodClientSchema>;
+      type InferredServer = z.infer<
+        typeof nameField.config.zodValidationSchema
+      >;
+      expectTypeOf<InferredClient>().toEqualTypeOf<string>();
+      expectTypeOf<InferredServer>().toEqualTypeOf<string>();
+    });
   });
 
   describe("`createSchemaBoxRegistry` Integration with Relations", () => {
