@@ -33,7 +33,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
 
   describe("Chainable Methods", () => {
     it("should create a union type when .client provides a different type", () => {
-      const idField = s.sql({ type: "int", pk: true }).client({
+      const idField = s.sql({ type: "int", pk: true }).clientInput({
         value: () => "temp-uuid-123",
         schema: z.literal("temp-uuid-123"),
       });
@@ -44,17 +44,21 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     it("should NOT create a union type when .client provides the same type", () => {
       const countField = s
         .sql({ type: "int" })
-        .client({ value: () => 0, schema: z.number() });
+        .clientInput({ value: () => 0, schema: z.number() });
       type InferredClient = z.infer<typeof countField.config.zodClientSchema>;
       expectTypeOf<InferredClient>().toEqualTypeOf<number>();
     });
 
-    it("should correctly override the client schema with .client()", () => {
-      const statusField = s.sql({ type: "int" }).client(() => z.boolean());
+    it("should correctly override the client schema with .clientInput()", () => {
+      const statusField = s.sql({ type: "int" }).clientInput(() => z.boolean());
       type InferredSql = z.infer<typeof statusField.config.zodSqlSchema>;
       type InferredClient = z.infer<typeof statusField.config.zodClientSchema>;
+      type InferredClientInput = z.infer<
+        typeof statusField.config.zodClientInputSchema
+      >;
       expectTypeOf<InferredSql>().toEqualTypeOf<number>();
-      expectTypeOf<InferredClient>().toEqualTypeOf<boolean>();
+      expectTypeOf<InferredClientInput>().toEqualTypeOf<boolean>();
+      expectTypeOf<InferredClient>().toEqualTypeOf<number | boolean>();
     });
   });
 
@@ -62,7 +66,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     // 1. Define schemas with placeholders
     const users = schema({
       _tableName: "users",
-      id: s.sql({ type: "int", pk: true }).client({
+      id: s.sql({ type: "int", pk: true }).clientInput({
         value: () => "new-user" as const,
         schema: z.literal("new-user"),
       }),
@@ -72,7 +76,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     const posts = schema({
       _tableName: "posts",
       id: s.sql({ type: "int", pk: true }),
-      isPublished: s.sql({ type: "int" }).client(() => z.boolean()),
+      isPublished: s.sql({ type: "int" }).clientInput(() => z.boolean()),
       authorId: s.reference(() => users.id),
     });
 
@@ -108,7 +112,7 @@ describe("Schema Builder Runtime Behavior", () => {
     // Define the schema using the new builder syntax
     const defaultsSchema = schema({
       _tableName: "defaults",
-      fromInitialState: s.sql({ type: "varchar" }).client({
+      fromInitialState: s.sql({ type: "varchar" }).clientInput({
         value: () => "from-initial-state",
         schema: z.string(),
       }),
@@ -126,7 +130,7 @@ describe("Schema Builder Runtime Behavior", () => {
     );
     const defaults = box.defaults.defaults;
 
-    it("should get default from .client()", () => {
+    it("should get default from .clientInput()", () => {
       expect(defaults.fromInitialState).toBe("from-initial-state");
     });
 
@@ -149,7 +153,7 @@ describe("Schema Builder Runtime Behavior", () => {
       id: s.sql({ type: "int", pk: true }),
       status: s
         .sql({ type: "int" }) // DB: 0=Inactive, 1=Active
-        .client(() => z.enum(["inactive", "active"])) // Client: "inactive" | "active"
+        .clientInput(() => z.enum(["inactive", "active"])) // Client: "inactive" | "active"
         .transform({
           toClient: (dbValue) => (dbValue === 1 ? "active" : "inactive"),
           toDb: (clientValue) => (clientValue === "active" ? 1 : 0),
@@ -197,7 +201,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
     _tableName: "users",
     id: s
       .sql({ type: "int", pk: true })
-      .client({ value: () => "user-123", schema: z.string() }),
+      .clientInput({ value: () => "user-123", schema: z.string() }),
 
     petId: s.reference(() => pets.id),
     pets: s.hasMany(),
@@ -347,8 +351,8 @@ describe("Relation Defaults in Views", () => {
     _tableName: "users",
     id: s
       .sql({ type: "int", pk: true })
-      .client({ value: () => "user-123", schema: z.string() }),
-    name: s.sql({ type: "varchar" }).client({ value: "John" }),
+      .clientInput({ value: () => "user-123", schema: z.string() }),
+    name: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
     posts: s.hasMany({ count: 2 }), // Should generate 2 posts
     comments: s.hasMany([]), // Should be empty array
     profile: s.hasOne(true), // Changed from {} to true
@@ -359,7 +363,7 @@ describe("Relation Defaults in Views", () => {
   const posts = schema({
     _tableName: "posts",
     id: s.sql({ type: "int", pk: true }),
-    title: s.sql({ type: "varchar" }).client({ value: "Default Post" }),
+    title: s.sql({ type: "varchar" }).clientInput({ value: "Default Post" }),
     authorId: s.reference(() => users.id),
     user: s.hasOne(true),
   });
@@ -367,7 +371,7 @@ describe("Relation Defaults in Views", () => {
   const comments = schema({
     _tableName: "comments",
     id: s.sql({ type: "int", pk: true }),
-    text: s.sql({ type: "varchar" }).client({ value: "Default Comment" }),
+    text: s.sql({ type: "varchar" }).clientInput({ value: "Default Comment" }),
     userId: s.reference(() => users.id),
     user: s.hasOne(true),
   });
@@ -375,7 +379,7 @@ describe("Relation Defaults in Views", () => {
   const profiles = schema({
     _tableName: "profiles",
     id: s.sql({ type: "int", pk: true }),
-    bio: s.sql({ type: "varchar" }).client({ value: "Default Bio" }),
+    bio: s.sql({ type: "varchar" }).clientInput({ value: "Default Bio" }),
     userId: s.reference(() => users.id),
     user: s.hasOne(true),
   });
@@ -463,7 +467,7 @@ describe("Transform affects defaults", () => {
   const userSchema = schema({
     _tableName: "users",
 
-    id: s.sql({ type: "int", pk: true }).client({
+    id: s.sql({ type: "int", pk: true }).clientInput({
       value: () => `temp_${Math.random().toString(36).substr(2, 9)}`,
       schema: z.string(),
     }),
@@ -474,13 +478,13 @@ describe("Transform affects defaults", () => {
 
     isActive: s
       .sql({ type: "int" })
-      .client(() => z.boolean())
+      .clientInput(() => z.boolean())
       .transform({
         toClient: (val) => val === 1,
         toDb: (val) => (val ? 1 : 0),
       }),
 
-    role: s.sql({ type: "varchar" }).client({
+    role: s.sql({ type: "varchar" }).clientInput({
       value: "user",
       schema: z.enum(["user", "admin"]),
     }),
@@ -507,7 +511,7 @@ describe("Transform affects defaults", () => {
 
 describe("UUID generation in initialState", () => {
   it("should call value function with uuid tool", () => {
-    const field = s.sql({ type: "int", pk: true }).client({
+    const field = s.sql({ type: "int", pk: true }).clientInput({
       value: ({ uuid }) => uuid(),
       schema: z.string(),
       clientPk: true,
@@ -521,15 +525,15 @@ describe("UUID generation in initialState", () => {
 describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRecord", () => {
   const users = schema({
     _tableName: "users",
-    id: s.sql({ type: "int", pk: true }).client({
+    id: s.sql({ type: "int", pk: true }).clientInput({
       value: ({ uuid }) => uuid(),
       schema: z.string(),
       clientPk: true,
     }),
-    name: s.sql({ type: "varchar" }).client({ value: "John" }),
+    name: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
     isActive: s
       .sql({ type: "int" })
-      .client(() => z.boolean())
+      .clientInput(() => z.boolean())
       .transform({
         toClient: (val) => val === 1,
         toDb: (val) => (val ? 1 : 0),
@@ -541,7 +545,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
   const posts = schema({
     _tableName: "posts",
     id: s.sql({ type: "int", pk: true }),
-    title: s.sql({ type: "varchar" }).client({ value: "Untitled" }),
+    title: s.sql({ type: "varchar" }).clientInput({ value: "Untitled" }),
     authorId: s.reference(() => users.id),
   });
 
@@ -657,13 +661,13 @@ describe("Smart clientPk and isClientRecord logic", () => {
   const smartSchema = schema({
     _tableName: "smart_table",
     // 1. Auto-detect function execution
-    id: s.sql({ type: "int", pk: true }).client({
+    id: s.sql({ type: "int", pk: true }).clientInput({
       value: ({ uuid }) => uuid(),
       schema: z.string(),
       clientPk: true, // Should auto-detect by dummy-executing the uuid factory
     }),
     // 2. Custom function + mapped db key
-    mappedId: s.sql({ type: "int", field: "db_mapped_id" }).client({
+    mappedId: s.sql({ type: "int", field: "db_mapped_id" }).clientInput({
       value: "temp_999",
       schema: z.string(),
       clientPk: (val) => typeof val === "string" && val.startsWith("temp_"),
@@ -716,18 +720,18 @@ describe("Nested relations with transforms", () => {
     _tableName: "users",
     id: s
       .sql({ type: "int", pk: true })
-      .client({ value: () => "user-123", schema: z.string() }),
-    name: s.sql({ type: "varchar" }).client({ value: "John" }),
+      .clientInput({ value: () => "user-123", schema: z.string() }),
+    name: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
     posts: s.hasMany({ count: 1 }),
   });
 
   const posts = schema({
     _tableName: "posts",
     id: s.sql({ type: "int", pk: true }),
-    title: s.sql({ type: "varchar" }).client({ value: "Default Post" }),
+    title: s.sql({ type: "varchar" }).clientInput({ value: "Default Post" }),
     isPublished: s
       .sql({ type: "int" })
-      .client(() => z.boolean())
+      .clientInput(() => z.boolean())
       .transform({
         toClient: (val) => val === 1,
         toDb: (val) => (val ? 1 : 0),
@@ -739,10 +743,10 @@ describe("Nested relations with transforms", () => {
   const comments = schema({
     _tableName: "comments",
     id: s.sql({ type: "int", pk: true }),
-    text: s.sql({ type: "varchar" }).client({ value: "Comment" }),
+    text: s.sql({ type: "varchar" }).clientInput({ value: "Comment" }),
     isDeleted: s
       .sql({ type: "int" })
-      .client(() => z.boolean())
+      .clientInput(() => z.boolean())
       .transform({
         toClient: (val) => val === 1,
         toDb: (val) => (val ? 1 : 0),
@@ -898,11 +902,11 @@ describe("Nested relations with transforms", () => {
 describe("sqlOnly fields", () => {
   const users = schema({
     _tableName: "users",
-    id: s.sql({ type: "int", pk: true }).client({
+    id: s.sql({ type: "int", pk: true }).clientInput({
       value: () => "user-123",
       schema: z.string(),
     }),
-    name: s.sql({ type: "varchar" }).client({ value: "John" }),
+    name: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
     internalToken: s.sql({ type: "varchar", sqlOnly: true }),
   });
 
@@ -948,9 +952,9 @@ describe("derive - computed fields", () => {
   const users = schema({
     _tableName: "users",
     id: s.sql({ type: "int", pk: true }),
-    fullName: s.client(""),
-    firstName: s.sql({ type: "varchar" }).client({ value: "John" }),
-    lastName: s.sql({ type: "varchar" }).client({ value: "Doe" }),
+    fullName: s.clientInput(""),
+    firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+    lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
   }).derive({
     fullName: (row) => `${row.firstName} ${row.lastName}`,
   });
@@ -983,10 +987,10 @@ describe("derive - computed fields", () => {
     const products = schema({
       _tableName: "products",
       id: s.sql({ type: "int", pk: true }),
-      price: s.sql({ type: "int" }).client({ value: 100 }),
-      quantity: s.sql({ type: "int" }).client({ value: 5 }),
-      total: s.client(0),
-      formattedPrice: s.client(""),
+      price: s.sql({ type: "int" }).clientInput({ value: 100 }),
+      quantity: s.sql({ type: "int" }).clientInput({ value: 5 }),
+      total: s.clientInput(0),
+      formattedPrice: s.clientInput(""),
     }).derive({
       total: (row) => row.price * row.quantity,
       formattedPrice: (row) => `$${row.price}`,
@@ -1003,7 +1007,7 @@ describe("derive - computed fields", () => {
 describe("sqlOnly with derive in relations", () => {
   const users = schema({
     _tableName: "users",
-    id: s.sql({ type: "int", pk: true }).client({
+    id: s.sql({ type: "int", pk: true }).clientInput({
       value: () => "user-123",
       schema: z.string(),
     }),
@@ -1014,9 +1018,9 @@ describe("sqlOnly with derive in relations", () => {
   const posts = schema({
     _tableName: "posts",
     id: s.sql({ type: "int", pk: true }),
-    title: s.sql({ type: "varchar" }).client({ value: "Post" }),
+    title: s.sql({ type: "varchar" }).clientInput({ value: "Post" }),
     authorId: s.reference(() => users.id),
-    preview: s.client(""),
+    preview: s.clientInput(""),
   }).derive({
     preview: (row) => row.title.substring(0, 5),
   });
@@ -1042,7 +1046,7 @@ describe("sqlOnly with derive in relations", () => {
     const defaults = view.defaults;
 
     expect(defaults.preview).toBe("Post");
-  }); 
+  });
 
   it("should apply toClient transforms correctly with derived", () => {
     const view = box.users.createView({ posts: true });
