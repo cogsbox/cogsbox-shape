@@ -1786,6 +1786,7 @@ export type DeriveViewResult<
   };
 
   defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+  defaultsDefinition: any;
 
   pk: string[] | null;
   clientPk: string[] | null;
@@ -1923,6 +1924,7 @@ type CreateSchemaBoxReturn<
     };
 
     defaults: Resolved[K]["zodSchemas"]["defaultValues"];
+    defaultsDefinition: any;
     stateType: Resolved[K]["zodSchemas"]["stateType"];
     generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
 
@@ -2046,6 +2048,49 @@ export function createSchemaBox<
     };
   }
 
+  const cleanerRegistry: any = {};
+  const tableNameToRegistryKeyMap: Record<string, string> = {};
+  for (const key in finalRegistry) {
+    const tableName = finalRegistry[key].rawSchema._tableName;
+    tableNameToRegistryKeyMap[tableName] = key;
+  }
+
+  for (const tableName in finalRegistry) {
+    const entry = finalRegistry[tableName];
+    const rawSchema = entry.rawSchema;
+    const tableDef: any = {};
+
+    for (const key in rawSchema) {
+      if (key === "_tableName" || key.startsWith("__")) continue;
+
+      const field = rawSchema[key];
+      if (!field?.config?.sql) continue;
+
+      const sqlConfig = field.config.sql;
+
+      if (sqlConfig.schema) {
+        const targetTableName = sqlConfig.schema()._tableName;
+        const targetRegKey = tableNameToRegistryKeyMap[targetTableName];
+
+        if (targetRegKey && finalRegistry[targetRegKey]) {
+          const targetEntry = finalRegistry[targetRegKey];
+          const targetDefaults = targetEntry.generateDefaults();
+
+          if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+            const count = (sqlConfig as any)?.defaultCount || 1;
+            tableDef[key] = Array.from({ length: count }, () => targetDefaults);
+          } else {
+            tableDef[key] = targetDefaults;
+          }
+        }
+      } else {
+        tableDef[key] = rawSchema[key]?.config?.initialValue;
+      }
+    }
+
+    entry.zodSchemas.defaultsDefinition = tableDef;
+  }
+
   const createNavProxy = (currentTable: string, registry: any): any => {
     return new Proxy(
       {},
@@ -2070,13 +2115,6 @@ export function createSchemaBox<
     );
   };
 
-  const cleanerRegistry: any = {};
-  const tableNameToRegistryKeyMap: Record<string, string> = {};
-  for (const key in finalRegistry) {
-    const tableName = finalRegistry[key].rawSchema._tableName;
-    tableNameToRegistryKeyMap[tableName] = key;
-  }
-
   for (const tableName in finalRegistry) {
     const entry = finalRegistry[tableName];
 
@@ -2099,6 +2137,7 @@ export function createSchemaBox<
       },
 
       defaults: entry.generateDefaults(),
+      defaultsDefinition: entry.zodSchemas.defaultsDefinition,
       stateType: entry.zodSchemas.stateType,
       generateDefaults: entry.generateDefaults,
 
@@ -2116,6 +2155,12 @@ export function createSchemaBox<
           tableNameToRegistryKeyMap,
         );
         const defaults = computeViewDefaults(
+          tableName,
+          selection,
+          finalRegistry,
+          tableNameToRegistryKeyMap,
+        );
+        const defaultsDefinition = computeViewDefaultsDefinition(
           tableName,
           selection,
           finalRegistry,
@@ -2235,6 +2280,7 @@ export function createSchemaBox<
           },
 
           defaults: defaults,
+          defaultsDefinition: defaultsDefinition,
           pk: entry.zodSchemas.pk,
           clientPk: entry.zodSchemas.clientPk,
           supportsReconciliation: view.supportsReconciliation,
@@ -2326,6 +2372,85 @@ function computeViewDefaults(
   }
 
   return baseDefaults;
+}
+
+function computeViewDefaultsDefinition(
+  currentRegistryKey: string,
+  selection: Record<string, any> | boolean,
+  registry: any,
+  tableNameToRegistryKeyMap: Record<string, string>,
+  visited = new Set<string>(),
+): any {
+  if (visited.has(currentRegistryKey)) {
+    return undefined;
+  }
+  visited.add(currentRegistryKey);
+
+  const entry = registry[currentRegistryKey];
+  if (!entry) {
+    return {};
+  }
+
+  const baseDef: any = {};
+
+  for (const key in entry.rawSchema) {
+    if (key === "_tableName" || key.startsWith("__")) continue;
+
+    const field = entry.rawSchema[key];
+    if (!field?.config?.sql) continue;
+
+    const sqlConfig = field.config.sql;
+
+    if (sqlConfig.schema) {
+      const targetTableName = sqlConfig.schema()._tableName;
+      const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+      if (!nextRegKey) continue;
+
+      const targetEntry = registry[nextRegKey];
+      const targetDefaults = targetEntry.generateDefaults();
+
+      if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+        const count = (sqlConfig as any)?.defaultCount || 1;
+        baseDef[key] = Array.from({ length: count }, () => targetDefaults);
+      } else if (sqlConfig.defaultConfig !== null) {
+        baseDef[key] = targetDefaults;
+      }
+    } else {
+      baseDef[key] = entry.rawSchema[key]?.config?.initialValue;
+    }
+  }
+
+  if (selection === true || typeof selection !== "object") {
+    return baseDef;
+  }
+
+  const result: any = { ...baseDef };
+
+  for (const key in selection) {
+    if (!selection[key]) continue;
+
+    const field = entry.rawSchema[key];
+    if (!field?.config?.sql?.schema) continue;
+
+    const relationConfig = field.config.sql;
+    const targetTableName = relationConfig.schema()._tableName;
+    const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
+    if (!nextRegistryKey) continue;
+
+    const nestedDef = computeViewDefaultsDefinition(
+      nextRegistryKey,
+      selection[key],
+      registry,
+      tableNameToRegistryKeyMap,
+      new Set(visited),
+    );
+
+    if (nestedDef) {
+      result[`__def__${key}`] = nestedDef;
+    }
+  }
+
+  return result;
 }
 
 type SchemaProxy<S extends Record<string, SchemaWithPlaceholders>> = {

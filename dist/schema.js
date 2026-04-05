@@ -8,7 +8,7 @@ export function currentTimeStamp() {
     };
 }
 export const s = {
-    client: (value) => {
+    clientInput: (value) => {
         const actualValue = isFunction(value) ? value({ uuid }) : value;
         let inferredZodType;
         if (typeof actualValue === "string") {
@@ -30,7 +30,7 @@ export const s = {
             inferredZodType = z.any();
         }
         return createBuilder({
-            stage: "client",
+            stage: "clientInput",
             sqlConfig: null,
             sqlZod: z.undefined(),
             initialValue: actualValue,
@@ -107,6 +107,7 @@ function createBuilder(config) {
             zodSqlSchema: config.sqlZod,
             initialValue: config.initialValue ||
                 inferDefaultFromZod(config.clientZod, config.sqlConfig),
+            zodClientInputSchema: config.clientInputZod || config.clientZod,
             zodClientSchema: config.clientZod,
             zodValidationSchema: config.validationZod,
             clientTransform: config.clientTransform,
@@ -121,15 +122,15 @@ function createBuilder(config) {
                 },
             });
         },
-        client: (...args) => {
-            if (completedStages.has("client")) {
-                throw new Error("client() can only be called once in the chain");
+        clientInput: (...args) => {
+            if (completedStages.has("clientInput")) {
+                throw new Error("clientInput() can only be called once in the chain");
             }
             if (completedStages.has("server")) {
-                throw new Error("client() must be called before server()");
+                throw new Error("clientInput() must be called before server()");
             }
             const newCompletedStages = new Set(completedStages);
-            newCompletedStages.add("client");
+            newCompletedStages.add("clientInput");
             let optionsOrSchema = args[0];
             if (config.stage === "relation") {
                 const assert = typeof optionsOrSchema === "function" ||
@@ -138,8 +139,10 @@ function createBuilder(config) {
                     : optionsOrSchema?.schema;
                 return createBuilder({
                     ...config,
-                    stage: "client",
+                    stage: "clientInput",
                     completedStages: newCompletedStages,
+                    clientZod: assert,
+                    clientInputZod: assert,
                     clientTransform: (baseSchema) => {
                         if (isFunction(assert)) {
                             return assert({ sql: baseSchema });
@@ -254,13 +257,39 @@ function createBuilder(config) {
             }
             return createBuilder({
                 ...config,
-                stage: "client",
+                stage: "clientInput",
                 sqlConfig: newConfig,
                 initialValue: actualValue,
                 clientZod: clientAndServerSchema,
+                clientInputZod: finalSchema,
                 validationZod: clientAndServerSchema,
                 completedStages: newCompletedStages,
             });
+        },
+        client: (assert) => {
+            if (completedStages.has("server")) {
+                throw new Error("client() must be called before server()");
+            }
+            const clientSchema = isFunction(assert)
+                ? assert({
+                    sql: config.sqlZod,
+                    clientInput: config.clientInputZod || config.clientZod,
+                    client: config.clientZod,
+                })
+                : assert;
+            const newCompletedStages = new Set(completedStages);
+            newCompletedStages.add("client");
+            const newConfig = {
+                ...config,
+                stage: "client",
+                clientZod: clientSchema,
+                validationZod: clientSchema,
+                completedStages: newCompletedStages,
+            };
+            if (config.clientInputZod !== undefined) {
+                newConfig.clientInputZod = config.clientInputZod;
+            }
+            return createBuilder(newConfig);
         },
         server: (assert) => {
             if (completedStages.has("server")) {
@@ -269,6 +298,7 @@ function createBuilder(config) {
             const serverSchema = isFunction(assert)
                 ? assert({
                     sql: config.sqlZod,
+                    clientInput: config.clientZod,
                     client: config.clientZod,
                 })
                 : assert;
@@ -282,8 +312,8 @@ function createBuilder(config) {
             });
         },
         transform: (transforms) => {
-            if (!completedStages.has("server") && !completedStages.has("client")) {
-                throw new Error("transform() requires at least client() or server() to be called first");
+            if (!completedStages.has("server") && !completedStages.has("clientInput")) {
+                throw new Error("transform() requires at least clientInput() or server() to be called first");
             }
             return {
                 config: {
@@ -386,6 +416,7 @@ function isReference(value) {
 }
 export function createSchema(schema, relations) {
     const sqlFields = {};
+    const clientInputFields = {};
     const clientFields = {};
     const serverFields = {};
     const defaultValues = {};
@@ -420,6 +451,7 @@ export function createSchema(schema, relations) {
                 else {
                     clientToDbKeys[key] = dbFieldName;
                     dbToClientKeys[dbFieldName] = key;
+                    clientInputFields[key] = config.zodClientInputSchema;
                     clientFields[key] = config.zodClientSchema;
                     serverFields[key] = config.zodValidationSchema;
                     const initialValueOrFn = config.initialValue;
@@ -461,6 +493,7 @@ export function createSchema(schema, relations) {
                 else {
                     clientToDbKeys[key] = dbFieldName;
                     dbToClientKeys[dbFieldName] = key;
+                    clientInputFields[key] = config.zodClientInputSchema;
                     clientFields[key] = config.zodClientSchema;
                     serverFields[key] = config.zodValidationSchema;
                     if (config.transforms) {
@@ -480,6 +513,7 @@ export function createSchema(schema, relations) {
                 }
             }
             else {
+                clientInputFields[key] = config.zodClientInputSchema;
                 clientFields[key] = config.zodClientSchema;
                 serverFields[key] = config.zodValidationSchema;
                 if (config.transforms) {
@@ -591,6 +625,7 @@ export function createSchema(schema, relations) {
         return dbObject;
     };
     const finalSqlSchema = z.object(sqlFields);
+    const finalClientInputSchema = z.object(clientInputFields);
     const finalClientSchema = z.object(clientFields);
     const finalValidationSchema = z.object(serverFields);
     return {
@@ -598,6 +633,7 @@ export function createSchema(schema, relations) {
         clientPk: clientPkKeys.length ? clientPkKeys : null,
         isClientRecord,
         sqlSchema: finalSqlSchema,
+        clientInputSchema: finalClientInputSchema,
         clientSchema: finalClientSchema,
         serverSchema: finalValidationSchema,
         defaultValues: defaultValues,
@@ -758,6 +794,44 @@ export function createSchemaBox(schemas, resolutions) {
             generateDefaults: zodSchemas.generateDefaults,
         };
     }
+    const cleanerRegistry = {};
+    const tableNameToRegistryKeyMap = {};
+    for (const key in finalRegistry) {
+        const tableName = finalRegistry[key].rawSchema._tableName;
+        tableNameToRegistryKeyMap[tableName] = key;
+    }
+    for (const tableName in finalRegistry) {
+        const entry = finalRegistry[tableName];
+        const rawSchema = entry.rawSchema;
+        const tableDef = {};
+        for (const key in rawSchema) {
+            if (key === "_tableName" || key.startsWith("__"))
+                continue;
+            const field = rawSchema[key];
+            if (!field?.config?.sql)
+                continue;
+            const sqlConfig = field.config.sql;
+            if (sqlConfig.schema) {
+                const targetTableName = sqlConfig.schema()._tableName;
+                const targetRegKey = tableNameToRegistryKeyMap[targetTableName];
+                if (targetRegKey && finalRegistry[targetRegKey]) {
+                    const targetEntry = finalRegistry[targetRegKey];
+                    const targetDefaults = targetEntry.generateDefaults();
+                    if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+                        const count = sqlConfig?.defaultCount || 1;
+                        tableDef[key] = Array.from({ length: count }, () => targetDefaults);
+                    }
+                    else {
+                        tableDef[key] = targetDefaults;
+                    }
+                }
+            }
+            else {
+                tableDef[key] = rawSchema[key]?.config?.initialValue;
+            }
+        }
+        entry.zodSchemas.defaultsDefinition = tableDef;
+    }
     const createNavProxy = (currentTable, registry) => {
         return new Proxy({}, {
             get(target, relationName) {
@@ -776,12 +850,6 @@ export function createSchemaBox(schemas, resolutions) {
             },
         });
     };
-    const cleanerRegistry = {};
-    const tableNameToRegistryKeyMap = {};
-    for (const key in finalRegistry) {
-        const tableName = finalRegistry[key].rawSchema._tableName;
-        tableNameToRegistryKeyMap[tableName] = key;
-    }
     for (const tableName in finalRegistry) {
         const entry = finalRegistry[tableName];
         cleanerRegistry[tableName] = {
@@ -789,6 +857,7 @@ export function createSchemaBox(schemas, resolutions) {
             schemaKey: tableName,
             schemas: {
                 sql: entry.zodSchemas.sqlSchema,
+                clientInput: entry.zodSchemas.clientInputSchema,
                 client: entry.zodSchemas.clientSchema,
                 server: entry.zodSchemas.serverSchema,
             },
@@ -799,6 +868,7 @@ export function createSchemaBox(schemas, resolutions) {
                 parseFromDb: entry.transforms.parseFromDb,
             },
             defaults: entry.generateDefaults(),
+            defaultsDefinition: entry.zodSchemas.defaultsDefinition,
             stateType: entry.zodSchemas.stateType,
             generateDefaults: entry.generateDefaults,
             pk: entry.pk,
@@ -808,6 +878,7 @@ export function createSchemaBox(schemas, resolutions) {
             createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
+                const defaultsDefinition = computeViewDefaultsDefinition(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const deepToClient = (dbData, currentSelection, currentKey) => {
                     if (!dbData)
                         return dbData;
@@ -884,6 +955,7 @@ export function createSchemaBox(schemas, resolutions) {
                         },
                     },
                     defaults: defaults,
+                    defaultsDefinition: defaultsDefinition,
                     pk: entry.zodSchemas.pk,
                     clientPk: entry.zodSchemas.clientPk,
                     supportsReconciliation: view.supportsReconciliation,
@@ -945,4 +1017,62 @@ function computeViewDefaults(currentRegistryKey, selection, registry, tableNameT
         }
     }
     return baseDefaults;
+}
+function computeViewDefaultsDefinition(currentRegistryKey, selection, registry, tableNameToRegistryKeyMap, visited = new Set()) {
+    if (visited.has(currentRegistryKey)) {
+        return undefined;
+    }
+    visited.add(currentRegistryKey);
+    const entry = registry[currentRegistryKey];
+    if (!entry) {
+        return {};
+    }
+    const baseDef = {};
+    for (const key in entry.rawSchema) {
+        if (key === "_tableName" || key.startsWith("__"))
+            continue;
+        const field = entry.rawSchema[key];
+        if (!field?.config?.sql)
+            continue;
+        const sqlConfig = field.config.sql;
+        if (sqlConfig.schema) {
+            const targetTableName = sqlConfig.schema()._tableName;
+            const nextRegKey = tableNameToRegistryKeyMap[targetTableName];
+            if (!nextRegKey)
+                continue;
+            const targetEntry = registry[nextRegKey];
+            const targetDefaults = targetEntry.generateDefaults();
+            if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
+                const count = sqlConfig?.defaultCount || 1;
+                baseDef[key] = Array.from({ length: count }, () => targetDefaults);
+            }
+            else if (sqlConfig.defaultConfig !== null) {
+                baseDef[key] = targetDefaults;
+            }
+        }
+        else {
+            baseDef[key] = entry.rawSchema[key]?.config?.initialValue;
+        }
+    }
+    if (selection === true || typeof selection !== "object") {
+        return baseDef;
+    }
+    const result = { ...baseDef };
+    for (const key in selection) {
+        if (!selection[key])
+            continue;
+        const field = entry.rawSchema[key];
+        if (!field?.config?.sql?.schema)
+            continue;
+        const relationConfig = field.config.sql;
+        const targetTableName = relationConfig.schema()._tableName;
+        const nextRegistryKey = tableNameToRegistryKeyMap[targetTableName];
+        if (!nextRegistryKey)
+            continue;
+        const nestedDef = computeViewDefaultsDefinition(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, new Set(visited));
+        if (nestedDef) {
+            result[`__def__${key}`] = nestedDef;
+        }
+    }
+    return result;
 }

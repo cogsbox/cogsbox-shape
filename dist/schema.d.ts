@@ -35,52 +35,57 @@ type BaseConfig = {
     field?: string;
     sqlOnly?: true;
 };
-type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodBoolean> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
-} ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodBoolean : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+} ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodNumber : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
 } ? TDefault extends true ? never : z.ZodDate : z.ZodDate : never;
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;
 type CollapsedUnion<A extends z.ZodTypeAny, B extends z.ZodTypeAny> = A extends B ? (B extends A ? A : z.ZodUnion<[A, B]>) : z.ZodUnion<[A, B]>;
 export interface IBuilderMethods<T extends DbConfig, TSql extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
-    client<const TValue>(options: {
+    clientInput<const TValue>(options: {
         value: TValue | ((tools: {
             uuid: () => string;
         }) => TValue);
         schema?: never;
         clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"client", T, TSql, TValue extends () => infer R ? R : TValue, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>>>;
-    client<const TSchema extends z.ZodTypeAny>(options: {
+    }): Prettify<Builder<"clientInput", T, TSql, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>>>;
+    clientInput<const TSchema extends z.ZodTypeAny>(options: {
         value?: never;
         schema: TSchema;
         clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"client", T, TSql, z.infer<TSchema>, CollapsedUnion<TSql, TSchema>, CollapsedUnion<TSql, TSchema>>>;
-    client<const TSchema extends z.ZodTypeAny>(options: {
+    }): Prettify<Builder<"clientInput", T, TSql, z.infer<TSchema>, TSchema, CollapsedUnion<TSql, TSchema>>>;
+    clientInput<const TSchema extends z.ZodTypeAny>(options: {
         value?: never;
         schema: TSchema | ((tools: any) => TSchema);
         clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"client", T, TSql, z.infer<TSchema>, CollapsedUnion<TSql, TSchema>, CollapsedUnion<TSql, TSchema>>>;
-    client<const TValue>(options: {
+    }): Prettify<Builder<"clientInput", T, TSql, z.infer<TSchema>, TSchema, CollapsedUnion<TSql, TSchema>>>;
+    clientInput<const TValue>(options: {
         value: TValue | ((tools: {
             uuid: () => string;
         }) => TValue);
         schema?: never;
         clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"client", T, TSql, TValue extends () => infer R ? R : TValue, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>>>;
-    client(options: {
+    }): Prettify<Builder<"clientInput", T, TSql, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, CollapsedUnion<TSql, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>>>;
+    clientInput(options: {
         value?: never;
         schema: (tools: any) => z.ZodTypeAny;
-    }): Prettify<Builder<"client", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>>;
-    client<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+    }): Prettify<Builder<"clientInput", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>>;
+    clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
         value: TValue | ((tools: {
             uuid: () => string;
         }) => TValue);
         schema: TSchema | ((base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>) => TSchema);
         clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"client", T, TSql, TValue extends () => infer R ? R : TValue, CollapsedUnion<TSql, TSchema>, CollapsedUnion<TSql, TSchema>>>;
-    client<TClientNext extends z.ZodTypeAny>(schema: ((tools: {
+    }): Prettify<Builder<"clientInput", T, TSql, TValue extends () => infer R ? R : TValue, TSchema, CollapsedUnion<TSql, TSchema>>>;
+    clientInput<TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
-    }) => TClientNext) | TClientNext): Prettify<Builder<"client", T, TSql, TInitialValue, TClientNext, TClientNext>>;
+    }) => TClientNext) | TClientNext): Prettify<Builder<"clientInput", T, TSql, z.infer<TClientNext>, TClientNext, CollapsedUnion<TSql, TClientNext>>>;
+    client: <TClientNext extends z.ZodTypeAny>(schema: ((tools: {
+        sql: TSql;
+        clientInput: TClient;
+        client: z.ZodUnion<[TSql, TClient]>;
+    }) => TClientNext) | TClientNext) => Prettify<Builder<"client", T, TSql, TInitialValue, TClient, z.ZodUnion<[TSql, TClientNext]>>>;
     reference: <TRefSchema extends {
         _tableName: string;
     }>(fieldGetter: () => any) => Builder<"sql", T & {
@@ -88,7 +93,8 @@ export interface IBuilderMethods<T extends DbConfig, TSql extends z.ZodTypeAny, 
     }, TSql, TInitialValue, TClient, TValidation>;
     server: <TValidationNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
-        client: TClient;
+        clientInput: TClient;
+        client: z.ZodUnion<[TSql, TClient]>;
     }) => TValidationNext) | TValidationNext) => Prettify<Builder<"server", T, TSql, TInitialValue, TClient, TValidationNext>>;
     transform: (transforms: {
         toClient: (dbValue: z.infer<TSql>) => z.infer<TClient>;
@@ -114,10 +120,11 @@ export type RelationConfig<T extends Schema<any>> = (BaseRelationConfig<T> & {
 }) | (BaseRelationConfig<T> & {
     type: "manyToMany";
 });
-type Stage = "sql" | "relation" | "client" | "server" | "done";
+type Stage = "sql" | "relation" | "clientInput" | "client" | "server" | "done";
 type StageMethods = {
-    sql: "client" | "server" | "transform" | "reference";
-    relation: "client" | "server" | "transform";
+    sql: "clientInput" | "client" | "server" | "transform" | "reference";
+    relation: "clientInput" | "client" | "server" | "transform";
+    clientInput: "client" | "server" | "transform";
     client: "server" | "transform";
     server: "transform";
     done: never;
@@ -126,6 +133,7 @@ type BuilderConfig<T extends DbConfig, TSql extends z.ZodTypeAny, TInitialValue,
     sql: T;
     zodSqlSchema: TSql;
     initialValue: TInitialValue;
+    zodClientInputSchema: TClient;
     zodClientSchema: TClient;
     zodValidationSchema: TValidation;
     clientTransform?: (schema: z.ZodTypeAny) => z.ZodTypeAny;
@@ -136,7 +144,8 @@ export type Builder<TStage extends Stage, T extends DbConfig, TSql extends z.Zod
         sql: T;
         zodSqlSchema: TSql;
         initialValue: TInitialValue;
-        zodClientSchema: TClient;
+        zodClientInputSchema: TClient;
+        zodClientSchema: TValidation;
         zodValidationSchema: TValidation;
     };
 } & Pick<IBuilderMethods<T, TSql, TInitialValue, TClient, TValidation>, StageMethods[TStage]>;
@@ -149,10 +158,9 @@ export type Reference<TGetter extends () => any> = {
     getter: TGetter;
 };
 interface ShapeAPI {
-    client: <const TValue>(value: TValue | ((tools: {
+    clientInput: <const TValue>(value: TValue | ((tools: {
         uuid: () => string;
-    }) => TValue)) => Builder<"client", null, z.ZodUndefined, // No SQL schema
-    TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
+    }) => TValue)) => Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
     sql: <const T extends SQLType>(sqlConfig: T) => Builder<"sql", T, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
     reference: <TGetter extends () => any>(getter: TGetter) => Reference<TGetter>;
     hasMany: <T extends HasManyDefault>(config?: T) => PlaceholderRelation<"hasMany">;
@@ -228,6 +236,7 @@ export declare function createSchema<T extends {
     clientPk: string[] | null;
     isClientRecord: (record: any) => boolean;
     sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>;
+    clientInputSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientInputSchema">>>;
     clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>;
     serverSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>>;
     defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
@@ -290,6 +299,7 @@ type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders
         rawSchema: ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>;
         zodSchemas: {
             sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodSqlSchema">>>;
+            clientInputSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodClientInputSchema">>>;
             clientSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodClientSchema">>>;
             serverSchema: z.ZodObject<Prettify<DeriveSchemaByKey<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>, "zodValidationSchema">>>;
             defaultValues: Prettify<DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>>>;
@@ -376,6 +386,7 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
     };
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+    defaultsDefinition: any;
     pk: string[] | null;
     clientPk: string[] | null;
     supportsReconciliation: boolean;
@@ -410,6 +421,7 @@ type RegistryShape = Record<string, {
     rawSchema: any;
     zodSchemas: {
         sqlSchema: z.ZodObject<any>;
+        clientInputSchema: z.ZodObject<any>;
         clientSchema: z.ZodObject<any>;
         serverSchema: z.ZodObject<any>;
         defaultValues: any;
@@ -432,6 +444,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         schemaKey: K;
         schemas: {
             sql: Resolved[K]["zodSchemas"]["sqlSchema"];
+            clientInput: Resolved[K]["zodSchemas"]["clientInputSchema"];
             client: Resolved[K]["zodSchemas"]["clientSchema"];
             server: Resolved[K]["zodSchemas"]["serverSchema"];
         };
@@ -442,6 +455,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
             parseFromDb: (dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
+        defaultsDefinition: any;
         stateType: Resolved[K]["zodSchemas"]["stateType"];
         generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
         pk: string[] | null;
@@ -470,7 +484,7 @@ type GetDbKey<K, Field> = Field extends Reference<infer TGetter> ? ReturnType<TG
         };
     };
 } ? string extends F ? K : F : K;
-type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
+type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientInputSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
     [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" ? never : K extends keyof T ? T[K] extends {
         config: {
             sql: {

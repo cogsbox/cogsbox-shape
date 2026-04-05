@@ -15,6 +15,9 @@ const factory = schema({
     .transform({ toClient: (v) => Boolean(v), toDb: (v) => (v ? 1 : 0) }),
   createdAt: s.sql({ type: "timestamp", default: "CURRENT_TIMESTAMP" }),
   boxes: s.hasMany([]),
+  statusLabel: s.clientInput(""),
+}).derive({
+  statusLabel: (row) => `${row.name} - ${row.isActive ? "Active" : "Inactive"}`,
 });
 
 const box = schema({

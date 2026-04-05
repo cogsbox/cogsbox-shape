@@ -5,7 +5,7 @@ const sqlTypeMap = {
     char: (length = 1) => `CHAR(${length})`,
     text: "TEXT",
     longtext: "LONGTEXT",
-    boolean: "BOOLEAN",
+    boolean: "TINYINT(1)",
     date: "DATE",
     datetime: "DATETIME",
 };

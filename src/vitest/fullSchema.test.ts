@@ -1086,3 +1086,54 @@ describe("sqlOnly with derive in relations", () => {
     expect(result.posts[0].preview).toBe("Hello");
   });
 });
+
+describe("defaultsDefinition", () => {
+  const users = schema({
+    _tableName: "users",
+    id: s
+      .sql({ type: "int", pk: true })
+      .clientInput({ value: "user-123", schema: z.string() }),
+    name: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+    posts: s.hasMany({ count: 2 }),
+    profile: s.hasOne(true),
+  });
+
+  const posts = schema({
+    _tableName: "posts",
+    id: s.sql({ type: "int", pk: true }),
+    title: s.sql({ type: "varchar" }).clientInput({ value: "Default Post" }),
+    authorId: s.reference(() => users.id),
+    user: s.hasOne(true),
+  });
+
+  const box = createSchemaBox(
+    { users, posts },
+    {
+      users: { posts: { fromKey: "id", toKey: posts.authorId } },
+      posts: { user: { fromKey: "id", toKey: users.id } },
+    },
+  );
+
+  it("should have defaultsDefinition on schema box", () => {
+    const def = box.users.defaultsDefinition;
+    expect(def).toBeDefined();
+    expect(def.id).toBe("user-123");
+    expect(def.name).toBe("John");
+    expect(def.posts).toBeInstanceOf(Array);
+    expect(def.posts).toHaveLength(2);
+    expect(def.posts![0].title).toBe("Default Post");
+  });
+
+  it("should have defaultsDefinition on views", () => {
+    const view = box.users.createView({
+      posts: { user: true },
+    });
+
+    const def = view.defaultsDefinition;
+    expect(def).toBeDefined();
+    expect(def!.posts).toBeInstanceOf(Array);
+    expect(def!.posts).toHaveLength(2);
+    expect(def!.__def__posts).toBeDefined();
+    expect(def!.__def__posts.title).toBe("Default Post");
+  });
+});
