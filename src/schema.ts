@@ -221,7 +221,7 @@ export interface IBuilderMethods<
       | ((tools: { sql: TSql; clientInput: TClient; client: z.ZodUnion<[TSql, TClient]> }) => TValidationNext)
       | TValidationNext,
   ) => Prettify<
-    Builder<"server", T, TSql, TInitialValue, z.ZodUnion<[TSql, TClient]>, TValidationNext>
+    Builder<"server", T, TSql, TInitialValue, TClient, TValidationNext>
   >;
 
   transform: (transforms: {

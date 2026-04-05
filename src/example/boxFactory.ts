@@ -39,7 +39,7 @@ const boxVariant = schema({
   boxName: s
     .sql({ type: "varchar", length: 50 })
     .clientInput({ value: "Standard" })
-    .client(({ sql, clientInput, client }) => client)
+
     .server(({ clientInput }) => clientInput.min(3, "Name too short"))
     .transform({ toClient: (v) => v, toDb: (v) => v }),
   color: s.sql({ type: "varchar", length: 20 }).clientInput({ value: "brown" }),
