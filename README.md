@@ -34,8 +34,6 @@ Define a field by chaining methods. Each step is optional — use only what you 
 
 ```
 s.sql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
-                                                                 ↑
-                                                              .derive()
 ```
 
 | Method                                         | Purpose                                                        |
@@ -45,6 +43,8 @@ s.sql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
 | `.client(fn)`                                  | Client-side validation on the final client union type.         |
 | `.server(fn)`                                  | Server-side validation. Stricter rules before database writes. |
 | `.transform({ toClient, toDb })`                | Converts between database and client representations.          |
+
+Note: `.derive()` is a schema-level method, not chainable on fields.
 
 ### 1. SQL — Define Your Database Schema
 
@@ -103,7 +103,7 @@ name: s.sql({ type: "varchar" })
   .server((tools) => tools.clientInput.min(5, "Must be at least 5 chars")),
 ```
 
-The `.client()` callback receives `tools` with `sql` and `clientInput` schemas.
+The `.client()` callback receives `tools` with `sql`, `clientInput`, and `client` schemas.
 
 ### 4. Server — Server-Side Validation
 
