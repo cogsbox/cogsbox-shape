@@ -312,7 +312,8 @@ function createBuilder(config) {
             });
         },
         transform: (transforms) => {
-            if (!completedStages.has("server") && !completedStages.has("clientInput")) {
+            if (!completedStages.has("server") &&
+                !completedStages.has("clientInput")) {
                 throw new Error("transform() requires at least clientInput() or server() to be called first");
             }
             return {
@@ -612,15 +613,23 @@ export function createSchema(schema, relations) {
         return clientObject;
     };
     const toDb = (clientObject) => {
+        // 1. Calculate derives FIRST based on the client data
+        const clientWithDerives = { ...clientObject };
+        if (derives) {
+            for (const key in derives) {
+                clientWithDerives[key] = derives[key](clientWithDerives);
+            }
+        }
+        // 2. Map the data (including the newly derived fields) to the DB object
         const dbObject = {};
-        for (const clientKey in clientObject) {
-            if (clientObject[clientKey] === undefined)
+        for (const clientKey in clientWithDerives) {
+            if (clientWithDerives[clientKey] === undefined)
                 continue;
             const dbKey = clientToDbKeys[clientKey] || clientKey;
             const transform = fieldTransforms[clientKey]?.toDb;
             dbObject[dbKey] = transform
-                ? transform(clientObject[clientKey])
-                : clientObject[clientKey];
+                ? transform(clientWithDerives[clientKey])
+                : clientWithDerives[clientKey];
         }
         return dbObject;
     };
@@ -646,8 +655,8 @@ export function createSchema(schema, relations) {
             return toDb(validData);
         },
         parseFromDb: (dbData) => {
-            const mappedData = toClient(dbData);
-            return finalClientSchema.parse(mappedData);
+            finalSqlSchema.parse(dbData);
+            return toClient(dbData);
         },
     };
 }
@@ -675,7 +684,9 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
         }
         const baseSchema = schemaType === "server"
             ? registryEntry.zodSchemas.serverSchema
-            : registryEntry.zodSchemas.clientSchema;
+            : schemaType === "sql"
+                ? registryEntry.zodSchemas.sqlSchema
+                : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
         if (subSelection === true) {
             return z.object(primitiveShape);
@@ -706,7 +717,7 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
         return z.object(finalShape);
     }
     return {
-        sql: registry[initialRegistryKey].zodSchemas.sqlSchema,
+        sql: buildView(initialRegistryKey, selection, "sql"),
         client: buildView(initialRegistryKey, selection, "client"),
         server: buildView(initialRegistryKey, selection, "server"),
         supportsReconciliation: allTablesSupportsReconciliation,
@@ -803,7 +814,7 @@ export function createSchemaBox(schemas, resolutions) {
     for (const tableName in finalRegistry) {
         const entry = finalRegistry[tableName];
         const rawSchema = entry.rawSchema;
-        const tableDef = {};
+        const tableDef = { ...entry.generateDefaults() };
         for (const key in rawSchema) {
             if (key === "_tableName" || key.startsWith("__"))
                 continue;
@@ -820,14 +831,14 @@ export function createSchemaBox(schemas, resolutions) {
                     if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
                         const count = sqlConfig?.defaultCount || 1;
                         tableDef[key] = Array.from({ length: count }, () => targetDefaults);
+                        tableDef[`__def__${key}`] = targetDefaults;
                     }
                     else {
-                        tableDef[key] = targetDefaults;
+                        tableDef[key] =
+                            sqlConfig.defaultConfig === null ? null : targetDefaults;
+                        tableDef[`__def__${key}`] = targetDefaults;
                     }
                 }
-            }
-            else {
-                tableDef[key] = rawSchema[key]?.config?.initialValue;
             }
         }
         entry.zodSchemas.defaultsDefinition = tableDef;
@@ -948,10 +959,14 @@ export function createSchemaBox(schemas, resolutions) {
                         toClient: viewToClient,
                         toDb: viewToDb,
                         parseForDb: (appData) => {
-                            return viewToDb(appData);
+                            // FIX: Now correctly validates against the view's server schema first
+                            const validData = view.server.parse(appData);
+                            return viewToDb(validData);
                         },
                         parseFromDb: (dbData) => {
-                            return viewToClient(dbData);
+                            // FIX: Now correctly validates against the view's client schema after mapping
+                            const mappedData = view.sql.parse(dbData);
+                            return viewToClient(mappedData);
                         },
                     },
                     defaults: defaults,
@@ -1027,7 +1042,7 @@ function computeViewDefaultsDefinition(currentRegistryKey, selection, registry, 
     if (!entry) {
         return {};
     }
-    const baseDef = {};
+    const baseDef = { ...entry.generateDefaults() };
     for (const key in entry.rawSchema) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
@@ -1045,13 +1060,12 @@ function computeViewDefaultsDefinition(currentRegistryKey, selection, registry, 
             if (sqlConfig.type === "hasMany" || sqlConfig.type === "manyToMany") {
                 const count = sqlConfig?.defaultCount || 1;
                 baseDef[key] = Array.from({ length: count }, () => targetDefaults);
+                baseDef[`__def__${key}`] = targetDefaults;
             }
-            else if (sqlConfig.defaultConfig !== null) {
-                baseDef[key] = targetDefaults;
+            else {
+                baseDef[key] = sqlConfig.defaultConfig === null ? null : targetDefaults;
+                baseDef[`__def__${key}`] = targetDefaults;
             }
-        }
-        else {
-            baseDef[key] = entry.rawSchema[key]?.config?.initialValue;
         }
     }
     if (selection === true || typeof selection !== "object") {
@@ -1072,6 +1086,14 @@ function computeViewDefaultsDefinition(currentRegistryKey, selection, registry, 
         const nestedDef = computeViewDefaultsDefinition(nextRegistryKey, selection[key], registry, tableNameToRegistryKeyMap, new Set(visited));
         if (nestedDef) {
             result[`__def__${key}`] = nestedDef;
+            if (relationConfig.type === "hasMany" ||
+                relationConfig.type === "manyToMany") {
+                const count = relationConfig?.defaultCount || 1;
+                result[key] = Array.from({ length: count }, () => nestedDef);
+            }
+            else {
+                result[key] = relationConfig.defaultConfig === null ? null : nestedDef;
+            }
         }
     }
     return result;

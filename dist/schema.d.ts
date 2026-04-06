@@ -371,6 +371,34 @@ type DeriveViewDefaults<TTableName extends keyof TRegistry, TSelection, TRegistr
         1
     ]> | null : never : never : never;
 } : {})>;
+export type DeriveViewDefaultsDefinition<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape, Depth extends any[] = []> = Depth["length"] extends 10 ? any : Prettify<TRegistry[TTableName]["zodSchemas"]["defaultValues"] & {
+    [K in keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<TRegistry[TTableName]["rawSchema"][K]> extends true ? K : never]: TRegistry[TTableName]["rawSchema"][K] extends {
+        config: {
+            sql: {
+                type: infer RelType;
+                schema: any;
+            };
+        };
+    } ? GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? K extends keyof TSelection ? TSelection[K] extends true ? RelType extends "hasMany" | "manyToMany" ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][] : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] | null : TSelection[K] extends false | undefined ? RelType extends "hasMany" | "manyToMany" ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][] : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] | null : RelType extends "hasMany" | "manyToMany" ? DeriveViewDefaultsDefinition<TargetKey, TSelection[K], TRegistry, [
+        ...Depth,
+        1
+    ]>[] : DeriveViewDefaultsDefinition<TargetKey, TSelection[K], TRegistry, [
+        ...Depth,
+        1
+    ]> | null : RelType extends "hasMany" | "manyToMany" ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"][] : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] | null : never : never : never;
+} & {
+    [K in keyof TRegistry[TTableName]["rawSchema"] as IsRelationField<TRegistry[TTableName]["rawSchema"][K]> extends true ? `__def__${K & string}` : never]: TRegistry[TTableName]["rawSchema"][K] extends {
+        config: {
+            sql: {
+                type: any;
+                schema: any;
+            };
+        };
+    } ? GetRelationRegistryKey<TRegistry[TTableName]["rawSchema"][K], TRegistry> extends infer TargetKey ? TargetKey extends keyof TRegistry ? K extends keyof TSelection ? TSelection[K] extends true ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"] : TSelection[K] extends false | undefined ? TRegistry[TargetKey]["zodSchemas"]["defaultValues"] : DeriveViewDefaultsDefinition<TargetKey, TSelection[K], TRegistry, [
+        ...Depth,
+        1
+    ]> : TRegistry[TargetKey]["zodSchemas"]["defaultValues"] : never : never : never;
+}>;
 export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRegistry extends RegistryShape> = {
     definition: TRegistry[TTableName]["rawSchema"];
     schemaKey: TTableName;
@@ -386,16 +414,7 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
     };
     defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
-    defaultsDefinition: Prettify<DeriveViewDefaults<TTableName, TSelection, TRegistry> & {
-        [K2 in keyof TRegistry[TTableName]["rawSchema"] as K2 extends string ? TRegistry[TTableName]["rawSchema"][K2] extends {
-            config: {
-                sql: {
-                    type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
-                    schema: any;
-                };
-            };
-        } ? `__def__${K2}` : never : never]: any;
-    }>;
+    defaultsDefinition: DeriveViewDefaultsDefinition<TTableName, TSelection, TRegistry>;
     pk: string[] | null;
     clientPk: string[] | null;
     supportsReconciliation: boolean;
@@ -464,16 +483,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
             parseFromDb: (dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];
-        defaultsDefinition: Prettify<Resolved[K]["zodSchemas"]["defaultValues"] & {
-            [K2 in keyof Resolved[K]["rawSchema"] as K2 extends string ? Resolved[K]["rawSchema"][K2] extends {
-                config: {
-                    sql: {
-                        type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
-                        schema: any;
-                    };
-                };
-            } ? `__def__${K2}` : never : never]: any;
-        }>;
+        defaultsDefinition: DeriveViewDefaultsDefinition<K & string, {}, Resolved>;
         stateType: Resolved[K]["zodSchemas"]["stateType"];
         generateDefaults: () => Resolved[K]["zodSchemas"]["defaultValues"];
         pk: string[] | null;
