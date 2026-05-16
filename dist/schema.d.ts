@@ -525,7 +525,11 @@ type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientInputSchema" | 
                 type: "hasMany" | "manyToMany" | "hasOne" | "belongsTo";
             };
         };
-    } ? never : Key extends "zodSqlSchema" ? GetDbKey<K, T[K]> : K : never]: T[K] extends Reference<infer TGetter> ? ReturnType<TGetter> extends {
+    } ? never : T[K] extends {
+        config: {
+            sql: null;
+        };
+    } ? Key extends "zodSqlSchema" ? never : K : Key extends "zodSqlSchema" ? GetDbKey<K, T[K]> : K : never]: T[K] extends Reference<infer TGetter> ? ReturnType<TGetter> extends {
         config: {
             [P in Key]: infer ZodSchema extends z.ZodTypeAny;
         };
