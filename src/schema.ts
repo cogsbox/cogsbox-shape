@@ -434,7 +434,7 @@ export const s: ShapeAPI = {
             baseType = z.number();
             break;
           case "boolean":
-            baseType = z.boolean();
+            baseType = z.number();
             break;
           case "date":
           case "datetime":
