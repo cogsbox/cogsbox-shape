@@ -732,7 +732,7 @@ function createBuilder<
       const serverSchema = isFunction(assert)
         ? assert({
             sql: config.sqlZod,
-            clientInput: config.clientZod,
+            clientInput: config.clientInputZod || config.clientZod,
             client: config.clientZod as unknown as z.ZodUnion<[TSql, TClient]>,
           })
         : assert;

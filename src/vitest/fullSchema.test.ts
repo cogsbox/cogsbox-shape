@@ -218,6 +218,130 @@ describe("Schema Builder Runtime Behavior", () => {
     });
   });
 });
+
+describe("Tools params are actual Zod schemas at runtime", () => {
+  it("should provide actual Zod schemas as tools in .client()", () => {
+    let capturedTools: Record<string, unknown> | undefined;
+
+    s.sql({ type: "varchar" })
+      .clientInput({ value: "test" })
+      .client((tools) => {
+        capturedTools = { sql: tools.sql, clientInput: tools.clientInput, client: tools.client };
+        return tools.clientInput;
+      });
+
+    expect(capturedTools).toBeDefined();
+    expect(capturedTools!.sql).toBeInstanceOf(z.ZodType);
+    expect(typeof (capturedTools!.sql as z.ZodType).parse).toBe("function");
+    expect(typeof (capturedTools!.sql as z.ZodType).safeParse).toBe("function");
+
+    expect(capturedTools!.clientInput).toBeInstanceOf(z.ZodType);
+    expect(typeof (capturedTools!.clientInput as z.ZodType).parse).toBe("function");
+
+    expect(capturedTools!.client).toBeInstanceOf(z.ZodType);
+    expect(typeof (capturedTools!.client as z.ZodType).parse).toBe("function");
+  });
+
+  it("should provide actual Zod schemas as tools in .server()", () => {
+    let capturedTools: Record<string, unknown> | undefined;
+
+    s.sql({ type: "varchar" })
+      .clientInput({ value: "test" })
+      .client((tools) => tools.clientInput)
+      .server((tools) => {
+        capturedTools = { sql: tools.sql, clientInput: tools.clientInput, client: tools.client };
+        return tools.clientInput;
+      });
+
+    expect(capturedTools).toBeDefined();
+    expect(capturedTools!.sql).toBeInstanceOf(z.ZodType);
+    expect(capturedTools!.clientInput).toBeInstanceOf(z.ZodType);
+    expect(capturedTools!.client).toBeInstanceOf(z.ZodType);
+  });
+
+  it("should allow calling Zod methods on tools params in .client()", () => {
+    let clientInputSchema: z.ZodString | undefined;
+
+    s.sql({ type: "varchar" })
+      .clientInput({ value: "" })
+      .client((tools) => {
+        clientInputSchema = tools.clientInput;
+        const validated = tools.clientInput.min(3);
+        expect(validated.safeParse("ab").success).toBe(false);
+        expect(validated.safeParse("abc").success).toBe(true);
+        return validated;
+      });
+
+    expect(clientInputSchema).toBeInstanceOf(z.ZodString);
+  });
+
+  it("should allow calling Zod methods on tools params in .server()", () => {
+    let serverClientInput: z.ZodString | undefined;
+
+    s.sql({ type: "varchar" })
+      .clientInput({ value: "" })
+      .client((tools) => tools.clientInput.min(3))
+      .server((tools) => {
+        serverClientInput = tools.clientInput;
+        const validated = tools.clientInput.min(5);
+        expect(validated.safeParse("abcd").success).toBe(false);
+        expect(validated.safeParse("abcde").success).toBe(true);
+        return validated;
+      });
+
+    expect(serverClientInput).toBeInstanceOf(z.ZodString);
+  });
+
+  it("should provide correct Zod types for numeric fields in tools", () => {
+    let capturedSql: unknown;
+    let capturedInput: unknown;
+
+    s.sql({ type: "int" })
+      .clientInput({ value: 0 })
+      .client((tools) => {
+        capturedSql = tools.sql;
+        capturedInput = tools.clientInput;
+        return tools.clientInput;
+      });
+
+    expect(capturedSql).toBeInstanceOf(z.ZodNumber);
+    expect((capturedSql as z.ZodNumber).parse(42)).toBe(42);
+
+    expect(capturedInput).toBeInstanceOf(z.ZodNumber);
+    expect((capturedInput as z.ZodNumber).parse(0)).toBe(0);
+  });
+
+  it("should provide correct Zod types for boolean fields in tools", () => {
+    let capturedInput: unknown;
+
+    s.sql({ type: "int" })
+      .clientInput(() => z.boolean())
+      .client((tools) => {
+        capturedInput = tools.clientInput;
+        return tools.clientInput;
+      });
+
+    expect(capturedInput).toBeInstanceOf(z.ZodBoolean);
+    expect((capturedInput as z.ZodBoolean).parse(true)).toBe(true);
+    expect((capturedInput as z.ZodBoolean).safeParse("not bool").success).toBe(false);
+  });
+
+  it("should allow nullable() and other modifiers on tools params", () => {
+    let capturedInput: unknown;
+
+    s.sql({ type: "varchar", nullable: true })
+      .clientInput({ value: null, schema: z.string().nullable() })
+      .client((tools) => {
+        capturedInput = tools.clientInput;
+        expect(tools.clientInput.safeParse(null).success).toBe(true);
+        expect(tools.clientInput.safeParse("hello").success).toBe(true);
+        return tools.clientInput;
+      });
+
+    expect(capturedInput).toBeInstanceOf(z.ZodNullable);
+  });
+});
+
 describe("New Session Features - Base Schema Without Relations", () => {
   const users = schema({
     _tableName: "users",
