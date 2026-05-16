@@ -1341,8 +1341,8 @@ export function createSchema<
     },
 
     parseFromDb: (dbData) => {
-      finalSqlSchema.parse(dbData);
-      return toClient(dbData);
+      const parsed = finalSqlSchema.parse(dbData);
+      return toClient(parsed);
     },
   };
 }

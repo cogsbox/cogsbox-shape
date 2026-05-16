@@ -655,8 +655,8 @@ export function createSchema(schema, relations) {
             return toDb(validData);
         },
         parseFromDb: (dbData) => {
-            finalSqlSchema.parse(dbData);
-            return toClient(dbData);
+            const parsed = finalSqlSchema.parse(dbData);
+            return toClient(parsed);
         },
     };
 }
