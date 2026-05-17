@@ -9,21 +9,21 @@ export function currentTimeStamp() {
 }
 export const s = {
     clientInput: (value) => {
-        const actualValue = isFunction(value) ? value({ uuid }) : value;
+        const sample = isFunction(value) ? value({ uuid }) : value;
         let inferredZodType;
-        if (typeof actualValue === "string") {
+        if (typeof sample === "string") {
             inferredZodType = z.string();
         }
-        else if (typeof actualValue === "number") {
+        else if (typeof sample === "number") {
             inferredZodType = z.number();
         }
-        else if (typeof actualValue === "boolean") {
+        else if (typeof sample === "boolean") {
             inferredZodType = z.boolean();
         }
-        else if (actualValue instanceof Date) {
+        else if (sample instanceof Date) {
             inferredZodType = z.date();
         }
-        else if (actualValue === null) {
+        else if (sample === null) {
             inferredZodType = z.null();
         }
         else {
@@ -33,7 +33,7 @@ export const s = {
             stage: "clientInput",
             sqlConfig: null,
             sqlZod: z.undefined(),
-            initialValue: actualValue,
+            initialValue: value,
             clientZod: inferredZodType,
             validationZod: inferredZodType,
         });
@@ -185,7 +185,7 @@ function createBuilder(config) {
             let actualValue = config.initialValue;
             let finalSchema;
             if (value !== undefined) {
-                actualValue = isFunction(value) ? value({ uuid }) : value;
+                actualValue = value;
             }
             else if (schemaOrModifier &&
                 typeof schemaOrModifier === "object" &&
@@ -203,15 +203,16 @@ function createBuilder(config) {
             }
             else {
                 if (value !== undefined) {
-                    if (typeof actualValue === "string")
+                    const sample = isFunction(value) ? value({ uuid }) : value;
+                    if (typeof sample === "string")
                         baseSchema = z.string();
-                    else if (typeof actualValue === "number")
+                    else if (typeof sample === "number")
                         baseSchema = z.number();
-                    else if (typeof actualValue === "boolean")
+                    else if (typeof sample === "boolean")
                         baseSchema = z.boolean();
-                    else if (actualValue instanceof Date)
+                    else if (sample instanceof Date)
                         baseSchema = z.date();
-                    else if (actualValue === null)
+                    else if (sample === null)
                         baseSchema = z.null();
                     else
                         baseSchema = z.any();

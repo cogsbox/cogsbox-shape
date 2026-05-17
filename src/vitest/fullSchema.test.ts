@@ -663,8 +663,10 @@ describe("UUID generation in initialState", () => {
       clientPk: true,
     });
 
-    expect(typeof field.config.initialValue).toBe("string");
-    expect(field.config.initialValue.length).toBeGreaterThan(0);
+    expect(typeof field.config.initialValue).toBe("function");
+    const result = (field.config.initialValue as any)({ uuid: () => "test-uuid" });
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
   });
 });
 
@@ -1271,5 +1273,113 @@ describe("defaultsDefinition", () => {
     expect(def!.__def__posts.title).toBe("Default Post");
     expect(def!.__def__posts.user).toBeDefined();
     expect(def!.__def__posts.user?.name).toBe("John");
+  });
+});
+
+describe("dynamic value functions re-run on each view.defaults() call", () => {
+  const factory = schema({
+    _tableName: "factories",
+    id: s.sql({ type: "int", pk: true }).clientInput({
+      value: () => `temp_${Math.random().toString(36).substr(2, 8)}`,
+      schema: z.string(),
+      clientPk: true,
+    }),
+    name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "MyFactory" }),
+    boxes: s.hasMany({ count: 2 }),
+  });
+
+  const box = schema({
+    _tableName: "boxes",
+    id: s.sql({ type: "int", pk: true }).clientInput({
+      value: () => `box_${Math.random().toString(36).substr(2, 8)}`,
+      schema: z.string(),
+      clientPk: true,
+    }),
+    factoryId: s.reference(() => factory.id),
+    variant: s.hasOne(true),
+  });
+
+  const boxVariant = schema({
+    _tableName: "box_variants",
+    id: s.sql({ type: "int", pk: true }).clientInput({
+      value: () => `var_${Math.random().toString(36).substr(2, 8)}`,
+      schema: z.string(),
+      clientPk: true,
+    }),
+    boxId: s.reference(() => box.id),
+    label: s.sql({ type: "varchar", length: 50 }).clientInput({ value: "Standard" }),
+  });
+
+  const box_ = createSchemaBox(
+    { factory, box, boxVariant },
+    {
+      factory: {
+        boxes: { fromKey: "id", toKey: box.factoryId },
+      },
+      box: {
+        variant: { fromKey: "id", toKey: boxVariant.boxId },
+      },
+      boxVariant: {},
+    },
+  );
+
+  it("should generate unique top-level defaults on each call", () => {
+    const view = box_.factory.createView({ boxes: { variant: true } });
+    const first = view.defaults();
+    const second = view.defaults();
+
+    expect(first.id).not.toBe(second.id);
+    expect(first.name).toBe("MyFactory");
+  });
+
+  it("should generate unique nested relation defaults on each call", () => {
+    const view = box_.factory.createView({ boxes: { variant: true } });
+
+    const first = view.defaults();
+    const second = view.defaults();
+
+    expect(first.boxes).toHaveLength(2);
+    expect(second.boxes).toHaveLength(2);
+
+    first.boxes!.forEach((b: any, i: number) => {
+      expect(b.id).not.toBe(second.boxes![i].id);
+    });
+  });
+
+  it("should generate unique deeply nested defaults on each call", () => {
+    const view = box_.factory.createView({ boxes: { variant: true } });
+
+    const first = view.defaults();
+    const second = view.defaults();
+
+    first.boxes!.forEach((b: any, i: number) => {
+      const firstVariant = b.variant;
+      const secondVariant = second.boxes![i].variant;
+      expect(firstVariant!.id).not.toBe(secondVariant!.id);
+    });
+  });
+
+  it("should generate unique values within the same defaults call", () => {
+    const view = box_.factory.createView({ boxes: { variant: true } });
+
+    const defaults = view.defaults();
+
+    const ids = new Set<string | number>([
+      defaults.id,
+      ...(defaults.boxes?.map((b: any) => b.id) ?? []),
+      ...(defaults.boxes?.flatMap((b: any) => (b.variant ? [b.variant.id] : [])) ?? []),
+    ]);
+
+    expect(ids.size).toBe(5);
+  });
+
+  it("should generate unique values across defaultsDefinition calls", () => {
+    const view = box_.factory.createView({ boxes: { variant: true } });
+
+    const first = view.defaultsDefinition();
+    const second = view.defaultsDefinition();
+
+    expect(first.id).not.toBe(second.id);
+    expect((first as any).boxes![0].variant!.id).not.toBe((second as any).boxes![0].variant!.id);
   });
 });

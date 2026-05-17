@@ -369,18 +369,18 @@ export const s: ShapeAPI = {
   clientInput: <const TValue>(
     value: TValue | ((tools: { uuid: () => string }) => TValue),
   ) => {
-    const actualValue = isFunction(value) ? value({ uuid }) : value;
+    const sample = isFunction(value) ? value({ uuid }) : value;
 
     let inferredZodType: z.ZodTypeAny;
-    if (typeof actualValue === "string") {
+    if (typeof sample === "string") {
       inferredZodType = z.string();
-    } else if (typeof actualValue === "number") {
+    } else if (typeof sample === "number") {
       inferredZodType = z.number();
-    } else if (typeof actualValue === "boolean") {
+    } else if (typeof sample === "boolean") {
       inferredZodType = z.boolean();
-    } else if (actualValue instanceof Date) {
+    } else if (sample instanceof Date) {
       inferredZodType = z.date();
-    } else if (actualValue === null) {
+    } else if (sample === null) {
       inferredZodType = z.null();
     } else {
       inferredZodType = z.any();
@@ -390,7 +390,7 @@ export const s: ShapeAPI = {
       stage: "clientInput",
       sqlConfig: null,
       sqlZod: z.undefined(),
-      initialValue: actualValue,
+      initialValue: value,
       clientZod: inferredZodType,
       validationZod: inferredZodType,
     }) as any;
@@ -596,7 +596,7 @@ function createBuilder<
       let finalSchema: z.ZodTypeAny;
 
       if (value !== undefined) {
-        actualValue = isFunction(value) ? value({ uuid }) : value;
+        actualValue = value;
       } else if (
         schemaOrModifier &&
         typeof schemaOrModifier === "object" &&
@@ -622,11 +622,12 @@ function createBuilder<
         finalSchema = schemaOrModifier;
       } else {
         if (value !== undefined) {
-          if (typeof actualValue === "string") baseSchema = z.string();
-          else if (typeof actualValue === "number") baseSchema = z.number();
-          else if (typeof actualValue === "boolean") baseSchema = z.boolean();
-          else if (actualValue instanceof Date) baseSchema = z.date();
-          else if (actualValue === null) baseSchema = z.null();
+          const sample = isFunction(value) ? value({ uuid }) : value;
+          if (typeof sample === "string") baseSchema = z.string();
+          else if (typeof sample === "number") baseSchema = z.number();
+          else if (typeof sample === "boolean") baseSchema = z.boolean();
+          else if (sample instanceof Date) baseSchema = z.date();
+          else if (sample === null) baseSchema = z.null();
           else baseSchema = z.any();
         } else {
           baseSchema = config.clientZod;
