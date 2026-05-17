@@ -13,6 +13,9 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
       parseForDb: (data: Record<string, unknown>) => Record<string, unknown>;
       parseFromDb: (data: Record<string, unknown>) => TClient;
     },
+    private reconcile?: (
+      clientData: unknown,
+    ) => { withServer: (serverData: unknown) => unknown },
   ) {}
 
   async findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]> {
@@ -70,7 +73,24 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
     return this.transforms.parseFromDb(row);
   }
 
+  insert(data: TCreate): {
+    ids: () => Promise<Record<string, unknown>>;
+    full: () => Promise<TClient>;
+  } {
+    return {
+      ids: () => this.insertIds(data),
+      full: async () => {
+        const ids = await this.insertIds(data);
+        return this.reconcileIds(data, ids) as TClient;
+      },
+    };
+  }
+
   async create(data: TCreate): Promise<Record<string, unknown>> {
+    return this.insert(data).ids();
+  }
+
+  private async insertIds(data: TCreate): Promise<Record<string, unknown>> {
     const dbData = this.transforms.parseForDb(data as Record<string, unknown>);
 
     const clientPkClientKeys = this.meta.clientPkFields;
@@ -94,14 +114,35 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
 
     const insertId = result[0]?.insertId;
     if (insertId !== undefined && this.meta.pkFields.length > 0) {
-      const dbPkField = this.meta.pkFields[0];
+      const dbPkField = this.meta.pkFields[0]!;
       return { [dbPkField]: Number(insertId) };
     }
 
     return {};
   }
 
-  async update(id: unknown, data: Partial<TCreate>): Promise<Record<string, unknown>> {
+  update(id: unknown, data: Partial<TCreate>): {
+    ids: () => Promise<Record<string, unknown>>;
+    full: () => Promise<TClient>;
+  } {
+    return {
+      ids: () => this.updateIds(id, data),
+      full: async () => {
+        const ids = await this.updateIds(id, data);
+        const idValue = this.firstPkValue(ids);
+        const row = await this.findById(idValue);
+        if (!row) {
+          throw new RecordNotFoundError(this.meta.tableName, idValue);
+        }
+        return row;
+      },
+    };
+  }
+
+  private async updateIds(
+    id: unknown,
+    data: Partial<TCreate>,
+  ): Promise<Record<string, unknown>> {
     const pkValues = Array.isArray(id) ? id : [id];
     const pkFields =
       this.meta.pkFields.length > 0
@@ -125,9 +166,28 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
 
     const pkResult: Record<string, unknown> = {};
     for (let i = 0; i < pkFields.length; i++) {
-      pkResult[pkFields[i]] = pkValues[i];
+      pkResult[pkFields[i]!] = pkValues[i];
     }
     return pkResult;
+  }
+
+  reconcileIds(clientData: unknown, ids: unknown): unknown {
+    if (!this.reconcile) {
+      throw new Error(
+        "reconcileIds requires a connected view with reconciliation support.",
+      );
+    }
+
+    return this.reconcile(clientData).withServer(ids);
+  }
+
+  private firstPkValue(ids: Record<string, unknown>): unknown {
+    const pkField = this.meta.pkFields[0];
+    if (pkField && ids[pkField] !== undefined) {
+      return ids[pkField];
+    }
+
+    return Object.values(ids)[0];
   }
 
   async delete(id: unknown): Promise<{ deleted: boolean }> {

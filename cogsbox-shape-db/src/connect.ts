@@ -94,6 +94,9 @@ export function connect<T extends Record<string, unknown>>(
           const viewMeta: TableMeta = { ...meta };
 
           const viewTransforms = (view as any).transforms ?? {};
+          const reconcile = (view as any).reconcile as
+            | ((clientData: unknown) => { withServer: (serverData: unknown) => unknown })
+            | undefined;
           const viewDb = new TableDB(
             db,
             viewMeta,
@@ -103,6 +106,7 @@ export function connect<T extends Record<string, unknown>>(
               parseForDb: viewTransforms.parseForDb ?? ((r: any) => r),
               parseFromDb: viewTransforms.parseFromDb ?? ((r: any) => r),
             },
+            reconcile,
           );
 
           return new Proxy(view, {

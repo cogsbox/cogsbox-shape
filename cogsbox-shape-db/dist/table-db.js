@@ -5,10 +5,12 @@ export class TableDB {
     db;
     meta;
     transforms;
-    constructor(db, meta, transforms) {
+    reconcile;
+    constructor(db, meta, transforms, reconcile) {
         this.db = db;
         this.meta = meta;
         this.transforms = transforms;
+        this.reconcile = reconcile;
     }
     async findMany(opts) {
         const qb = this.db;
@@ -54,7 +56,19 @@ export class TableDB {
             return null;
         return this.transforms.parseFromDb(row);
     }
+    insert(data) {
+        return {
+            ids: () => this.insertIds(data),
+            full: async () => {
+                const ids = await this.insertIds(data);
+                return this.reconcileIds(data, ids);
+            },
+        };
+    }
     async create(data) {
+        return this.insert(data).ids();
+    }
+    async insertIds(data) {
         const dbData = this.transforms.parseForDb(data);
         const clientPkClientKeys = this.meta.clientPkFields;
         const pkDbNames = new Set(clientPkClientKeys.map((k) => {
@@ -74,13 +88,26 @@ export class TableDB {
             .execute();
         const insertId = result[0]?.insertId;
         if (insertId !== undefined && this.meta.pkFields.length > 0) {
-            const row = await this.findById(Number(insertId));
-            if (row)
-                return row;
+            const dbPkField = this.meta.pkFields[0];
+            return { [dbPkField]: Number(insertId) };
         }
-        return this.transforms.parseFromDb(dbData);
+        return {};
     }
-    async update(id, data) {
+    update(id, data) {
+        return {
+            ids: () => this.updateIds(id, data),
+            full: async () => {
+                const ids = await this.updateIds(id, data);
+                const idValue = this.firstPkValue(ids);
+                const row = await this.findById(idValue);
+                if (!row) {
+                    throw new RecordNotFoundError(this.meta.tableName, idValue);
+                }
+                return row;
+            },
+        };
+    }
+    async updateIds(id, data) {
         const pkValues = Array.isArray(id) ? id : [id];
         const pkFields = this.meta.pkFields.length > 0
             ? this.meta.pkFields
@@ -88,15 +115,33 @@ export class TableDB {
         const dbData = this.transforms.toDb(data);
         const conditions = buildPkConditions(pkValues, pkFields);
         const qb = this.db;
-        await qb
+        const result = await qb
             .updateTable(this.meta.tableName)
             .set(dbData)
             .where(sql.join(conditions, sql ` AND `))
             .execute();
-        const row = await this.findById(pkValues.length === 1 ? pkValues[0] : pkValues);
-        if (row)
-            return row;
-        throw new RecordNotFoundError(this.meta.tableName, id);
+        const numUpdated = result[0]?.numUpdatedRows ?? 0n;
+        if (Number(numUpdated) === 0) {
+            throw new RecordNotFoundError(this.meta.tableName, id);
+        }
+        const pkResult = {};
+        for (let i = 0; i < pkFields.length; i++) {
+            pkResult[pkFields[i]] = pkValues[i];
+        }
+        return pkResult;
+    }
+    reconcileIds(clientData, ids) {
+        if (!this.reconcile) {
+            throw new Error("reconcileIds requires a connected view with reconciliation support.");
+        }
+        return this.reconcile(clientData).withServer(ids);
+    }
+    firstPkValue(ids) {
+        const pkField = this.meta.pkFields[0];
+        if (pkField && ids[pkField] !== undefined) {
+            return ids[pkField];
+        }
+        return Object.values(ids)[0];
     }
     async delete(id) {
         const pkValues = Array.isArray(id) ? id : [id];

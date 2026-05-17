@@ -9,8 +9,8 @@ export async function createSqliteDb(path) {
             }),
         });
     }
-    catch {
-        throw new Error("better-sqlite3 is not installed. Install it:\n" +
-            "  npm install better-sqlite3\n");
+    catch (err) {
+        throw new Error("Failed to initialize better-sqlite3. It may be missing, blocked by pnpm builds, or built for a different Node version.\n" +
+            "Try: pnpm approve-builds && pnpm rebuild better-sqlite3", { cause: err });
     }
 }

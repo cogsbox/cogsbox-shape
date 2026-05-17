@@ -4,16 +4,30 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate> {
     private db;
     private meta;
     private transforms;
+    private reconcile?;
     constructor(db: Kysely<unknown>, meta: TableMeta, transforms: {
         toClient: (row: Record<string, unknown>) => TClient;
         toDb: (row: Record<string, unknown>) => Record<string, unknown>;
         parseForDb: (data: Record<string, unknown>) => Record<string, unknown>;
         parseFromDb: (data: Record<string, unknown>) => TClient;
-    });
+    }, reconcile?: ((clientData: unknown) => {
+        withServer: (serverData: unknown) => unknown;
+    }) | undefined);
     findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]>;
     findById(id: unknown): Promise<TClient | null>;
-    create(data: TCreate): Promise<TClient>;
-    update(id: unknown, data: Partial<TCreate>): Promise<TClient>;
+    insert(data: TCreate): {
+        ids: () => Promise<Record<string, unknown>>;
+        full: () => Promise<TClient>;
+    };
+    create(data: TCreate): Promise<Record<string, unknown>>;
+    private insertIds;
+    update(id: unknown, data: Partial<TCreate>): {
+        ids: () => Promise<Record<string, unknown>>;
+        full: () => Promise<TClient>;
+    };
+    private updateIds;
+    reconcileIds(clientData: unknown, ids: unknown): unknown;
+    private firstPkValue;
     delete(id: unknown): Promise<{
         deleted: boolean;
     }>;

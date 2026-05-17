@@ -946,6 +946,64 @@ export function createSchemaBox(schemas, resolutions) {
                 };
                 const viewToClient = (dbData) => deepToClient(dbData, selection, tableName);
                 const viewToDb = (clientData) => deepToDb(clientData, selection, tableName);
+                const reconcile = (clientData) => {
+                    return {
+                        withServer: (serverData) => {
+                            const parsedServerData = viewToClient(serverData);
+                            const mergeTrees = (cNode, sNode, tableKey, sel) => {
+                                if (sNode === undefined || sNode === null)
+                                    return cNode;
+                                if (cNode === undefined || cNode === null)
+                                    return sNode;
+                                const regEntry = finalRegistry[tableKey];
+                                const clientPkField = regEntry.clientPk?.[0] || regEntry.pk?.[0];
+                                const dbPkField = regEntry.pk?.[0] || clientPkField;
+                                if (Array.isArray(cNode)) {
+                                    if (!Array.isArray(sNode))
+                                        return cNode;
+                                    return cNode.map((cItem, index) => {
+                                        let sItem = undefined;
+                                        if (clientPkField && cItem[clientPkField] !== undefined) {
+                                            sItem = sNode.find((s) => s[clientPkField] === cItem[clientPkField]);
+                                        }
+                                        if (!sItem && dbPkField && cItem[dbPkField] !== undefined) {
+                                            sItem = sNode.find((s) => s[dbPkField] === cItem[dbPkField]);
+                                        }
+                                        if (!sItem && sNode[index]) {
+                                            sItem = sNode[index];
+                                        }
+                                        return mergeTrees(cItem, sItem, tableKey, sel);
+                                    });
+                                }
+                                if (typeof cNode === "object" && typeof sNode === "object") {
+                                    const merged = { ...cNode };
+                                    for (const key in sNode) {
+                                        const selValue = typeof sel === "object" ? sel[key] : undefined;
+                                        const relField = regEntry.rawSchema[key];
+                                        const isRelation = !!(selValue && relField?.config?.sql?.schema);
+                                        if (isRelation) {
+                                            const nextTableKey = tableNameToRegistryKeyMap[relField.config.sql.schema()._tableName];
+                                            merged[key] = mergeTrees(cNode[key], sNode[key], nextTableKey, selValue);
+                                        }
+                                        else {
+                                            merged[key] = sNode[key];
+                                        }
+                                    }
+                                    if (clientPkField &&
+                                        dbPkField &&
+                                        clientPkField !== dbPkField &&
+                                        merged[dbPkField] !== undefined &&
+                                        merged[dbPkField] !== null) {
+                                        delete merged[clientPkField];
+                                    }
+                                    return merged;
+                                }
+                                return sNode !== undefined ? sNode : cNode;
+                            };
+                            return mergeTrees(clientData, parsedServerData, tableName, selection);
+                        },
+                    };
+                };
                 return {
                     definition: entry.rawSchema,
                     schemaKey: tableName,
@@ -958,16 +1016,15 @@ export function createSchemaBox(schemas, resolutions) {
                         toClient: viewToClient,
                         toDb: viewToDb,
                         parseForDb: (appData) => {
-                            // FIX: Now correctly validates against the view's server schema first
                             const validData = view.server.parse(appData);
                             return viewToDb(validData);
                         },
                         parseFromDb: (dbData) => {
-                            // FIX: Now correctly validates against the view's client schema after mapping
                             const mappedData = view.sql.parse(dbData);
                             return viewToClient(mappedData);
                         },
                     },
+                    reconcile,
                     defaults: () => computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap),
                     defaultsDefinition: () => computeViewDefaultsDefinition(tableName, selection, finalRegistry, tableNameToRegistryKeyMap),
                     pk: entry.zodSchemas.pk,

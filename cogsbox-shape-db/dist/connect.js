@@ -74,12 +74,13 @@ export function connect(box, db) {
                     const view = originalCreateView(selection);
                     const viewMeta = { ...meta };
                     const viewTransforms = view.transforms ?? {};
+                    const reconcile = view.reconcile;
                     const viewDb = new TableDB(db, viewMeta, {
                         toClient: viewTransforms.toClient ?? ((r) => r),
                         toDb: viewTransforms.toDb ?? ((r) => r),
                         parseForDb: viewTransforms.parseForDb ?? ((r) => r),
                         parseFromDb: viewTransforms.parseFromDb ?? ((r) => r),
-                    });
+                    }, reconcile);
                     return new Proxy(view, {
                         get(target, prop, receiver) {
                             if (prop === "db")

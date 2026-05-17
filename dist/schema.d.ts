@@ -1,4 +1,7 @@
 import { z } from "zod";
+export type DeepPartial<T> = T extends object ? {
+    [P in keyof T]?: DeepPartial<T[P]>;
+} : T;
 type CurrentTimestampConfig = {
     default: "CURRENT_TIMESTAMP";
     defaultValue: Date;
@@ -412,6 +415,9 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         toDb: TRegistry[TTableName]["transforms"]["toDb"];
         parseForDb: (appData: z.input<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>;
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
+    };
+    reconcile: (clientData: z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>> | z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>[]) => {
+        withServer: (serverData: DeepPartial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>> | DeepPartial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>[]) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>> | z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>[];
     };
     defaults: () => DeriveViewDefaults<TTableName, TSelection, TRegistry>;
     defaultsDefinition: () => DeriveViewDefaultsDefinition<TTableName, TSelection, TRegistry>;
