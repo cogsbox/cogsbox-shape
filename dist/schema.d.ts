@@ -413,8 +413,8 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         parseForDb: (appData: z.input<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>;
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
     };
-    defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
-    defaultsDefinition: DeriveViewDefaultsDefinition<TTableName, TSelection, TRegistry>;
+    defaults: () => DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+    defaultsDefinition: () => DeriveViewDefaultsDefinition<TTableName, TSelection, TRegistry>;
     pk: string[] | null;
     clientPk: string[] | null;
     supportsReconciliation: boolean;

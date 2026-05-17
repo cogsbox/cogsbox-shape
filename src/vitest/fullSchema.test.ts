@@ -561,7 +561,7 @@ describe("Relation Defaults in Views", () => {
       followers: true,
     });
 
-    const defaults = view.defaults;
+    const defaults = view.defaults();
 
     // Base fields
     expect(defaults.id).toBe("user-123");
@@ -602,7 +602,7 @@ describe("Relation Defaults in Views", () => {
       posts: {},
     });
 
-    const defaults = nestedView.defaults;
+    const defaults = nestedView.defaults();
 
     expect(defaults.posts).toHaveLength(2);
     expect(defaults.posts?.[0]).not.toHaveProperty("author"); // Relation not selected
@@ -917,7 +917,7 @@ describe("Nested relations with transforms", () => {
       posts: { comments: true },
     } as const);
 
-    const defaults = view.defaults;
+    const defaults = view.defaults();
 
     expect(defaults.posts).toHaveLength(1);
     const post = defaults.posts?.[0];
@@ -1185,7 +1185,7 @@ describe("sqlOnly with derive in relations", () => {
 
   it("should include derived fields in view", () => {
     const view = box.posts.createView({});
-    const defaults = view.defaults;
+    const defaults = view.defaults();
 
     expect(defaults.preview).toBe("Post");
   });
@@ -1256,7 +1256,7 @@ describe("defaultsDefinition", () => {
       posts: { user: true },
     });
 
-    const def = view.defaultsDefinition;
+    const def = view.defaultsDefinition();
     expect(def).toBeDefined();
     expect(def!.posts).toBeInstanceOf(Array);
     expect(def!.posts).toHaveLength(2);

@@ -1912,8 +1912,8 @@ export type DeriveViewResult<
     >;
   };
 
-  defaults: DeriveViewDefaults<TTableName, TSelection, TRegistry>;
-  defaultsDefinition: DeriveViewDefaultsDefinition<
+  defaults: () => DeriveViewDefaults<TTableName, TSelection, TRegistry>;
+  defaultsDefinition: () => DeriveViewDefaultsDefinition<
     TTableName,
     TSelection,
     TRegistry
@@ -2286,19 +2286,6 @@ export function createSchemaBox<
           finalRegistry,
           tableNameToRegistryKeyMap,
         );
-        const defaults = computeViewDefaults(
-          tableName,
-          selection,
-          finalRegistry,
-          tableNameToRegistryKeyMap,
-        );
-        const defaultsDefinition = computeViewDefaultsDefinition(
-          tableName,
-          selection,
-          finalRegistry,
-          tableNameToRegistryKeyMap,
-        );
-
         const deepToClient = (
           dbData: any,
           currentSelection: any,
@@ -2415,8 +2402,18 @@ export function createSchemaBox<
             },
           },
 
-          defaults: defaults,
-          defaultsDefinition: defaultsDefinition,
+          defaults: () => computeViewDefaults(
+            tableName,
+            selection,
+            finalRegistry,
+            tableNameToRegistryKeyMap,
+          ),
+          defaultsDefinition: () => computeViewDefaultsDefinition(
+            tableName,
+            selection,
+            finalRegistry,
+            tableNameToRegistryKeyMap,
+          ),
           pk: entry.zodSchemas.pk,
           clientPk: entry.zodSchemas.clientPk,
           supportsReconciliation: view.supportsReconciliation,

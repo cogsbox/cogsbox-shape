@@ -888,8 +888,6 @@ export function createSchemaBox(schemas, resolutions) {
             nav: createNavProxy(tableName, finalRegistry),
             createView: (selection) => {
                 const view = createViewObject(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
-                const defaults = computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
-                const defaultsDefinition = computeViewDefaultsDefinition(tableName, selection, finalRegistry, tableNameToRegistryKeyMap);
                 const deepToClient = (dbData, currentSelection, currentKey) => {
                     if (!dbData)
                         return dbData;
@@ -969,8 +967,8 @@ export function createSchemaBox(schemas, resolutions) {
                             return viewToClient(mappedData);
                         },
                     },
-                    defaults: defaults,
-                    defaultsDefinition: defaultsDefinition,
+                    defaults: () => computeViewDefaults(tableName, selection, finalRegistry, tableNameToRegistryKeyMap),
+                    defaultsDefinition: () => computeViewDefaultsDefinition(tableName, selection, finalRegistry, tableNameToRegistryKeyMap),
                     pk: entry.zodSchemas.pk,
                     clientPk: entry.zodSchemas.clientPk,
                     supportsReconciliation: view.supportsReconciliation,
