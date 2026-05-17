@@ -1056,6 +1056,19 @@ export function createSchema<
   ) => z.infer<
     z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
   >;
+  parsePatchForDb: (
+    patchData: Partial<
+      z.input<
+        z.ZodObject<
+          Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
+        >
+      >
+    >,
+  ) => Partial<
+    z.infer<
+      z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>
+    >
+  >;
 
   parseFromDb: (
     dbData: Partial<
@@ -1346,6 +1359,10 @@ export function createSchema<
       const validData = finalValidationSchema.parse(appData);
       return toDb(validData);
     },
+    parsePatchForDb: (patchData) => {
+      const validPatch = finalValidationSchema.partial().parse(patchData);
+      return toDb(validPatch) as any;
+    },
 
     parseFromDb: (dbData) => {
       const parsed = finalSqlSchema.parse(dbData);
@@ -1513,6 +1530,7 @@ type ResolvedRegistryWithSchemas<
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
       parseForDb: (appData: any) => any;
+      parsePatchForDb: (patchData: any) => any;
       parseFromDb: (dbData: any) => any;
     };
     pk: string[] | null;
@@ -1904,6 +1922,21 @@ export type DeriveViewResult<
         _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
       >
     >;
+    parsePatchForDb: (
+      patchData: Partial<
+        z.input<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">
+          >
+        >
+      >,
+    ) => Partial<
+      z.infer<
+        z.ZodObject<
+          _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
+        >
+      >
+    >;
     parseFromDb: (
       dbData: Partial<
         z.infer<
@@ -2056,6 +2089,7 @@ type RegistryShape = Record<
       toClient: (dbObject: any) => any;
       toDb: (clientObject: any) => any;
       parseForDb: (appData: any) => any;
+      parsePatchForDb: (patchData: any) => any;
       parseFromDb: (dbData: any) => any;
     };
     pk: string[] | null;
@@ -2097,6 +2131,10 @@ type CreateSchemaBoxReturn<
       parseForDb: (
         appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>,
       ) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+
+      parsePatchForDb: (
+        patchData: Partial<z.input<Resolved[K]["zodSchemas"]["serverSchema"]>>,
+      ) => Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>;
 
       parseFromDb: (
         dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>,
@@ -2219,6 +2257,7 @@ export function createSchemaBox<
         toClient: zodSchemas.toClient,
         toDb: zodSchemas.toDb,
         parseForDb: zodSchemas.parseForDb,
+        parsePatchForDb: zodSchemas.parsePatchForDb,
         parseFromDb: zodSchemas.parseFromDb,
       },
       pk: zodSchemas.pk,
@@ -2314,6 +2353,7 @@ export function createSchemaBox<
         toClient: entry.transforms.toClient,
         toDb: entry.transforms.toDb,
         parseForDb: entry.transforms.parseForDb,
+        parsePatchForDb: entry.transforms.parsePatchForDb,
         parseFromDb: entry.transforms.parseFromDb,
       },
 
@@ -2540,6 +2580,10 @@ export function createSchemaBox<
             parseForDb: (appData: any) => {
               const validData = view.server.parse(appData);
               return viewToDb(validData);
+            },
+            parsePatchForDb: (patchData: any) => {
+              const validPatch = view.server.partial().parse(patchData);
+              return viewToDb(validPatch);
             },
             parseFromDb: (dbData: any) => {
               const mappedData = view.sql.parse(dbData);

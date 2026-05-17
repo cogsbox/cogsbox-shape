@@ -9,6 +9,7 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate> {
         toClient: (row: Record<string, unknown>) => TClient;
         toDb: (row: Record<string, unknown>) => Record<string, unknown>;
         parseForDb: (data: Record<string, unknown>) => Record<string, unknown>;
+        parsePatchForDb: (data: Record<string, unknown>) => Record<string, unknown>;
         parseFromDb: (data: Record<string, unknown>) => TClient;
     }, reconcile?: ((clientData: unknown) => {
         withServer: (serverData: unknown) => unknown;
@@ -27,6 +28,9 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate> {
     };
     private updateIds;
     reconcileIds(clientData: unknown, ids: unknown): unknown;
+    private reconcileFlatIds;
+    private mapIdsToClientFields;
+    private clientKeyForDbField;
     private firstPkValue;
     delete(id: unknown): Promise<{
         deleted: boolean;

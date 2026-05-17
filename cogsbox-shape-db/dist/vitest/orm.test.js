@@ -10,7 +10,7 @@ const userSchema = schema({
         clientPk: true,
     }),
     name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
-    email: s.sql({ type: "varchar", length: 255 }),
+    email: s.sql({ type: "varchar", length: 255 }).server(({ sql }) => sql.email()),
     isActive: s
         .sql({ type: "int" })
         .clientInput({ value: false })
@@ -20,6 +20,15 @@ const userSchema = schema({
     }),
 });
 const box = createSchemaBox({ users: userSchema }, { users: {} });
+const aliasedUserSchema = schema({
+    _tableName: "aliased_users",
+    publicId: s.sql({ type: "int", pk: true, field: "user_id" }).clientInput({
+        value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+        clientPk: true,
+    }),
+    name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+});
+const aliasedBox = createSchemaBox({ aliasedUsers: aliasedUserSchema }, { aliasedUsers: {} });
 let db;
 describe("cogsbox-shape-db", () => {
     beforeAll(async () => {
@@ -30,6 +39,12 @@ describe("cogsbox-shape-db", () => {
         name VARCHAR(100) NOT NULL,
         email VARCHAR(255) NOT NULL,
         isActive INTEGER NOT NULL DEFAULT 0
+      )
+    `.execute(db);
+        await sql `
+      CREATE TABLE IF NOT EXISTS aliased_users (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL
       )
     `.execute(db);
     });
@@ -121,6 +136,44 @@ describe("cogsbox-shape-db", () => {
             email: "insert-full@test.com",
             isActive: true,
         });
+    });
+    it("insert(...).full reconciles ids for a non-view table", async () => {
+        const b = connect(box, db);
+        const draft = {
+            ...box.users.generateDefaults(),
+            name: "Plain Insert Full User",
+            email: "plain-insert-full@test.com",
+            isActive: true,
+        };
+        const inserted = await b.users.db.insert(draft).full();
+        expect(draft.id).toMatch(/^new_/);
+        expect(inserted).toEqual({
+            ...draft,
+            id: expect.any(Number),
+        });
+        expect(inserted.id).not.toBe(draft.id);
+        const stored = await b.users.db.findById(inserted.id);
+        expect(stored).toMatchObject({
+            id: inserted.id,
+            name: "Plain Insert Full User",
+            email: "plain-insert-full@test.com",
+            isActive: true,
+        });
+    });
+    it("reconcileIds maps aliased db primary keys onto non-view client fields", async () => {
+        const b = connect(aliasedBox, db);
+        const draft = {
+            ...aliasedBox.aliasedUsers.generateDefaults(),
+            name: "Aliased Plain User",
+        };
+        const ids = await b.aliasedUsers.db.insert(draft).ids();
+        const reconciled = b.aliasedUsers.db.reconcileIds(draft, ids);
+        expect(ids).toEqual({ user_id: expect.any(Number) });
+        expect(reconciled).toEqual({
+            ...draft,
+            publicId: ids.user_id,
+        });
+        expect(reconciled.publicId).not.toBe(draft.publicId);
     });
     it("reconcileIds maps db ids back onto client data", async () => {
         const b = connect(box, db);
@@ -243,6 +296,42 @@ describe("cogsbox-shape-db", () => {
         expect(updated).not.toBeNull();
         expect(updated.name).toBe("Charlie Updated");
         expect(updated.isActive).toBe(true);
+    });
+    it("update validates partial patches with the schema server rules", async () => {
+        const b = connect(box, db);
+        const pkResult = await b.users.db.insert({
+            ...box.users.generateDefaults(),
+            name: "Patch Validation",
+            email: "patch-validation@test.com",
+            isActive: false,
+        }).ids();
+        await expect(b.users.db.update(pkResult.id, {
+            email: "not-an-email",
+        }).ids()).rejects.toThrow();
+        const updatePk = await b.users.db.update(pkResult.id, {
+            email: "patch-validation-updated@test.com",
+        }).ids();
+        expect(updatePk.id).toBe(pkResult.id);
+        const updated = await b.users.db.findById(pkResult.id);
+        expect(updated).toMatchObject({
+            id: pkResult.id,
+            name: "Patch Validation",
+            email: "patch-validation-updated@test.com",
+            isActive: false,
+        });
+    });
+    it("view update validates partial patches with the view server schema", async () => {
+        const b = connect(box, db);
+        const userView = b.users.createView({});
+        const inserted = await userView.db.insert({
+            ...userView.defaults(),
+            name: "View Patch Validation",
+            email: "view-patch-validation@test.com",
+            isActive: false,
+        }).full();
+        await expect(userView.db.update(inserted.id, {
+            email: "not-an-email",
+        }).ids()).rejects.toThrow();
     });
     it("update(...).full returns the stored row after update", async () => {
         const b = connect(box, db);

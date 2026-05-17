@@ -248,6 +248,7 @@ export declare function createSchema<T extends {
     toClient: (dbObject: Partial<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>>>) => z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>>;
     toDb: (clientObject: Partial<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>>>) => z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>>;
     parseForDb: (appData: z.input<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>>>) => z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>>;
+    parsePatchForDb: (patchData: Partial<z.input<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>>>>) => Partial<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>>>;
     parseFromDb: (dbData: Partial<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>>>) => z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientSchema">>>>;
 };
 export type PlaceholderReference = {
@@ -312,6 +313,7 @@ type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders
             toClient: (dbObject: any) => any;
             toDb: (clientObject: any) => any;
             parseForDb: (appData: any) => any;
+            parsePatchForDb: (patchData: any) => any;
             parseFromDb: (dbData: any) => any;
         };
         pk: string[] | null;
@@ -414,6 +416,7 @@ export type DeriveViewResult<TTableName extends keyof TRegistry, TSelection, TRe
         toClient: TRegistry[TTableName]["transforms"]["toClient"];
         toDb: TRegistry[TTableName]["transforms"]["toDb"];
         parseForDb: (appData: z.input<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>;
+        parsePatchForDb: (patchData: Partial<z.input<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">>>>) => Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>;
         parseFromDb: (dbData: Partial<z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">>>>) => z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>;
     };
     reconcile: (clientData: z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>> | z.infer<z.ZodObject<_DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">>>[]) => {
@@ -465,6 +468,7 @@ type RegistryShape = Record<string, {
         toClient: (dbObject: any) => any;
         toDb: (clientObject: any) => any;
         parseForDb: (appData: any) => any;
+        parsePatchForDb: (patchData: any) => any;
         parseFromDb: (dbData: any) => any;
     };
     pk: string[] | null;
@@ -486,6 +490,7 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
             toClient: (dbData: z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
             toDb: (clientData: z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
             parseForDb: (appData: z.input<Resolved[K]["zodSchemas"]["serverSchema"]>) => z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>;
+            parsePatchForDb: (patchData: Partial<z.input<Resolved[K]["zodSchemas"]["serverSchema"]>>) => Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>;
             parseFromDb: (dbData: Partial<z.infer<Resolved[K]["zodSchemas"]["sqlSchema"]>>) => z.infer<Resolved[K]["zodSchemas"]["clientSchema"]>;
         };
         defaults: Resolved[K]["zodSchemas"]["defaultValues"];

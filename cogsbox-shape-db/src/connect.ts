@@ -58,6 +58,7 @@ function enhanceTable<T extends Record<string, unknown>>(
       toClient: transforms.toClient ?? ((r: any) => r),
       toDb: transforms.toDb ?? ((r: any) => r),
       parseForDb: transforms.parseForDb ?? ((r: any) => r),
+      parsePatchForDb: transforms.parsePatchForDb ?? transforms.toDb ?? ((r: any) => r),
       parseFromDb: transforms.parseFromDb ?? ((r: any) => r),
     },
   );
@@ -104,6 +105,7 @@ export function connect<T extends Record<string, unknown>>(
               toClient: viewTransforms.toClient ?? ((r: any) => r),
               toDb: viewTransforms.toDb ?? ((r: any) => r),
               parseForDb: viewTransforms.parseForDb ?? ((r: any) => r),
+              parsePatchForDb: viewTransforms.parsePatchForDb ?? viewTransforms.toDb ?? ((r: any) => r),
               parseFromDb: viewTransforms.parseFromDb ?? ((r: any) => r),
             },
             reconcile,

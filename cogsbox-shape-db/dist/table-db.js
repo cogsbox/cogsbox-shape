@@ -112,7 +112,7 @@ export class TableDB {
         const pkFields = this.meta.pkFields.length > 0
             ? this.meta.pkFields
             : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
-        const dbData = this.transforms.toDb(data);
+        const dbData = this.transforms.parsePatchForDb(data);
         const conditions = buildPkConditions(pkValues, pkFields);
         const qb = this.db;
         const result = await qb
@@ -131,10 +131,43 @@ export class TableDB {
         return pkResult;
     }
     reconcileIds(clientData, ids) {
-        if (!this.reconcile) {
-            throw new Error("reconcileIds requires a connected view with reconciliation support.");
+        if (this.reconcile) {
+            return this.reconcile(clientData).withServer(ids);
         }
-        return this.reconcile(clientData).withServer(ids);
+        return this.reconcileFlatIds(clientData, ids);
+    }
+    reconcileFlatIds(clientData, ids) {
+        if (Array.isArray(clientData)) {
+            if (!Array.isArray(ids))
+                return clientData;
+            return clientData.map((item, index) => this.reconcileFlatIds(item, ids[index]));
+        }
+        if (typeof clientData !== "object" ||
+            clientData === null ||
+            typeof ids !== "object" ||
+            ids === null) {
+            return clientData;
+        }
+        return {
+            ...clientData,
+            ...this.mapIdsToClientFields(ids),
+        };
+    }
+    mapIdsToClientFields(ids) {
+        const mapped = {};
+        for (const [idKey, value] of Object.entries(ids)) {
+            const clientKey = this.clientKeyForDbField(idKey);
+            const field = this.meta.dbFields.get(clientKey);
+            mapped[clientKey] = field?.toClient ? field.toClient(value) : value;
+        }
+        return mapped;
+    }
+    clientKeyForDbField(dbField) {
+        for (const [clientKey, field] of this.meta.dbFields.entries()) {
+            if (field.dbName === dbField)
+                return clientKey;
+        }
+        return dbField;
     }
     firstPkValue(ids) {
         const pkField = this.meta.pkFields[0];

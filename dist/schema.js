@@ -655,6 +655,10 @@ export function createSchema(schema, relations) {
             const validData = finalValidationSchema.parse(appData);
             return toDb(validData);
         },
+        parsePatchForDb: (patchData) => {
+            const validPatch = finalValidationSchema.partial().parse(patchData);
+            return toDb(validPatch);
+        },
         parseFromDb: (dbData) => {
             const parsed = finalSqlSchema.parse(dbData);
             return toClient(parsed);
@@ -798,6 +802,7 @@ export function createSchemaBox(schemas, resolutions) {
                 toClient: zodSchemas.toClient,
                 toDb: zodSchemas.toDb,
                 parseForDb: zodSchemas.parseForDb,
+                parsePatchForDb: zodSchemas.parsePatchForDb,
                 parseFromDb: zodSchemas.parseFromDb,
             },
             pk: zodSchemas.pk,
@@ -877,6 +882,7 @@ export function createSchemaBox(schemas, resolutions) {
                 toClient: entry.transforms.toClient,
                 toDb: entry.transforms.toDb,
                 parseForDb: entry.transforms.parseForDb,
+                parsePatchForDb: entry.transforms.parsePatchForDb,
                 parseFromDb: entry.transforms.parseFromDb,
             },
             defaults: entry.generateDefaults(),
@@ -1018,6 +1024,10 @@ export function createSchemaBox(schemas, resolutions) {
                         parseForDb: (appData) => {
                             const validData = view.server.parse(appData);
                             return viewToDb(validData);
+                        },
+                        parsePatchForDb: (patchData) => {
+                            const validPatch = view.server.partial().parse(patchData);
+                            return viewToDb(validPatch);
                         },
                         parseFromDb: (dbData) => {
                             const mappedData = view.sql.parse(dbData);

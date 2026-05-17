@@ -47,6 +47,7 @@ function enhanceTable(entry, meta, db) {
         toClient: transforms.toClient ?? ((r) => r),
         toDb: transforms.toDb ?? ((r) => r),
         parseForDb: transforms.parseForDb ?? ((r) => r),
+        parsePatchForDb: transforms.parsePatchForDb ?? transforms.toDb ?? ((r) => r),
         parseFromDb: transforms.parseFromDb ?? ((r) => r),
     });
     return new Proxy(entry, {
@@ -79,6 +80,7 @@ export function connect(box, db) {
                         toClient: viewTransforms.toClient ?? ((r) => r),
                         toDb: viewTransforms.toDb ?? ((r) => r),
                         parseForDb: viewTransforms.parseForDb ?? ((r) => r),
+                        parsePatchForDb: viewTransforms.parsePatchForDb ?? viewTransforms.toDb ?? ((r) => r),
                         parseFromDb: viewTransforms.parseFromDb ?? ((r) => r),
                     }, reconcile);
                     return new Proxy(view, {

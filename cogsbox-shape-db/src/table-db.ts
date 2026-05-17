@@ -11,6 +11,9 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
       toClient: (row: Record<string, unknown>) => TClient;
       toDb: (row: Record<string, unknown>) => Record<string, unknown>;
       parseForDb: (data: Record<string, unknown>) => Record<string, unknown>;
+      parsePatchForDb: (
+        data: Record<string, unknown>,
+      ) => Record<string, unknown>;
       parseFromDb: (data: Record<string, unknown>) => TClient;
     },
     private reconcile?: (
@@ -149,7 +152,9 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
         ? this.meta.pkFields
         : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
 
-    const dbData = this.transforms.toDb(data as Record<string, unknown>);
+    const dbData = this.transforms.parsePatchForDb(
+      data as Record<string, unknown>,
+    );
     const conditions = buildPkConditions(pkValues, pkFields);
 
     const qb = this.db as any;
@@ -172,13 +177,56 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
   }
 
   reconcileIds(clientData: unknown, ids: unknown): unknown {
-    if (!this.reconcile) {
-      throw new Error(
-        "reconcileIds requires a connected view with reconciliation support.",
+    if (this.reconcile) {
+      return this.reconcile(clientData).withServer(ids);
+    }
+
+    return this.reconcileFlatIds(clientData, ids);
+  }
+
+  private reconcileFlatIds(clientData: unknown, ids: unknown): unknown {
+    if (Array.isArray(clientData)) {
+      if (!Array.isArray(ids)) return clientData;
+      return clientData.map((item, index) =>
+        this.reconcileFlatIds(item, ids[index]),
       );
     }
 
-    return this.reconcile(clientData).withServer(ids);
+    if (
+      typeof clientData !== "object" ||
+      clientData === null ||
+      typeof ids !== "object" ||
+      ids === null
+    ) {
+      return clientData;
+    }
+
+    return {
+      ...(clientData as Record<string, unknown>),
+      ...this.mapIdsToClientFields(ids as Record<string, unknown>),
+    };
+  }
+
+  private mapIdsToClientFields(
+    ids: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const mapped: Record<string, unknown> = {};
+
+    for (const [idKey, value] of Object.entries(ids)) {
+      const clientKey = this.clientKeyForDbField(idKey);
+      const field = this.meta.dbFields.get(clientKey);
+      mapped[clientKey] = field?.toClient ? field.toClient(value) : value;
+    }
+
+    return mapped;
+  }
+
+  private clientKeyForDbField(dbField: string): string {
+    for (const [clientKey, field] of this.meta.dbFields.entries()) {
+      if (field.dbName === dbField) return clientKey;
+    }
+
+    return dbField;
   }
 
   private firstPkValue(ids: Record<string, unknown>): unknown {
