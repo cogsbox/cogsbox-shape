@@ -1,0 +1,49 @@
+{
+  "name": "cogsbox-shape-db",
+  "version": "0.1.0",
+  "description": "ORM layer for cogsbox-shape — type-safe database queries with automatic client/server transforms",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite/index.d.ts",
+      "import": "./dist/sqlite/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.7.0"
+  },
+  "peerDependencies": {
+    "cogsbox-shape": "*",
+    "zod": "^3.22.4 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "better-sqlite3": "^11.7.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "zod": "^3.25.76"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  },
+  "repository": "github:cogsbox/cogsbox-shape",
+  "license": "MIT",
+  "dependencies": {
+    "kysely": "^0.29.2"
+  }
+}

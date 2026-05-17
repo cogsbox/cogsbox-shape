@@ -226,7 +226,11 @@ describe("Tools params are actual Zod schemas at runtime", () => {
     s.sql({ type: "varchar" })
       .clientInput({ value: "test" })
       .client((tools) => {
-        capturedTools = { sql: tools.sql, clientInput: tools.clientInput, client: tools.client };
+        capturedTools = {
+          sql: tools.sql,
+          clientInput: tools.clientInput,
+          client: tools.client,
+        };
         return tools.clientInput;
       });
 
@@ -236,7 +240,9 @@ describe("Tools params are actual Zod schemas at runtime", () => {
     expect(typeof (capturedTools!.sql as z.ZodType).safeParse).toBe("function");
 
     expect(capturedTools!.clientInput).toBeInstanceOf(z.ZodType);
-    expect(typeof (capturedTools!.clientInput as z.ZodType).parse).toBe("function");
+    expect(typeof (capturedTools!.clientInput as z.ZodType).parse).toBe(
+      "function",
+    );
 
     expect(capturedTools!.client).toBeInstanceOf(z.ZodType);
     expect(typeof (capturedTools!.client as z.ZodType).parse).toBe("function");
@@ -249,7 +255,11 @@ describe("Tools params are actual Zod schemas at runtime", () => {
       .clientInput({ value: "test" })
       .client((tools) => tools.clientInput)
       .server((tools) => {
-        capturedTools = { sql: tools.sql, clientInput: tools.clientInput, client: tools.client };
+        capturedTools = {
+          sql: tools.sql,
+          clientInput: tools.clientInput,
+          client: tools.client,
+        };
         return tools.clientInput;
       });
 
@@ -323,7 +333,9 @@ describe("Tools params are actual Zod schemas at runtime", () => {
 
     expect(capturedInput).toBeInstanceOf(z.ZodBoolean);
     expect((capturedInput as z.ZodBoolean).parse(true)).toBe(true);
-    expect((capturedInput as z.ZodBoolean).safeParse("not bool").success).toBe(false);
+    expect((capturedInput as z.ZodBoolean).safeParse("not bool").success).toBe(
+      false,
+    );
   });
 
   it("should allow nullable() and other modifiers on tools params", () => {
@@ -664,7 +676,9 @@ describe("UUID generation in initialState", () => {
     });
 
     expect(typeof field.config.initialValue).toBe("function");
-    const result = (field.config.initialValue as any)({ uuid: () => "test-uuid" });
+    const result = (field.config.initialValue as any)({
+      uuid: () => "test-uuid",
+    });
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
   });
@@ -1284,7 +1298,9 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
       schema: z.string(),
       clientPk: true,
     }),
-    name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "MyFactory" }),
+    name: s
+      .sql({ type: "varchar", length: 100 })
+      .clientInput({ value: "MyFactory" }),
     boxes: s.hasMany({ count: 2 }),
   });
 
@@ -1307,7 +1323,9 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
       clientPk: true,
     }),
     boxId: s.reference(() => box.id),
-    label: s.sql({ type: "varchar", length: 50 }).clientInput({ value: "Standard" }),
+    label: s
+      .sql({ type: "varchar", length: 50 })
+      .clientInput({ value: "Standard" }),
   });
 
   const box_ = createSchemaBox(
@@ -1367,7 +1385,9 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
     const ids = new Set<string | number>([
       defaults.id,
       ...(defaults.boxes?.map((b: any) => b.id) ?? []),
-      ...(defaults.boxes?.flatMap((b: any) => (b.variant ? [b.variant.id] : [])) ?? []),
+      ...(defaults.boxes?.flatMap((b: any) =>
+        b.variant ? [b.variant.id] : [],
+      ) ?? []),
     ]);
 
     expect(ids.size).toBe(5);
@@ -1380,6 +1400,8 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
     const second = view.defaultsDefinition();
 
     expect(first.id).not.toBe(second.id);
-    expect((first as any).boxes![0].variant!.id).not.toBe((second as any).boxes![0].variant!.id);
+    expect((first as any).boxes![0].variant!.id).not.toBe(
+      (second as any).boxes![0].variant!.id,
+    );
   });
 });

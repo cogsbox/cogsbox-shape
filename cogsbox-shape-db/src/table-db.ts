@@ -1,0 +1,170 @@
+import { Kysely, sql } from "kysely";
+import type { TableMeta, FindManyOpts, WhereInput } from "./types.js";
+import { buildWhereConditions, buildPkConditions } from "./where-builder.js";
+import { RecordNotFoundError } from "./errors.js";
+
+export class TableDB<TClient extends Record<string, unknown>, TCreate> {
+  constructor(
+    private db: Kysely<unknown>,
+    private meta: TableMeta,
+    private transforms: {
+      toClient: (row: Record<string, unknown>) => TClient;
+      toDb: (row: Record<string, unknown>) => Record<string, unknown>;
+      parseForDb: (data: Record<string, unknown>) => Record<string, unknown>;
+      parseFromDb: (data: Record<string, unknown>) => TClient;
+    },
+  ) {}
+
+  async findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]> {
+    const qb = this.db as any;
+    let query = qb.selectFrom(this.meta.tableName).selectAll();
+
+    if (opts?.where) {
+      const conditions = buildWhereConditions(
+        opts.where as Record<string, unknown>,
+        this.meta,
+      );
+      if (conditions.length > 0) {
+        query = query.where(sql.join(conditions, sql` AND `));
+      }
+    }
+
+    if (opts?.orderBy) {
+      for (const [col, dir] of Object.entries(opts.orderBy)) {
+        if (dir) {
+          const field = this.meta.dbFields.get(col);
+          const dbCol = field?.dbName ?? col;
+          query = query.orderBy(dbCol, dir as any);
+        }
+      }
+    }
+
+    const limit = opts?.limit ?? 100;
+    query = query.limit(limit);
+    if (opts?.offset !== undefined) {
+      query = query.offset(opts.offset);
+    }
+
+    const rows = (await query.execute()) as Record<string, unknown>[];
+    return rows.map((r) => this.transforms.parseFromDb(r));
+  }
+
+  async findById(id: unknown): Promise<TClient | null> {
+    const pkValues = Array.isArray(id) ? id : [id];
+    const pkFields =
+      this.meta.pkFields.length > 0
+        ? this.meta.pkFields
+        : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
+
+    const conditions = buildPkConditions(pkValues, pkFields);
+    const qb = this.db as any;
+    const rows = await qb
+      .selectFrom(this.meta.tableName)
+      .selectAll()
+      .where(sql.join(conditions, sql` AND `))
+      .limit(1)
+      .execute();
+
+    const row = (rows[0] as Record<string, unknown>) ?? null;
+    if (!row) return null;
+    return this.transforms.parseFromDb(row);
+  }
+
+  async create(data: TCreate): Promise<Record<string, unknown>> {
+    const dbData = this.transforms.parseForDb(data as Record<string, unknown>);
+
+    const clientPkClientKeys = this.meta.clientPkFields;
+    const pkDbNames = new Set(clientPkClientKeys.map((k) => {
+      const field = this.meta.dbFields.get(k);
+      return field?.dbName ?? k;
+    }));
+
+    const insertData: Record<string, unknown> = {};
+    for (const key of Object.keys(dbData)) {
+      if (!pkDbNames.has(key)) {
+        insertData[key] = dbData[key];
+      }
+    }
+
+    const qb = this.db as any;
+    const result = await qb
+      .insertInto(this.meta.tableName)
+      .values(insertData)
+      .execute();
+
+    const insertId = result[0]?.insertId;
+    if (insertId !== undefined && this.meta.pkFields.length > 0) {
+      const dbPkField = this.meta.pkFields[0];
+      return { [dbPkField]: Number(insertId) };
+    }
+
+    return {};
+  }
+
+  async update(id: unknown, data: Partial<TCreate>): Promise<Record<string, unknown>> {
+    const pkValues = Array.isArray(id) ? id : [id];
+    const pkFields =
+      this.meta.pkFields.length > 0
+        ? this.meta.pkFields
+        : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
+
+    const dbData = this.transforms.toDb(data as Record<string, unknown>);
+    const conditions = buildPkConditions(pkValues, pkFields);
+
+    const qb = this.db as any;
+    const result = await qb
+      .updateTable(this.meta.tableName)
+      .set(dbData)
+      .where(sql.join(conditions, sql` AND `))
+      .execute();
+
+    const numUpdated = result[0]?.numUpdatedRows ?? 0n;
+    if (Number(numUpdated) === 0) {
+      throw new RecordNotFoundError(this.meta.tableName, id);
+    }
+
+    const pkResult: Record<string, unknown> = {};
+    for (let i = 0; i < pkFields.length; i++) {
+      pkResult[pkFields[i]] = pkValues[i];
+    }
+    return pkResult;
+  }
+
+  async delete(id: unknown): Promise<{ deleted: boolean }> {
+    const pkValues = Array.isArray(id) ? id : [id];
+    const pkFields =
+      this.meta.pkFields.length > 0
+        ? this.meta.pkFields
+        : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
+
+    const conditions = buildPkConditions(pkValues, pkFields);
+    const qb = this.db as any;
+    const result = await qb
+      .deleteFrom(this.meta.tableName)
+      .where(sql.join(conditions, sql` AND `))
+      .execute();
+
+    const numDeleted = result[0]?.numDeletedRows ?? 0n;
+    return { deleted: Number(numDeleted) > 0 };
+  }
+
+  async count(where?: WhereInput<Partial<TClient>>): Promise<number> {
+    const qb = this.db as any;
+    let query = qb
+      .selectFrom(this.meta.tableName)
+      .select(sql<number>`count(*)`.as("count"));
+
+    if (where) {
+      const conditions = buildWhereConditions(
+        where as Record<string, unknown>,
+        this.meta,
+      );
+      if (conditions.length > 0) {
+        query = query.where(sql.join(conditions, sql` AND `));
+      }
+    }
+
+    const row = (await query.execute()) as Record<string, unknown>[];
+    return Number(row[0]?.count ?? 0);
+  }
+}

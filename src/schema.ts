@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { v4 as uuid } from "uuid";
 
+export type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
+  : T;
+
 type CurrentTimestampConfig = {
   default: "CURRENT_TIMESTAMP";
   defaultValue: Date;
@@ -1567,8 +1573,8 @@ function createViewObject(
       schemaType === "server"
         ? registryEntry.zodSchemas.serverSchema
         : schemaType === "sql"
-        ? registryEntry.zodSchemas.sqlSchema
-        : registryEntry.zodSchemas.clientSchema;
+          ? registryEntry.zodSchemas.sqlSchema
+          : registryEntry.zodSchemas.clientSchema;
     const primitiveShape = baseSchema.shape;
 
     if (subSelection === true) {
@@ -1911,6 +1917,48 @@ export type DeriveViewResult<
         _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
       >
     >;
+  };
+
+  reconcile: (
+    clientData:
+      | z.infer<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+          >
+        >
+      | z.infer<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+          >
+        >[],
+  ) => {
+    withServer: (
+      serverData:
+        | DeepPartial<
+            z.infer<
+              z.ZodObject<
+                _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
+              >
+            >
+          >
+        | DeepPartial<
+            z.infer<
+              z.ZodObject<
+                _DeriveViewShape<TTableName, TSelection, TRegistry, "sqlSchema">
+              >
+            >
+          >[],
+    ) =>
+      | z.infer<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+          >
+        >
+      | z.infer<
+          z.ZodObject<
+            _DeriveViewShape<TTableName, TSelection, TRegistry, "clientSchema">
+          >
+        >[];
   };
 
   defaults: () => DeriveViewDefaults<TTableName, TSelection, TRegistry>;
@@ -2380,6 +2428,104 @@ export function createSchemaBox<
         const viewToDb = (clientData: any) =>
           deepToDb(clientData, selection, tableName);
 
+        const reconcile = (clientData: any) => {
+          return {
+            withServer: (serverData: any) => {
+              const parsedServerData = viewToClient(serverData);
+
+              const mergeTrees = (
+                cNode: any,
+                sNode: any,
+                tableKey: string,
+                sel: any,
+              ): any => {
+                if (sNode === undefined || sNode === null) return cNode;
+                if (cNode === undefined || cNode === null) return sNode;
+
+                const regEntry = finalRegistry[tableKey];
+                const clientPkField =
+                  regEntry.clientPk?.[0] || regEntry.pk?.[0];
+                const dbPkField = regEntry.pk?.[0] || clientPkField;
+
+                if (Array.isArray(cNode)) {
+                  if (!Array.isArray(sNode)) return cNode;
+
+                  return cNode.map((cItem, index) => {
+                    let sItem = undefined;
+
+                    if (clientPkField && cItem[clientPkField] !== undefined) {
+                      sItem = sNode.find(
+                        (s: any) => s[clientPkField] === cItem[clientPkField],
+                      );
+                    }
+
+                    if (!sItem && dbPkField && cItem[dbPkField] !== undefined) {
+                      sItem = sNode.find(
+                        (s: any) => s[dbPkField] === cItem[dbPkField],
+                      );
+                    }
+
+                    if (!sItem && sNode[index]) {
+                      sItem = sNode[index];
+                    }
+
+                    return mergeTrees(cItem, sItem, tableKey, sel);
+                  });
+                }
+
+                if (typeof cNode === "object" && typeof sNode === "object") {
+                  const merged = { ...cNode };
+
+                  for (const key in sNode) {
+                    const selValue =
+                      typeof sel === "object" ? sel[key] : undefined;
+                    const relField = regEntry.rawSchema[key];
+                    const isRelation = !!(
+                      selValue && relField?.config?.sql?.schema
+                    );
+
+                    if (isRelation) {
+                      const nextTableKey =
+                        tableNameToRegistryKeyMap[
+                          relField.config.sql.schema()._tableName
+                        ];
+                      merged[key] = mergeTrees(
+                        cNode[key],
+                        sNode[key],
+                        nextTableKey!,
+                        selValue,
+                      );
+                    } else {
+                      merged[key] = sNode[key];
+                    }
+                  }
+
+                  if (
+                    clientPkField &&
+                    dbPkField &&
+                    clientPkField !== dbPkField &&
+                    merged[dbPkField] !== undefined &&
+                    merged[dbPkField] !== null
+                  ) {
+                    delete merged[clientPkField];
+                  }
+
+                  return merged;
+                }
+
+                return sNode !== undefined ? sNode : cNode;
+              };
+
+              return mergeTrees(
+                clientData,
+                parsedServerData,
+                tableName,
+                selection,
+              );
+            },
+          };
+        };
+
         return {
           definition: entry.rawSchema,
           schemaKey: tableName,
@@ -2392,29 +2538,31 @@ export function createSchemaBox<
             toClient: viewToClient,
             toDb: viewToDb,
             parseForDb: (appData: any) => {
-              // FIX: Now correctly validates against the view's server schema first
               const validData = view.server.parse(appData);
               return viewToDb(validData);
             },
             parseFromDb: (dbData: any) => {
-              // FIX: Now correctly validates against the view's client schema after mapping
               const mappedData = view.sql.parse(dbData);
               return viewToClient(mappedData);
             },
           },
 
-          defaults: () => computeViewDefaults(
-            tableName,
-            selection,
-            finalRegistry,
-            tableNameToRegistryKeyMap,
-          ),
-          defaultsDefinition: () => computeViewDefaultsDefinition(
-            tableName,
-            selection,
-            finalRegistry,
-            tableNameToRegistryKeyMap,
-          ),
+          reconcile,
+
+          defaults: () =>
+            computeViewDefaults(
+              tableName,
+              selection,
+              finalRegistry,
+              tableNameToRegistryKeyMap,
+            ),
+          defaultsDefinition: () =>
+            computeViewDefaultsDefinition(
+              tableName,
+              selection,
+              finalRegistry,
+              tableNameToRegistryKeyMap,
+            ),
           pk: entry.zodSchemas.pk,
           clientPk: entry.zodSchemas.clientPk,
           supportsReconciliation: view.supportsReconciliation,
