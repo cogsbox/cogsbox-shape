@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { s, schema, createSchemaBox } from "cogsbox-shape";
-import { z } from "zod";
 import { connect } from "../connect.js";
 import { createSqliteDb } from "../sqlite/sqlite-driver.js";
 import { Kysely, sql } from "kysely";
@@ -8,14 +7,13 @@ const userSchema = schema({
     _tableName: "users",
     id: s.sql({ type: "int", pk: true }).clientInput({
         value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
-        schema: z.string(),
         clientPk: true,
     }),
     name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
     email: s.sql({ type: "varchar", length: 255 }),
     isActive: s
         .sql({ type: "int" })
-        .clientInput(z.boolean())
+        .clientInput({ value: false })
         .transform({
         toClient: (val) => val === 1,
         toDb: (val) => (val ? 1 : 0),
