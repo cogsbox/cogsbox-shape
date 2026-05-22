@@ -237,6 +237,7 @@ export declare function createSchema<T extends {
 }, R extends Record<string, any> = {}, TActualSchema extends Omit<T & R, typeof SchemaWrapperBrand> = Omit<T & R, typeof SchemaWrapperBrand>>(schema: T, relations?: R): {
     pk: string[] | null;
     clientPk: string[] | null;
+    deriveDependencies: Record<string, string[]>;
     isClientRecord: (record: any) => boolean;
     sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>;
     clientInputSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodClientInputSchema">>>;
@@ -463,6 +464,7 @@ type RegistryShape = Record<string, {
         serverSchema: z.ZodObject<any>;
         defaultValues: any;
         stateType: any;
+        deriveDependencies: Record<string, string[]>;
     };
     transforms: {
         toClient: (dbObject: any) => any;
@@ -473,6 +475,7 @@ type RegistryShape = Record<string, {
     };
     pk: string[] | null;
     clientPk: string[] | null;
+    deriveDependencies: Record<string, string[]>;
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => any;
 }>;

@@ -32,4 +32,5 @@ export interface TableMeta {
     pkFields: string[];
     clientPkFields: string[];
     sqlOnlyFields: Set<string>;
+    deriveDependencies: Map<string, string[]>;
 }

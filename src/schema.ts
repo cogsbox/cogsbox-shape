@@ -1010,6 +1010,7 @@ export function createSchema<
 ): {
   pk: string[] | null;
   clientPk: string[] | null;
+  deriveDependencies: Record<string, string[]>;
   isClientRecord: (record: any) => boolean;
   sqlSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
@@ -1342,9 +1343,33 @@ export function createSchema<
   const finalClientInputSchema = z.object(clientInputFields) as any;
   const finalClientSchema = z.object(clientFields) as any;
   const finalValidationSchema = z.object(serverFields) as any;
+  const deriveDependencies: Record<string, string[]> = {};
+
+  if (derives) {
+    const trackingSeed = { ...defaultValues };
+    for (const key in derives) {
+      const accessed = new Set<string>();
+      const trackingRow = new Proxy(trackingSeed, {
+        get(target, prop, receiver) {
+          if (typeof prop === "string" && prop !== key) {
+            accessed.add(prop);
+          }
+          return Reflect.get(target, prop, receiver);
+        },
+      });
+
+      try {
+        derives[key](trackingRow);
+      } catch (e) {}
+
+      deriveDependencies[key] = Array.from(accessed);
+    }
+  }
+
   return {
     pk: pkKeys.length ? pkKeys : null,
     clientPk: clientPkKeys.length ? clientPkKeys : null,
+    deriveDependencies,
     isClientRecord,
     sqlSchema: finalSqlSchema,
     clientInputSchema: finalClientInputSchema,
@@ -2084,6 +2109,7 @@ type RegistryShape = Record<
       serverSchema: z.ZodObject<any>;
       defaultValues: any;
       stateType: any;
+      deriveDependencies: Record<string, string[]>;
     };
     transforms: {
       toClient: (dbObject: any) => any;
@@ -2094,6 +2120,7 @@ type RegistryShape = Record<
     };
     pk: string[] | null;
     clientPk: string[] | null;
+    deriveDependencies: Record<string, string[]>;
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => any;
   }
@@ -2262,6 +2289,7 @@ export function createSchemaBox<
       },
       pk: zodSchemas.pk,
       clientPk: zodSchemas.clientPk,
+      deriveDependencies: zodSchemas.deriveDependencies,
       isClientRecord: zodSchemas.isClientRecord,
       generateDefaults: zodSchemas.generateDefaults,
     };
@@ -2364,6 +2392,7 @@ export function createSchemaBox<
 
       pk: entry.pk,
       clientPk: entry.clientPk,
+      deriveDependencies: entry.deriveDependencies,
       isClientRecord: entry.isClientRecord,
 
       nav: createNavProxy(tableName, finalRegistry),

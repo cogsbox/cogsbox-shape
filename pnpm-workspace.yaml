@@ -1,0 +1,4 @@
+packages:
+  - "."
+  - "cogsbox-shape-db"
+  - "apps/*"

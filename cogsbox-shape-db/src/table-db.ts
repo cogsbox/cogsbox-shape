@@ -152,9 +152,19 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
         ? this.meta.pkFields
         : Array.from(this.meta.dbFields.values()).map((f) => f.dbName);
 
-    const dbData = this.transforms.parsePatchForDb(
-      data as Record<string, unknown>,
-    );
+    const patchData = data as Record<string, unknown>;
+    const deriveKeys = this.affectedDbBackedDerives(patchData);
+    const missingDeps = this.missingDeriveDependencies(patchData, deriveKeys);
+    const fetchedDeps =
+      missingDeps.length > 0
+        ? await this.fetchClientFieldsById(pkValues, pkFields, missingDeps)
+        : {};
+    const parseInput = { ...fetchedDeps, ...patchData };
+    const parsedDbData = this.transforms.parsePatchForDb(parseInput);
+    const dbData = this.pickDbPatchFields(parsedDbData, [
+      ...Object.keys(patchData),
+      ...deriveKeys,
+    ]);
     const conditions = buildPkConditions(pkValues, pkFields);
 
     const qb = this.db as any;
@@ -174,6 +184,88 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
       pkResult[pkFields[i]!] = pkValues[i];
     }
     return pkResult;
+  }
+
+  private affectedDbBackedDerives(
+    patchData: Record<string, unknown>,
+  ): string[] {
+    const patchKeys = new Set(Object.keys(patchData));
+    const affected: string[] = [];
+
+    for (const [deriveKey, deps] of this.meta.deriveDependencies.entries()) {
+      if (!this.meta.dbFields.has(deriveKey)) continue;
+      if (deps.some((dep) => patchKeys.has(dep))) {
+        affected.push(deriveKey);
+      }
+    }
+
+    return affected;
+  }
+
+  private missingDeriveDependencies(
+    patchData: Record<string, unknown>,
+    deriveKeys: string[],
+  ): string[] {
+    const patchKeys = new Set(Object.keys(patchData));
+    const missing = new Set<string>();
+
+    for (const deriveKey of deriveKeys) {
+      const deps = this.meta.deriveDependencies.get(deriveKey) ?? [];
+      for (const dep of deps) {
+        if (!patchKeys.has(dep)) missing.add(dep);
+      }
+    }
+
+    return Array.from(missing).filter((dep) => this.meta.dbFields.has(dep));
+  }
+
+  private async fetchClientFieldsById(
+    pkValues: unknown[],
+    pkFields: string[],
+    clientFields: string[],
+  ): Promise<Record<string, unknown>> {
+    const dbColumns = clientFields.map((clientKey) => {
+      const field = this.meta.dbFields.get(clientKey);
+      return field?.dbName ?? clientKey;
+    });
+    const conditions = buildPkConditions(pkValues, pkFields);
+    const qb = this.db as any;
+    const row = (await qb
+      .selectFrom(this.meta.tableName)
+      .select(dbColumns)
+      .where(sql.join(conditions, sql` AND `))
+      .limit(1)
+      .executeTakeFirst()) as Record<string, unknown> | undefined;
+
+    if (!row) {
+      throw new RecordNotFoundError(this.meta.tableName, pkValues);
+    }
+
+    const result: Record<string, unknown> = {};
+    for (const clientKey of clientFields) {
+      const field = this.meta.dbFields.get(clientKey);
+      const dbName = field?.dbName ?? clientKey;
+      const value = row[dbName];
+      result[clientKey] = field?.toClient ? field.toClient(value) : value;
+    }
+
+    return result;
+  }
+
+  private pickDbPatchFields(
+    dbData: Record<string, unknown>,
+    clientKeys: string[],
+  ): Record<string, unknown> {
+    const picked: Record<string, unknown> = {};
+
+    for (const clientKey of clientKeys) {
+      const dbName = this.meta.clientToDbName.get(clientKey) ?? clientKey;
+      if (dbData[dbName] !== undefined) {
+        picked[dbName] = dbData[dbName];
+      }
+    }
+
+    return picked;
   }
 
   reconcileIds(clientData: unknown, ids: unknown): unknown {

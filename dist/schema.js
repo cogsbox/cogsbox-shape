@@ -638,9 +638,30 @@ export function createSchema(schema, relations) {
     const finalClientInputSchema = z.object(clientInputFields);
     const finalClientSchema = z.object(clientFields);
     const finalValidationSchema = z.object(serverFields);
+    const deriveDependencies = {};
+    if (derives) {
+        const trackingSeed = { ...defaultValues };
+        for (const key in derives) {
+            const accessed = new Set();
+            const trackingRow = new Proxy(trackingSeed, {
+                get(target, prop, receiver) {
+                    if (typeof prop === "string" && prop !== key) {
+                        accessed.add(prop);
+                    }
+                    return Reflect.get(target, prop, receiver);
+                },
+            });
+            try {
+                derives[key](trackingRow);
+            }
+            catch (e) { }
+            deriveDependencies[key] = Array.from(accessed);
+        }
+    }
     return {
         pk: pkKeys.length ? pkKeys : null,
         clientPk: clientPkKeys.length ? clientPkKeys : null,
+        deriveDependencies,
         isClientRecord,
         sqlSchema: finalSqlSchema,
         clientInputSchema: finalClientInputSchema,
@@ -807,6 +828,7 @@ export function createSchemaBox(schemas, resolutions) {
             },
             pk: zodSchemas.pk,
             clientPk: zodSchemas.clientPk,
+            deriveDependencies: zodSchemas.deriveDependencies,
             isClientRecord: zodSchemas.isClientRecord,
             generateDefaults: zodSchemas.generateDefaults,
         };
@@ -891,6 +913,7 @@ export function createSchemaBox(schemas, resolutions) {
             generateDefaults: entry.generateDefaults,
             pk: entry.pk,
             clientPk: entry.clientPk,
+            deriveDependencies: entry.deriveDependencies,
             isClientRecord: entry.isClientRecord,
             nav: createNavProxy(tableName, finalRegistry),
             createView: (selection) => {

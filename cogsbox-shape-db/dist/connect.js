@@ -8,8 +8,9 @@ function extractTableMeta(entry) {
     const pkFields = [];
     const clientPkFields = [];
     const sqlOnlyFields = new Set();
+    const deriveDependencies = new Map(Object.entries((entry.deriveDependencies ?? {})));
     if (!definition)
-        return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields };
+        return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields, deriveDependencies };
     for (const [key, field] of Object.entries(definition)) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
@@ -39,7 +40,7 @@ function extractTableMeta(entry) {
         if (sqlConfig.sqlOnly)
             sqlOnlyFields.add(dbName);
     }
-    return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields };
+    return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields, deriveDependencies };
 }
 function enhanceTable(entry, meta, db) {
     const transforms = entry.transforms ?? {};

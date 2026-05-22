@@ -12,7 +12,8 @@
     "build": " tsc",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "vitest  "
+    "test": "vitest  ",
+    "playground": "pnpm --filter cogsbox-shape-playground dev"
   },
   "bin": {
     "cogsbox-shape": "./dist/cli.js"
@@ -54,6 +55,11 @@
   },
   "peerDependencies": {
     "zod": "^3.22.4 || ^4.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
   },
   "type": "module"
 }

@@ -23,7 +23,7 @@ const userSchema = schema({
     }),
 });
 
-const box = createSchemaBox({ users: userSchema }, { users: {} });
+const box = createSchemaBox({ users: userSchema }, { users: {} }) as any;
 
 const aliasedUserSchema = schema({
   _tableName: "aliased_users",
@@ -37,7 +37,31 @@ const aliasedUserSchema = schema({
 const aliasedBox = createSchemaBox(
   { aliasedUsers: aliasedUserSchema },
   { aliasedUsers: {} },
-);
+) as any;
+
+const derivedUserSchema = schema({
+  _tableName: "derived_users",
+  id: s.sql({ type: "int", pk: true }).clientInput({
+    value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    clientPk: true,
+  }),
+  firstName: s.sql({ type: "varchar", length: 100 }).clientInput({
+    value: "",
+  }),
+  lastName: s.sql({ type: "varchar", length: 100 }).clientInput({
+    value: "",
+  }),
+  fullName: s.sql({ type: "varchar", length: 220 }).clientInput({
+    value: "",
+  }),
+}).derive({
+  fullName: (row) => `${row.firstName} ${row.lastName}`,
+});
+
+const derivedBox = createSchemaBox(
+  { derivedUsers: derivedUserSchema },
+  { derivedUsers: {} },
+) as any;
 
 let db: Kysely<unknown>;
 
@@ -57,6 +81,15 @@ describe("cogsbox-shape-db", () => {
       CREATE TABLE IF NOT EXISTS aliased_users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(100) NOT NULL
+      )
+    `.execute(db);
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS derived_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        firstName VARCHAR(100) NOT NULL,
+        lastName VARCHAR(100) NOT NULL,
+        fullName VARCHAR(220) NOT NULL
       )
     `.execute(db);
   });
@@ -398,6 +431,29 @@ describe("cogsbox-shape-db", () => {
         email: "not-an-email",
       }).ids(),
     ).rejects.toThrow();
+  });
+
+  it("update recomputes db-backed derived fields from fetched dependencies", async () => {
+    const b = connect(derivedBox, db) as any;
+    const inserted = await b.derivedUsers.db.insert({
+      ...derivedBox.derivedUsers.generateDefaults(),
+      firstName: "Ada",
+      lastName: "Lovelace",
+    }).full();
+
+    const updatePk = await b.derivedUsers.db.update(inserted.id, {
+      firstName: "Grace",
+    }).ids();
+
+    expect(updatePk.id).toBe(inserted.id);
+
+    const updated = await b.derivedUsers.db.findById(inserted.id);
+    expect(updated).toMatchObject({
+      id: inserted.id,
+      firstName: "Grace",
+      lastName: "Lovelace",
+      fullName: "Grace Lovelace",
+    });
   });
 
   it("update(...).full returns the stored row after update", async () => {

@@ -27,6 +27,10 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate> {
         full: () => Promise<TClient>;
     };
     private updateIds;
+    private affectedDbBackedDerives;
+    private missingDeriveDependencies;
+    private fetchClientFieldsById;
+    private pickDbPatchFields;
     reconcileIds(clientData: unknown, ids: unknown): unknown;
     private reconcileFlatIds;
     private mapIdsToClientFields;

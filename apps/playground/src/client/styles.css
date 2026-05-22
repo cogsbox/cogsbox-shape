@@ -1,0 +1,158 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f6f7f8;
+  color: #1d232a;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+main {
+  width: min(1120px, calc(100vw - 40px));
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.toolbar p {
+  margin-top: 6px;
+  color: #5b6572;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.panel {
+  background: #ffffff;
+  border: 1px solid #dce1e7;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+form {
+  display: grid;
+  gap: 14px;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  color: #3d4652;
+  font-size: 14px;
+}
+
+input {
+  width: 100%;
+  border: 1px solid #c9d0d8;
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #1d232a;
+  font: inherit;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox input {
+  width: auto;
+}
+
+button {
+  border: 1px solid #1f6feb;
+  border-radius: 6px;
+  background: #1f6feb;
+  color: white;
+  padding: 9px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e5e9ef;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.user div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.user span,
+.user small {
+  color: #64707d;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  background: #ffffff;
+  color: #1f6feb;
+}
+
+.error {
+  max-height: 180px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #fff2f2;
+  color: #9f1239;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 760px) {
+  main {
+    width: min(100vw - 24px, 1120px);
+    padding: 20px 0;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
