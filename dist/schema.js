@@ -578,6 +578,7 @@ export function createSchema(schema, relations) {
     const generateDefaults = () => {
         const freshDefaults = {};
         for (const key in defaultGenerators) {
+            // ... same logic for mapping standard defaults ...
             const generatorOrValue = defaultGenerators[key];
             let rawValue = isFunction(generatorOrValue)
                 ? generatorOrValue({ uuid })
@@ -586,9 +587,10 @@ export function createSchema(schema, relations) {
                 ? fieldTransforms[key].toClient(rawValue)
                 : rawValue;
         }
-        if (derives) {
-            for (const key in derives) {
-                freshDefaults[key] = derives[key](freshDefaults);
+        // Only apply client derivations
+        if (derives?.forClient) {
+            for (const key in derives.forClient) {
+                freshDefaults[key] = derives.forClient[key]?.(freshDefaults);
             }
         }
         return freshDefaults;
@@ -606,31 +608,34 @@ export function createSchema(schema, relations) {
                 ? transform(dbObject[dbKey])
                 : dbObject[dbKey];
         }
-        if (derives) {
-            for (const key in derives) {
-                clientObject[key] = derives[key](clientObject);
+        // Only apply Client derives AFTER mapping standard fields
+        if (derives?.forClient) {
+            for (const key in derives.forClient) {
+                clientObject[key] = derives.forClient[key]?.(clientObject);
             }
         }
         return clientObject;
     };
     const toDb = (clientObject) => {
-        // 1. Calculate derives FIRST based on the client data
-        const clientWithDerives = { ...clientObject };
-        if (derives) {
-            for (const key in derives) {
-                clientWithDerives[key] = derives[key](clientWithDerives);
-            }
-        }
-        // 2. Map the data (including the newly derived fields) to the DB object
         const dbObject = {};
-        for (const clientKey in clientWithDerives) {
-            if (clientWithDerives[clientKey] === undefined)
+        // 1. Map standard client fields to DB fields
+        for (const clientKey in clientObject) {
+            if (clientObject[clientKey] === undefined)
                 continue;
             const dbKey = clientToDbKeys[clientKey] || clientKey;
             const transform = fieldTransforms[clientKey]?.toDb;
             dbObject[dbKey] = transform
-                ? transform(clientWithDerives[clientKey])
-                : clientWithDerives[clientKey];
+                ? transform(clientObject[clientKey])
+                : clientObject[clientKey];
+        }
+        // 2. Map Database ONLY derives directly to the dbObject
+        if (derives?.forDb) {
+            for (const schemaKey in derives.forDb) {
+                // Resolve custom DB column name if they used s.sql({ field: "custom_name" })
+                const sqlConfig = fullSchema[schemaKey]?.config?.sql;
+                const dbKey = sqlConfig?.field || schemaKey;
+                dbObject[dbKey] = derives.forDb[schemaKey]?.(clientObject);
+            }
         }
         return dbObject;
     };
@@ -639,9 +644,9 @@ export function createSchema(schema, relations) {
     const finalClientSchema = z.object(clientFields);
     const finalValidationSchema = z.object(serverFields);
     const deriveDependencies = {};
-    if (derives) {
+    if (derives?.forClient) {
         const trackingSeed = { ...defaultValues };
-        for (const key in derives) {
+        for (const key in derives.forClient) {
             const accessed = new Set();
             const trackingRow = new Proxy(trackingSeed, {
                 get(target, prop, receiver) {
@@ -652,7 +657,7 @@ export function createSchema(schema, relations) {
                 },
             });
             try {
-                derives[key](trackingRow);
+                derives.forClient[key]?.(trackingRow);
             }
             catch (e) { }
             deriveDependencies[key] = Array.from(accessed);
@@ -945,9 +950,10 @@ export function createSchemaBox(schemas, resolutions) {
                             }
                         }
                     }
-                    if (regEntry.rawSchema.__derives) {
-                        for (const key in regEntry.rawSchema.__derives) {
-                            baseMapped[key] = regEntry.rawSchema.__derives[key](baseMapped);
+                    if (regEntry.rawSchema.__derives?.forClient) {
+                        for (const key in regEntry.rawSchema.__derives.forClient) {
+                            baseMapped[key] =
+                                regEntry.rawSchema.__derives.forClient[key](baseMapped);
                         }
                     }
                     return baseMapped;

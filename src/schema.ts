@@ -809,32 +809,42 @@ type PickPrimaryKeys<T extends ShapeSchema> = {
     : never]: T[K];
 };
 
+type PickClientOnlyKeys<T extends ShapeSchema> = {
+  [K in keyof T]: T[K] extends { config: { sql: null } } ? K : never;
+}[keyof T];
+
+type PickSqlOnlyKeys<T extends ShapeSchema> = {
+  [K in keyof T]: T[K] extends { config: { sql: { sqlOnly: true } } }
+    ? K
+    : never;
+}[keyof T];
+
+// Extracting the row type makes the derive signature much cleaner
+type InferClientRow<T extends ShapeSchema> = Prettify<
+  z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>
+>;
+
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
   __primaryKeySQL?: string;
-  __derives?: Record<string, (row: any) => any>;
+  __derives?: {
+    forClient?: Record<string, (row: any) => any>;
+    forDb?: Record<string, (row: any) => any>;
+  };
 
   primaryKeySQL: (
     definer: (pkFields: PickPrimaryKeys<T>) => string,
   ) => SchemaBuilder<T>;
 
-  derive: <
-    D extends Partial<
-      Record<
-        keyof T,
-        (
-          row: Prettify<
-            z.infer<
-              z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>
-            >
-          >,
-        ) => any
-      >
-    >,
-  >(
-    derivers: D,
-  ) => SchemaBuilder<T>;
+  // Notice: no <DClient, DDb> generics here. Just direct mapped types!
+  derive: (derivers: {
+    forClient?: {
+      [K in PickClientOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+    };
+    forDb?: {
+      [K in PickSqlOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+    };
+  }) => SchemaBuilder<T>;
 };
-
 export function schema<T extends string, U extends ShapeSchema<T>>(
   schema: U,
 ): SchemaBuilder<U> {
@@ -1099,7 +1109,12 @@ export function createSchema<
   const fullSchema = { ...schema, ...(relations || {}) };
   let pkKeys: string[] | null = [];
   let clientPkKeys: string[] | null = [];
-  const derives = (schema as any).__derives;
+  const derives = (schema as any).__derives as
+    | {
+        forClient?: Record<string, (row: any) => any>;
+        forDb?: Record<string, (row: any) => any>;
+      }
+    | undefined;
 
   for (const key in fullSchema) {
     const value = (fullSchema as any)[key];
@@ -1275,6 +1290,7 @@ export function createSchema<
   const generateDefaults = () => {
     const freshDefaults: any = {};
     for (const key in defaultGenerators) {
+      // ... same logic for mapping standard defaults ...
       const generatorOrValue = defaultGenerators[key];
       let rawValue = isFunction(generatorOrValue)
         ? generatorOrValue({ uuid })
@@ -1284,9 +1300,10 @@ export function createSchema<
         : rawValue;
     }
 
-    if (derives) {
-      for (const key in derives) {
-        freshDefaults[key] = derives[key](freshDefaults);
+    // Only apply client derivations
+    if (derives?.forClient) {
+      for (const key in derives.forClient) {
+        freshDefaults[key] = derives.forClient[key]?.(freshDefaults);
       }
     }
 
@@ -1307,9 +1324,10 @@ export function createSchema<
         : dbObject[dbKey];
     }
 
-    if (derives) {
-      for (const key in derives) {
-        clientObject[key] = derives[key](clientObject);
+    // Only apply Client derives AFTER mapping standard fields
+    if (derives?.forClient) {
+      for (const key in derives.forClient) {
+        clientObject[key] = derives.forClient[key]?.(clientObject);
       }
     }
 
@@ -1317,26 +1335,31 @@ export function createSchema<
   };
 
   const toDb = (clientObject: any) => {
-    // 1. Calculate derives FIRST based on the client data
-    const clientWithDerives = { ...clientObject };
-    if (derives) {
-      for (const key in derives) {
-        clientWithDerives[key] = derives[key](clientWithDerives);
-      }
-    }
-
-    // 2. Map the data (including the newly derived fields) to the DB object
     const dbObject: any = {};
-    for (const clientKey in clientWithDerives) {
-      if (clientWithDerives[clientKey] === undefined) continue;
+
+    // 1. Map standard client fields to DB fields
+    for (const clientKey in clientObject) {
+      if (clientObject[clientKey] === undefined) continue;
 
       const dbKey = clientToDbKeys[clientKey] || clientKey;
       const transform = fieldTransforms[clientKey]?.toDb;
 
       dbObject[dbKey] = transform
-        ? transform(clientWithDerives[clientKey])
-        : clientWithDerives[clientKey];
+        ? transform(clientObject[clientKey])
+        : clientObject[clientKey];
     }
+
+    // 2. Map Database ONLY derives directly to the dbObject
+    if (derives?.forDb) {
+      for (const schemaKey in derives.forDb) {
+        // Resolve custom DB column name if they used s.sql({ field: "custom_name" })
+        const sqlConfig = (fullSchema as any)[schemaKey]?.config?.sql;
+        const dbKey = sqlConfig?.field || schemaKey;
+
+        dbObject[dbKey] = derives.forDb[schemaKey]?.(clientObject);
+      }
+    }
+
     return dbObject;
   };
   const finalSqlSchema = z.object(sqlFields) as any;
@@ -1345,9 +1368,9 @@ export function createSchema<
   const finalValidationSchema = z.object(serverFields) as any;
   const deriveDependencies: Record<string, string[]> = {};
 
-  if (derives) {
+  if (derives?.forClient) {
     const trackingSeed = { ...defaultValues };
-    for (const key in derives) {
+    for (const key in derives.forClient) {
       const accessed = new Set<string>();
       const trackingRow = new Proxy(trackingSeed, {
         get(target, prop, receiver) {
@@ -1359,7 +1382,7 @@ export function createSchema<
       });
 
       try {
-        derives[key](trackingRow);
+        derives.forClient[key]?.(trackingRow);
       } catch (e) {}
 
       deriveDependencies[key] = Array.from(accessed);
@@ -2441,9 +2464,10 @@ export function createSchemaBox<
             }
           }
 
-          if (regEntry.rawSchema.__derives) {
-            for (const key in regEntry.rawSchema.__derives) {
-              baseMapped[key] = regEntry.rawSchema.__derives[key](baseMapped);
+          if (regEntry.rawSchema.__derives?.forClient) {
+            for (const key in regEntry.rawSchema.__derives.forClient) {
+              baseMapped[key] =
+                regEntry.rawSchema.__derives.forClient[key](baseMapped);
             }
           }
 

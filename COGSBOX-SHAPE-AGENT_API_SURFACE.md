@@ -73,11 +73,11 @@ The ORM should not invent validation rules. It should use the schema's validatio
 For writes:
 
 ```ts
-insert(data)
+insert(data);
 // validates full server schema
 // transforms through parseForDb()
 
-update(id, patch)
+update(id, patch);
 // validates partial server schema
 // transforms through parsePatchForDb()
 ```
@@ -111,7 +111,7 @@ Supported SQL field config includes:
 Use `s.clientInput()` for client-only/default fields.
 
 ```ts
-localId: s.clientInput(({ uuid }) => `new_${uuid()}`)
+localId: s.clientInput(({ uuid }) => `new_${uuid()}`);
 ```
 
 For optimistic records, a DB primary key can also have a client-side temporary value.
@@ -120,25 +120,22 @@ For optimistic records, a DB primary key can also have a client-side temporary v
 id: s.sql({ type: "int", pk: true }).clientInput({
   value: ({ uuid }) => `new_${uuid()}`,
   clientPk: true,
-})
+});
 ```
 
 Use `.client()`, `.server()`, and `.transform()` to customize client validation, server validation, and DB/client conversion.
 
 ```ts
-email: s
-  .sql({ type: "varchar", length: 255 })
-  .server((t) => t.sql.email())
+email: s.sql({ type: "varchar", length: 255 }).server((t) => t.sql.email());
 ```
 
 ```ts
-published: s
-  .sql({ type: "boolean" })
+published: s.sql({ type: "boolean" })
   .client((t) => t.sql.boolean())
   .transform({
     toClient: (value) => Boolean(value),
     toDb: (value) => (value ? 1 : 0),
-  })
+  });
 ```
 
 ## Schemas And Boxes
@@ -188,20 +185,35 @@ Prefer using the transform methods over calling lower-level Zod schemas manually
 
 ## Derived Fields
 
-Use schema-level `.derive()` for same-row deterministic derived values.
+Use schema-level `.derive()` for same-row deterministic derived values. Derivations are strictly split into two directions: `forClient` (virtual fields) and `forDb` (computed SQL fields).
 
 ```ts
 const users = schema("users", {
   id: s.sql({ type: "int", pk: true }),
   firstName: s.sql({ type: "varchar", length: 120 }),
   lastName: s.sql({ type: "varchar", length: 120 }),
-  fullName: s.sql({ type: "varchar", length: 255 }).clientInput(""),
+
+  // Virtual field (no DB column): allowed in forClient
+  statusLabel: s.clientInput(""),
+
+  // Computed DB column (no client input): allowed in forDb
+  searchVector: s.sql({ type: "varchar", length: 255, sqlOnly: true }),
 }).derive({
-  fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
+  forClient: {
+    statusLabel: (row) => `${row.firstName} ${row.lastName} - Active`,
+  },
+  forDb: {
+    searchVector: (row) => `${row.firstName} ${row.lastName}`.toLowerCase(),
+  },
 });
 ```
 
-Derived fields run through the schema transform/default pipeline. The library tracks which row fields a derive function reads by running it against a Proxy. The ORM uses those dependencies during partial updates.
+TypeScript strictly enforces this split:
+
+- `forClient` can only target fields defined without SQL (`s.clientInput(...)`). These fields are ignored during SQL inserts/updates but dynamically computed when formatting data for the client.
+- `forDb` can only target fields defined as `sqlOnly: true`. These fields are dynamically computed from the client payload during `insert` and `update`, and written directly to the database.
+
+The library tracks which row fields a derive function reads by running it against a Proxy. The ORM uses those dependencies during partial updates.
 
 Current DB-backed derived update behavior:
 
@@ -213,8 +225,8 @@ Important caution: conditional derive functions can hide dependencies if the def
 
 Good use cases:
 
-- `fullName` from `firstName` and `lastName`
-- normalized display/search fields
+- `statusLabel` from `isActive` status (`forClient`)
+- normalized display/search fields (`forDb`)
 - deterministic same-row values
 
 Avoid using derives for:
@@ -343,9 +355,13 @@ Validates the full server schema and inserts the row.
 Returns the DB primary key payload in DB column-name format.
 
 ```ts
-{ id: 42 }
+{
+  id: 42;
+}
 // or, with field aliases:
-{ user_id: 42 }
+{
+  user_id: 42;
+}
 ```
 
 For DB-generated PKs, the ORM omits client temporary PK fields before insert.
@@ -353,13 +369,12 @@ For DB-generated PKs, the ORM omits client temporary PK fields before insert.
 SQL-only fields can be supplied as the second argument:
 
 ```ts
-const ids = await bx.users.db.insert(
-  draft,
-  {
+const ids = await bx.users.db
+  .insert(draft, {
     tenantId,
     createdByUserId: userId,
-  },
-).ids();
+  })
+  .ids();
 ```
 
 The second argument only accepts fields marked `sqlOnly: true`. Those fields are validated against their SQL schema, mapped through DB field aliases, written to the database, and excluded from returned client objects.
@@ -372,7 +387,7 @@ tenantId: s.sql({
   length: 100,
   field: "tenant_id",
   sqlOnly: true,
-})
+});
 
 await bx.users.db.insert(draft).ids();
 // Type error and runtime error: missing tenantId
@@ -406,7 +421,7 @@ This is primarily for optimistic client flows. Current semantics are "client obj
 Legacy alias for:
 
 ```ts
-insert(data).ids()
+insert(data).ids();
 ```
 
 Prefer `insert()` in new code.
@@ -414,9 +429,11 @@ Prefer `insert()` in new code.
 ### `update(id, patch).ids()`
 
 ```ts
-const ids = await bx.users.db.update(1, {
-  email: "new@example.com",
-}).ids();
+const ids = await bx.users.db
+  .update(1, {
+    email: "new@example.com",
+  })
+  .ids();
 ```
 
 Validates `patch` through the partial server schema, transforms it through `parsePatchForDb()`, updates the row, and returns the PK payload.
@@ -428,11 +445,9 @@ For DB-backed derived fields, the ORM recomputes affected derives and fetches on
 SQL-only fields can be supplied as the third argument:
 
 ```ts
-await bx.users.db.update(
-  1,
-  { email: "new@example.com" },
-  { updatedByUserId: userId },
-).ids();
+await bx.users.db
+  .update(1, { email: "new@example.com" }, { updatedByUserId: userId })
+  .ids();
 ```
 
 As with insert, the third argument is only for fields marked `sqlOnly: true`.
@@ -442,9 +457,11 @@ Update `sqlOnly` fields are always partial. A non-null hidden column may be requ
 ### `update(id, patch).full()`
 
 ```ts
-const user = await bx.users.db.update(1, {
-  firstName: "Ada",
-}).full();
+const user = await bx.users.db
+  .update(1, {
+    firstName: "Ada",
+  })
+  .full();
 ```
 
 Runs the update, then fetches the stored row with `findById()`.
@@ -480,7 +497,7 @@ Maps DB primary key payloads back onto client data.
 For views with rich reconciliation support, this delegates to:
 
 ```ts
-view.reconcile(clientData).withServer(ids)
+view.reconcile(clientData).withServer(ids);
 ```
 
 For plain tables, it flat-maps DB column names back to client keys.
@@ -506,10 +523,12 @@ For optimistic UI:
 const draft = bx.users.generateDefaults();
 
 // draft.id might be "new_xxx"
-const created = await bx.users.db.insert({
-  ...draft,
-  email: "ada@example.com",
-}).full();
+const created = await bx.users.db
+  .insert({
+    ...draft,
+    email: "ada@example.com",
+  })
+  .full();
 
 // created.id is the real DB id
 ```
@@ -530,7 +549,7 @@ Current guarantees:
 - DB transforms run after validation.
 - client-only fields such as `s.clientInput("")` are ignored by ORM insert/update SQL generation.
 - only schema-mapped DB-backed fields are written to SQL.
-- DB-backed derived fields are recomputed during relevant partial updates.
+- DB-backed derived fields (`forDb`) are recomputed during relevant partial updates, while client derivations (`forClient`) safely append to fetched data without triggering SQL errors.
 
 Known weak spots:
 
@@ -561,7 +580,8 @@ Solid/currently covered:
 - basic `findMany`, `findById`, `delete`, `count`
 - connected view `findById()` / `findMany()` hydrate selected nested relations
 - transactions through connected boxes
-- DB-backed derived field recomputation during partial update
+- strict type-safe derivations splitting virtual client fields (`forClient`) and computed DB columns (`forDb`)
+- DB-backed derived field (`forDb`) recomputation during partial update
 - private playground app using the ORM in a real React/Hono flow
 
 Partial/limited:

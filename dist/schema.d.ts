@@ -194,11 +194,38 @@ type PickPrimaryKeys<T extends ShapeSchema> = {
         };
     } ? K : never]: T[K];
 };
+type PickClientOnlyKeys<T extends ShapeSchema> = {
+    [K in keyof T]: T[K] extends {
+        config: {
+            sql: null;
+        };
+    } ? K : never;
+}[keyof T];
+type PickSqlOnlyKeys<T extends ShapeSchema> = {
+    [K in keyof T]: T[K] extends {
+        config: {
+            sql: {
+                sqlOnly: true;
+            };
+        };
+    } ? K : never;
+}[keyof T];
+type InferClientRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>>;
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
     __primaryKeySQL?: string;
-    __derives?: Record<string, (row: any) => any>;
+    __derives?: {
+        forClient?: Record<string, (row: any) => any>;
+        forDb?: Record<string, (row: any) => any>;
+    };
     primaryKeySQL: (definer: (pkFields: PickPrimaryKeys<T>) => string) => SchemaBuilder<T>;
-    derive: <D extends Partial<Record<keyof T, (row: Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>>) => any>>>(derivers: D) => SchemaBuilder<T>;
+    derive: (derivers: {
+        forClient?: {
+            [K in PickClientOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+        };
+        forDb?: {
+            [K in PickSqlOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+        };
+    }) => SchemaBuilder<T>;
 };
 export declare function schema<T extends string, U extends ShapeSchema<T>>(schema: U): SchemaBuilder<U>;
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";
