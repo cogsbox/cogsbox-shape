@@ -21,6 +21,7 @@ const userSchema = schema({
     field: "tenant_id",
     sqlOnly: true,
   }),
+  statusLabel: s.clientInput(""),
   isActive: s
     .sql({ type: "int" })
     .clientInput({ value: false })
@@ -297,6 +298,29 @@ describe("cogsbox-shape-db", () => {
     expect(raw.tenant_id).toBe("tenant_insert");
   });
 
+  it("insert ignores client-only fields instead of writing them as sql columns", async () => {
+    const b = connect(box, db) as any;
+
+    const ids = await b.users.db
+      .insert({
+        ...box.users.generateDefaults(),
+        name: "Client Only Insert",
+        email: "client-only-insert@test.com",
+        statusLabel: "Draft only",
+        isActive: true,
+      })
+      .ids();
+
+    const stored = await b.users.db.findById(ids.id);
+    expect(stored).toMatchObject({
+      id: ids.id,
+      name: "Client Only Insert",
+      email: "client-only-insert@test.com",
+      isActive: true,
+    });
+    expect(stored).not.toHaveProperty("statusLabel");
+  });
+
   it("insert rejects non-sqlOnly fields in the second parameter", async () => {
     const b = connect(box, db) as any;
 
@@ -555,6 +579,35 @@ describe("cogsbox-shape-db", () => {
       email: "patch-validation-updated@test.com",
       isActive: false,
     });
+  });
+
+  it("update ignores client-only fields from full client/view state", async () => {
+    const b = connect(box, db) as any;
+    const inserted = await b.users.db
+      .insert({
+        ...box.users.generateDefaults(),
+        name: "Client Only Update",
+        email: "client-only-update@test.com",
+        statusLabel: "Local draft",
+        isActive: false,
+      })
+      .full();
+
+    const updated = await b.users.db
+      .update(inserted.id, {
+        ...inserted,
+        name: "Client Only Update Changed",
+        statusLabel: "Still local only",
+      })
+      .full();
+
+    expect(updated).toMatchObject({
+      id: inserted.id,
+      name: "Client Only Update Changed",
+      email: "client-only-update@test.com",
+      isActive: false,
+    });
+    expect(updated).not.toHaveProperty("statusLabel");
   });
 
   it("update accepts sqlOnly fields as the third parameter", async () => {

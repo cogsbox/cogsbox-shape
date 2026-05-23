@@ -82,7 +82,7 @@ export class TableDB {
         }));
         const insertData = {};
         for (const key of Object.keys(dbData)) {
-            if (!pkDbNames.has(key)) {
+            if (!pkDbNames.has(key) && this.isWritableDbColumn(key)) {
                 insertData[key] = dbData[key];
             }
         }
@@ -200,12 +200,21 @@ export class TableDB {
     pickDbPatchFields(dbData, clientKeys) {
         const picked = {};
         for (const clientKey of clientKeys) {
-            const dbName = this.meta.clientToDbName.get(clientKey) ?? clientKey;
+            const dbName = this.meta.clientToDbName.get(clientKey);
+            if (!dbName)
+                continue;
             if (dbData[dbName] !== undefined) {
                 picked[dbName] = dbData[dbName];
             }
         }
         return picked;
+    }
+    isWritableDbColumn(dbName) {
+        for (const field of this.meta.dbFields.values()) {
+            if (field.dbName === dbName)
+                return true;
+        }
+        return false;
     }
     parseDbOnlyData(dbOnlyData, opts = { requireRequired: false }) {
         if (opts.requireRequired) {

@@ -511,6 +511,8 @@ Current guarantees:
 - `update()` validates partial data.
 - view updates validate through the view/server patch schema.
 - DB transforms run after validation.
+- client-only fields such as `s.clientInput("")` are ignored by ORM insert/update SQL generation.
+- only schema-mapped DB-backed fields are written to SQL.
 - DB-backed derived fields are recomputed during relevant partial updates.
 
 Known weak spots:
@@ -534,6 +536,7 @@ Solid/currently covered:
 - required insert typing for non-null `sqlOnly` fields without DB defaults
 - full insert validation
 - partial update validation
+- client-only fields are not written as SQL columns during insert/update
 - insert ID return via `.ids()`
 - optimistic ID reconciliation via `.full()` and `reconcileIds()`
 - plain table reconciliation

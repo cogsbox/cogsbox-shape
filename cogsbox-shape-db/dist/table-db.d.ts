@@ -36,6 +36,7 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate, T
     private missingDeriveDependencies;
     private fetchClientFieldsById;
     private pickDbPatchFields;
+    private isWritableDbColumn;
     private parseDbOnlyData;
     reconcileIds(clientData: unknown, ids: unknown): unknown;
     private reconcileFlatIds;
