@@ -2,7 +2,7 @@
 
 This file is meant to be copied into other repos so another coding agent can make sensible decisions without rediscovering the library from scratch.
 
-The short version: `cogsbox-shape` defines the schema, validation, defaults, transforms, client IDs, DB field names, derived fields, and views. `cogsbox-shape-db` attaches a small ORM to that schema. The schema is the source of truth for writes.
+The short version: `cogsbox-shape` defines the schema, validation, defaults, transforms, client IDs, DB field names, derived fields, views, and DB/ORM entry points. The repo has an internal `cogsbox-shape-db` workspace folder, but the public npm API should come from the main `cogsbox-shape` package. The schema is the source of truth for writes.
 
 ## Packages
 
@@ -16,13 +16,13 @@ import { s, schema, createSchema, createSchemaBox } from "cogsbox-shape";
 
 Public root export currently re-exports `src/schema.ts`.
 
-### `cogsbox-shape-db`
+### DB API
 
-ORM package that connects a shape box to a Kysely database.
+The ORM code lives in the repo under `cogsbox-shape-db`, but it ships inside the main `cogsbox-shape` npm package through subpath exports. Do not tell users to install `cogsbox-shape-db`; it is an internal workspace package unless the project explicitly decides to publish it separately.
 
 ```ts
-import { connect } from "cogsbox-shape-db";
-import { createSqliteDb } from "cogsbox-shape-db/sqlite";
+import { connect } from "cogsbox-shape/db";
+import { createSqliteDb } from "cogsbox-shape/db/sqlite";
 ```
 
 Exports:
@@ -34,6 +34,29 @@ Exports:
 - ORM types such as `WhereInput`, `WhereValue`, `FindManyOpts`, `TableMeta`
 
 The SQLite helper uses `better-sqlite3` through Kysely's `SqliteDialect`.
+
+Packaging expectation:
+
+- `cogsbox-shape` publishes the root schema API.
+- `cogsbox-shape/db` publishes the ORM API.
+- `cogsbox-shape/db/sqlite` publishes the SQLite helper.
+- The internal `cogsbox-shape-db` workspace package should stay private unless there is an intentional decision to split packages later.
+
+Install expectation for consumers:
+
+```bash
+npm install cogsbox-shape zod
+```
+
+Then import:
+
+```ts
+import { s, schema, createSchemaBox } from "cogsbox-shape";
+import { connect } from "cogsbox-shape/db";
+import { createSqliteDb } from "cogsbox-shape/db/sqlite";
+```
+
+`kysely` is a dependency of `cogsbox-shape`. `better-sqlite3` is an optional dependency because it is only needed for the SQLite helper. If another driver is used, callers can pass their own Kysely instance to `connect()`.
 
 ## Mental Model
 

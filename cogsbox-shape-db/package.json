@@ -1,5 +1,6 @@
 {
   "name": "cogsbox-shape-db",
+  "private": true,
   "version": "0.1.0",
   "description": "ORM layer for cogsbox-shape — type-safe database queries with automatic client/server transforms",
   "type": "module",

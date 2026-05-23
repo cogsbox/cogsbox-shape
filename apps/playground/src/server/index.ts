@@ -2,8 +2,8 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sql } from "kysely";
-import { connect } from "cogsbox-shape-db";
-import { createSqliteDb } from "cogsbox-shape-db/sqlite";
+import { connect } from "cogsbox-shape/db";
+import { createSqliteDb } from "cogsbox-shape/db/sqlite";
 import { box } from "../shared/schema.js";
 
 const db = await createSqliteDb(":memory:");

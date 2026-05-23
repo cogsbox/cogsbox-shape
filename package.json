@@ -5,11 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "cogsbox-shape-db/dist"
   ],
   "repository": "github:cogsbox/cogsbox-shape",
   "scripts": {
-    "build": " tsc",
+    "build": "tsc && pnpm --dir cogsbox-shape-db run build",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest  ",
@@ -19,7 +20,18 @@
     "cogsbox-shape": "./dist/cli.js"
   },
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./db": {
+      "types": "./cogsbox-shape-db/dist/index.d.ts",
+      "import": "./cogsbox-shape-db/dist/index.js"
+    },
+    "./db/sqlite": {
+      "types": "./cogsbox-shape-db/dist/sqlite/index.d.ts",
+      "import": "./cogsbox-shape-db/dist/sqlite/index.js"
+    }
   },
   "keywords": [
     "typescript",
@@ -38,8 +50,12 @@
   "license": "MIT",
   "dependencies": {
     "commander": "^13.1.0",
+    "kysely": "^0.29.2",
     "tsx": "^4.19.3",
     "uuid": "^11.0.0"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
