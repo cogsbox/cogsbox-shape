@@ -254,6 +254,19 @@ await userView.db.insert(draft).full();
 
 Use views when the client shape includes selected relations or nested optimistic records. Use plain tables for table-local CRUD.
 
+Connected view queries hydrate selected relations:
+
+```ts
+const factoryView = bx.factory.createView({
+  boxes: { variant: true },
+});
+
+const factory = await factoryView.db.findById(id);
+// includes boxes[] and each box.variant
+```
+
+This belongs in the ORM, not in route/sync overrides. Automatic server routes that receive a view should be able to call `view.db.findById()` / `view.db.findMany()` and get the selected relation shape.
+
 ## ORM Setup
 
 ```ts
@@ -305,6 +318,8 @@ Supported `where` operators:
 
 Filter values are transformed through field `toDb` where possible.
 
+On connected views, `findMany()` hydrates the selected relation tree before parsing to the view client shape.
+
 Important current gap: filter objects are not fully schema-validated yet. Unknown/bad query fields should be treated as an unsafe edge to fix, not as intended behavior.
 
 ### `findById(id)`
@@ -314,6 +329,8 @@ const user = await bx.users.db.findById(1);
 ```
 
 Returns a client row or `null`. Composite IDs can be passed as an array.
+
+On connected views, `findById()` hydrates selected relations before parsing. A base-table select alone is not enough for view shapes.
 
 ### `insert(data).ids()`
 
@@ -542,6 +559,7 @@ Solid/currently covered:
 - plain table reconciliation
 - view reconciliation
 - basic `findMany`, `findById`, `delete`, `count`
+- connected view `findById()` / `findMany()` hydrate selected nested relations
 - transactions through connected boxes
 - DB-backed derived field recomputation during partial update
 - private playground app using the ORM in a real React/Hono flow

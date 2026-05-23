@@ -91,6 +91,70 @@ const sqlOnlyRequiredBox = createSchemaBox(
   { sqlOnlyRequiredUsers: {} },
 );
 
+const factorySchema = schema({
+  _tableName: "view_factories",
+  id: s.sql({ type: "int", pk: true }).clientInput({
+    value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    clientPk: true,
+  }),
+  name: s.sql({ type: "varchar", length: 100 }).clientInput({
+    value: "",
+  }),
+  isActive: s
+    .sql({ type: "int" })
+    .clientInput({ value: false })
+    .transform({
+      toClient: (val: number) => val === 1,
+      toDb: (val: boolean) => (val ? 1 : 0),
+    }),
+  boxes: s.hasMany([]),
+  statusLabel: s.clientInput(""),
+}).derive({
+  statusLabel: (row) => `${row.name} - ${row.isActive ? "Active" : "Inactive"}`,
+});
+
+const factoryBoxSchema = schema({
+  _tableName: "view_boxes",
+  id: s.sql({ type: "int", pk: true }).clientInput({
+    value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    clientPk: true,
+  }),
+  factoryId: s.reference(() => factorySchema.id),
+  label: s.sql({ type: "varchar", length: 100 }).clientInput({
+    value: "",
+  }),
+  variant: s.hasOne(true),
+});
+
+const factoryBoxVariantSchema = schema({
+  _tableName: "view_box_variants",
+  id: s.sql({ type: "int", pk: true }).clientInput({
+    value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    clientPk: true,
+  }),
+  boxId: s.reference(() => factoryBoxSchema.id),
+  color: s.sql({ type: "varchar", length: 40 }).clientInput({
+    value: "",
+  }),
+});
+
+const factoryViewBox = createSchemaBox(
+  {
+    factories: factorySchema,
+    boxes: factoryBoxSchema,
+    boxVariants: factoryBoxVariantSchema,
+  },
+  {
+    factories: {
+      boxes: { fromKey: "id", toKey: factoryBoxSchema.factoryId },
+    },
+    boxes: {
+      variant: { fromKey: "id", toKey: factoryBoxVariantSchema.boxId },
+    },
+    boxVariants: {},
+  },
+) as any;
+
 let db: Kysely<unknown>;
 
 describe("cogsbox-shape-db", () => {
@@ -127,6 +191,30 @@ describe("cogsbox-shape-db", () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(100) NOT NULL,
         tenant_id VARCHAR(100) NOT NULL
+      )
+    `.execute(db);
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS view_factories (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        isActive INTEGER NOT NULL DEFAULT 0
+      )
+    `.execute(db);
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS view_boxes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        factoryId INTEGER NOT NULL,
+        label VARCHAR(100) NOT NULL
+      )
+    `.execute(db);
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS view_box_variants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        boxId INTEGER NOT NULL,
+        color VARCHAR(40) NOT NULL
       )
     `.execute(db);
   });
@@ -487,6 +575,128 @@ describe("cogsbox-shape-db", () => {
     expect(found).not.toBeNull();
     expect(found!.name).toBe("Bob");
     expect(found!.isActive).toBe(false);
+  });
+
+  it("view findById hydrates selected nested relations", async () => {
+    const b = connect(factoryViewBox, db) as any;
+    const factory = await b.factories.db
+      .insert({
+        ...factoryViewBox.factories.generateDefaults(),
+        name: "Hydrated Factory",
+        isActive: true,
+      })
+      .full();
+    const box1 = await b.boxes.db
+      .insert({
+        ...factoryViewBox.boxes.generateDefaults(),
+        factoryId: factory.id,
+        label: "Box One",
+      })
+      .full();
+    const box2 = await b.boxes.db
+      .insert({
+        ...factoryViewBox.boxes.generateDefaults(),
+        factoryId: factory.id,
+        label: "Box Two",
+      })
+      .full();
+    await b.boxVariants.db
+      .insert({
+        ...factoryViewBox.boxVariants.generateDefaults(),
+        boxId: box1.id,
+        color: "red",
+      })
+      .ids();
+    await b.boxVariants.db
+      .insert({
+        ...factoryViewBox.boxVariants.generateDefaults(),
+        boxId: box2.id,
+        color: "blue",
+      })
+      .ids();
+
+    const factoryView = b.factories.createView({
+      boxes: { variant: true },
+    });
+    const found = await factoryView.db.findById(factory.id);
+
+    expect(found).toMatchObject({
+      id: factory.id,
+      name: "Hydrated Factory",
+      isActive: true,
+      statusLabel: "Hydrated Factory - Active",
+      boxes: [
+        {
+          id: box1.id,
+          factoryId: factory.id,
+          label: "Box One",
+          variant: {
+            boxId: box1.id,
+            color: "red",
+          },
+        },
+        {
+          id: box2.id,
+          factoryId: factory.id,
+          label: "Box Two",
+          variant: {
+            boxId: box2.id,
+            color: "blue",
+          },
+        },
+      ],
+    });
+  });
+
+  it("view findMany hydrates selected nested relations", async () => {
+    const b = connect(factoryViewBox, db) as any;
+    const factory = await b.factories.db
+      .insert({
+        ...factoryViewBox.factories.generateDefaults(),
+        name: "Hydrated FindMany Factory",
+        isActive: false,
+      })
+      .full();
+    const box = await b.boxes.db
+      .insert({
+        ...factoryViewBox.boxes.generateDefaults(),
+        factoryId: factory.id,
+        label: "FindMany Box",
+      })
+      .full();
+    await b.boxVariants.db
+      .insert({
+        ...factoryViewBox.boxVariants.generateDefaults(),
+        boxId: box.id,
+        color: "green",
+      })
+      .ids();
+
+    const factoryView = b.factories.createView({
+      boxes: { variant: true },
+    });
+    const rows = await factoryView.db.findMany({
+      where: { name: "Hydrated FindMany Factory" },
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      id: factory.id,
+      name: "Hydrated FindMany Factory",
+      isActive: false,
+      statusLabel: "Hydrated FindMany Factory - Inactive",
+      boxes: [
+        {
+          id: box.id,
+          factoryId: factory.id,
+          label: "FindMany Box",
+          variant: {
+            boxId: box.id,
+            color: "green",
+          },
+        },
+      ],
+    });
   });
 
   it("findMany returns all records", async () => {

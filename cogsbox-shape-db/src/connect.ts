@@ -155,7 +155,9 @@ function extractTableMeta(entry: Record<string, unknown>): TableMeta {
     clientToDbName.set(key, dbName);
 
     if (sqlConfig.pk) pkFields.push(dbName);
-    if ((sqlConfig as any).isClientPk) clientPkFields.push(key);
+    if ((sqlConfig as any).isClientPk && !sqlConfig.isForeignKey) {
+      clientPkFields.push(key);
+    }
     if (sqlConfig.sqlOnly) {
       sqlOnlyFields.add(dbName);
       sqlOnlyClientFields.add(key);
@@ -216,6 +218,128 @@ function enhanceTable<T extends Record<string, unknown>>(
   }) as any;
 }
 
+function registryKeyForTableName(
+  registry: Record<string, any>,
+  tableName: string,
+): string | undefined {
+  return Object.keys(registry).find(
+    (key) => registry[key]?.rawSchema?._tableName === tableName,
+  );
+}
+
+function dbNameForClientKey(meta: TableMeta, clientKey: string): string {
+  return meta.clientToDbName.get(clientKey) ?? clientKey;
+}
+
+function clientKeyForRelationTarget(
+  targetField: any,
+  targetDefinition: Record<string, unknown>,
+): string | undefined {
+  const metaKey = targetField?.__meta?._key;
+  if (typeof metaKey === "string") return metaKey;
+
+  for (const [key, field] of Object.entries(targetDefinition)) {
+    if (field === targetField) return key;
+  }
+
+  return undefined;
+}
+
+function createViewHydrator(
+  db: Kysely<unknown>,
+  registry: Record<string, any>,
+  baseRegistryKey: string,
+  selection: Record<string, any> | boolean,
+): (row: Record<string, unknown>) => Promise<Record<string, unknown>> {
+  const metas = new Map<string, TableMeta>();
+  const getMeta = (registryKey: string) => {
+    let meta = metas.get(registryKey);
+    if (!meta) {
+      const entry = registry[registryKey];
+      meta = extractTableMeta({
+        definition: entry?.rawSchema,
+        deriveDependencies: entry?.deriveDependencies,
+      });
+      metas.set(registryKey, meta);
+    }
+    return meta;
+  };
+
+  const hydrate = async (
+    row: Record<string, unknown>,
+    currentRegistryKey: string,
+    currentSelection: Record<string, any> | boolean,
+  ): Promise<Record<string, unknown>> => {
+    if (!row || typeof currentSelection !== "object") return row;
+
+    const currentEntry = registry[currentRegistryKey];
+    if (!currentEntry) return row;
+
+    const currentMeta = getMeta(currentRegistryKey);
+    const hydrated = { ...row };
+
+    for (const [relationKey, relationSelection] of Object.entries(
+      currentSelection,
+    )) {
+      if (!relationSelection) continue;
+
+      const relationField = currentEntry.rawSchema?.[relationKey];
+      const relationConfig = relationField?.config?.sql;
+      if (!relationConfig?.schema) continue;
+
+      const targetTableName = relationConfig.schema()._tableName;
+      const targetRegistryKey = registryKeyForTableName(
+        registry,
+        targetTableName,
+      );
+      if (!targetRegistryKey) continue;
+
+      const targetEntry = registry[targetRegistryKey];
+      const targetMeta = getMeta(targetRegistryKey);
+      const fromDbName = dbNameForClientKey(currentMeta, relationConfig.fromKey);
+      const targetClientKey = clientKeyForRelationTarget(
+        relationConfig.toKey?.(),
+        targetEntry.rawSchema,
+      );
+      if (!targetClientKey) continue;
+
+      const targetDbName = dbNameForClientKey(targetMeta, targetClientKey);
+      const fromValue = row[fromDbName];
+      if (fromValue === undefined || fromValue === null) {
+        hydrated[relationKey] = ["hasMany", "manyToMany"].includes(
+          relationConfig.type,
+        )
+          ? []
+          : null;
+        continue;
+      }
+
+      const qb = db as any;
+      const relatedRows = (await qb
+        .selectFrom(targetMeta.tableName)
+        .selectAll()
+        .where(targetDbName, "=", fromValue)
+        .execute()) as Record<string, unknown>[];
+
+      const hydratedRelated = await Promise.all(
+        relatedRows.map((relatedRow) =>
+          hydrate(relatedRow, targetRegistryKey, relationSelection as any),
+        ),
+      );
+
+      hydrated[relationKey] = ["hasMany", "manyToMany"].includes(
+        relationConfig.type,
+      )
+        ? hydratedRelated
+        : hydratedRelated[0] ?? null;
+    }
+
+    return hydrated;
+  };
+
+  return (row) => hydrate(row, baseRegistryKey, selection);
+}
+
 export function connect<T extends Record<string, unknown>>(
   box: T,
   db: Kysely<unknown>,
@@ -243,6 +367,18 @@ export function connect<T extends Record<string, unknown>>(
           const reconcile = (view as any).reconcile as
             | ((clientData: unknown) => { withServer: (serverData: unknown) => unknown })
             | undefined;
+          const registry = (view as any).__registry as
+            | Record<string, any>
+            | undefined;
+          const baseTable = (view as any).baseTable as string | undefined;
+          const viewSelection = (view as any).viewSelection as
+            | Record<string, any>
+            | boolean
+            | undefined;
+          const hydrateRow =
+            registry && baseTable && viewSelection
+              ? createViewHydrator(db, registry, baseTable, viewSelection)
+              : undefined;
           const viewDb = new TableDB(
             db,
             viewMeta,
@@ -254,6 +390,7 @@ export function connect<T extends Record<string, unknown>>(
               parseFromDb: viewTransforms.parseFromDb ?? ((r: any) => r),
             },
             reconcile,
+            hydrateRow,
           );
 
           return new Proxy(view, {

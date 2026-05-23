@@ -760,7 +760,11 @@ export function createSchemaBox(schemas, resolutions) {
                 if (targetField && targetField.config) {
                     const newConfig = {
                         ...targetField.config,
-                        sql: { ...targetField.config.sql, isForeignKey: true },
+                        sql: {
+                            ...targetField.config.sql,
+                            field: fieldName,
+                            isForeignKey: true,
+                        },
                     };
                     resolvedSchemas[tableName][fieldName] = {
                         ...targetField,

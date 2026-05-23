@@ -50,8 +50,9 @@ function extractTableMeta(entry) {
         clientToDbName.set(key, dbName);
         if (sqlConfig.pk)
             pkFields.push(dbName);
-        if (sqlConfig.isClientPk)
+        if (sqlConfig.isClientPk && !sqlConfig.isForeignKey) {
             clientPkFields.push(key);
+        }
         if (sqlConfig.sqlOnly) {
             sqlOnlyFields.add(dbName);
             sqlOnlyClientFields.add(key);
@@ -96,6 +97,84 @@ function enhanceTable(entry, meta, db) {
         },
     });
 }
+function registryKeyForTableName(registry, tableName) {
+    return Object.keys(registry).find((key) => registry[key]?.rawSchema?._tableName === tableName);
+}
+function dbNameForClientKey(meta, clientKey) {
+    return meta.clientToDbName.get(clientKey) ?? clientKey;
+}
+function clientKeyForRelationTarget(targetField, targetDefinition) {
+    const metaKey = targetField?.__meta?._key;
+    if (typeof metaKey === "string")
+        return metaKey;
+    for (const [key, field] of Object.entries(targetDefinition)) {
+        if (field === targetField)
+            return key;
+    }
+    return undefined;
+}
+function createViewHydrator(db, registry, baseRegistryKey, selection) {
+    const metas = new Map();
+    const getMeta = (registryKey) => {
+        let meta = metas.get(registryKey);
+        if (!meta) {
+            const entry = registry[registryKey];
+            meta = extractTableMeta({
+                definition: entry?.rawSchema,
+                deriveDependencies: entry?.deriveDependencies,
+            });
+            metas.set(registryKey, meta);
+        }
+        return meta;
+    };
+    const hydrate = async (row, currentRegistryKey, currentSelection) => {
+        if (!row || typeof currentSelection !== "object")
+            return row;
+        const currentEntry = registry[currentRegistryKey];
+        if (!currentEntry)
+            return row;
+        const currentMeta = getMeta(currentRegistryKey);
+        const hydrated = { ...row };
+        for (const [relationKey, relationSelection] of Object.entries(currentSelection)) {
+            if (!relationSelection)
+                continue;
+            const relationField = currentEntry.rawSchema?.[relationKey];
+            const relationConfig = relationField?.config?.sql;
+            if (!relationConfig?.schema)
+                continue;
+            const targetTableName = relationConfig.schema()._tableName;
+            const targetRegistryKey = registryKeyForTableName(registry, targetTableName);
+            if (!targetRegistryKey)
+                continue;
+            const targetEntry = registry[targetRegistryKey];
+            const targetMeta = getMeta(targetRegistryKey);
+            const fromDbName = dbNameForClientKey(currentMeta, relationConfig.fromKey);
+            const targetClientKey = clientKeyForRelationTarget(relationConfig.toKey?.(), targetEntry.rawSchema);
+            if (!targetClientKey)
+                continue;
+            const targetDbName = dbNameForClientKey(targetMeta, targetClientKey);
+            const fromValue = row[fromDbName];
+            if (fromValue === undefined || fromValue === null) {
+                hydrated[relationKey] = ["hasMany", "manyToMany"].includes(relationConfig.type)
+                    ? []
+                    : null;
+                continue;
+            }
+            const qb = db;
+            const relatedRows = (await qb
+                .selectFrom(targetMeta.tableName)
+                .selectAll()
+                .where(targetDbName, "=", fromValue)
+                .execute());
+            const hydratedRelated = await Promise.all(relatedRows.map((relatedRow) => hydrate(relatedRow, targetRegistryKey, relationSelection)));
+            hydrated[relationKey] = ["hasMany", "manyToMany"].includes(relationConfig.type)
+                ? hydratedRelated
+                : hydratedRelated[0] ?? null;
+        }
+        return hydrated;
+    };
+    return (row) => hydrate(row, baseRegistryKey, selection);
+}
 export function connect(box, db) {
     const result = {};
     for (const key of Object.keys(box)) {
@@ -114,13 +193,19 @@ export function connect(box, db) {
                     const viewMeta = { ...meta };
                     const viewTransforms = view.transforms ?? {};
                     const reconcile = view.reconcile;
+                    const registry = view.__registry;
+                    const baseTable = view.baseTable;
+                    const viewSelection = view.viewSelection;
+                    const hydrateRow = registry && baseTable && viewSelection
+                        ? createViewHydrator(db, registry, baseTable, viewSelection)
+                        : undefined;
                     const viewDb = new TableDB(db, viewMeta, {
                         toClient: viewTransforms.toClient ?? ((r) => r),
                         toDb: viewTransforms.toDb ?? ((r) => r),
                         parseForDb: viewTransforms.parseForDb ?? ((r) => r),
                         parsePatchForDb: viewTransforms.parsePatchForDb ?? viewTransforms.toDb ?? ((r) => r),
                         parseFromDb: viewTransforms.parseFromDb ?? ((r) => r),
-                    }, reconcile);
+                    }, reconcile, hydrateRow);
                     return new Proxy(view, {
                         get(target, prop, receiver) {
                             if (prop === "db")

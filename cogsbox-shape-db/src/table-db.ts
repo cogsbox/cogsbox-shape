@@ -35,6 +35,9 @@ export class TableDB<
     private reconcile?: (
       clientData: unknown,
     ) => { withServer: (serverData: unknown) => unknown },
+    private hydrateRow?: (
+      row: Record<string, unknown>,
+    ) => Promise<Record<string, unknown>>,
   ) {}
 
   async findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]> {
@@ -68,7 +71,10 @@ export class TableDB<
     }
 
     const rows = (await query.execute()) as Record<string, unknown>[];
-    return rows.map((r) => this.transforms.parseFromDb(r));
+    const hydratedRows = this.hydrateRow
+      ? await Promise.all(rows.map((row) => this.hydrateRow!(row)))
+      : rows;
+    return hydratedRows.map((r) => this.transforms.parseFromDb(r));
   }
 
   async findById(id: unknown): Promise<TClient | null> {
@@ -89,7 +95,8 @@ export class TableDB<
 
     const row = (rows[0] as Record<string, unknown>) ?? null;
     if (!row) return null;
-    return this.transforms.parseFromDb(row);
+    const hydratedRow = this.hydrateRow ? await this.hydrateRow(row) : row;
+    return this.transforms.parseFromDb(hydratedRow);
   }
 
   insert(

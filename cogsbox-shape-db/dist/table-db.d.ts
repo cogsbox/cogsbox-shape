@@ -10,6 +10,7 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate, T
     private meta;
     private transforms;
     private reconcile?;
+    private hydrateRow?;
     constructor(db: Kysely<unknown>, meta: TableMeta, transforms: {
         toClient: (row: Record<string, unknown>) => TClient;
         toDb: (row: Record<string, unknown>) => Record<string, unknown>;
@@ -18,7 +19,7 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate, T
         parseFromDb: (data: Record<string, unknown>) => TClient;
     }, reconcile?: ((clientData: unknown) => {
         withServer: (serverData: unknown) => unknown;
-    }) | undefined);
+    }) | undefined, hydrateRow?: ((row: Record<string, unknown>) => Promise<Record<string, unknown>>) | undefined);
     findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]>;
     findById(id: unknown): Promise<TClient | null>;
     insert(data: TCreate, ...args: InsertDbOnlyArgs<TDbOnly>): {
