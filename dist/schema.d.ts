@@ -479,7 +479,7 @@ type RegistryShape = Record<string, {
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => any;
 }>;
-type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>, Resolved extends RegistryShape = ResolvedRegistryWithSchemas<S, R> extends RegistryShape ? ResolvedRegistryWithSchemas<S, R> : RegistryShape> = {
+type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>, Resolved extends Record<string, any> = ResolvedRegistryWithSchemas<S, R>> = {
     [K in keyof Resolved]: {
         definition: Resolved[K]["rawSchema"];
         schemaKey: K;

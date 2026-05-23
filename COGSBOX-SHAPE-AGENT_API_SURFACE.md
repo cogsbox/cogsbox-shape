@@ -310,6 +310,47 @@ Returns the DB primary key payload in DB column-name format.
 
 For DB-generated PKs, the ORM omits client temporary PK fields before insert.
 
+SQL-only fields can be supplied as the second argument:
+
+```ts
+const ids = await bx.users.db.insert(
+  draft,
+  {
+    tenantId,
+    createdByUserId: userId,
+  },
+).ids();
+```
+
+The second argument only accepts fields marked `sqlOnly: true`. Those fields are validated against their SQL schema, mapped through DB field aliases, written to the database, and excluded from returned client objects.
+
+TypeScript treats non-null `sqlOnly` fields without DB defaults as required on insert:
+
+```ts
+tenantId: s.sql({
+  type: "varchar",
+  length: 100,
+  field: "tenant_id",
+  sqlOnly: true,
+})
+
+await bx.users.db.insert(draft).ids();
+// Type error and runtime error: missing tenantId
+
+await bx.users.db.insert(draft, { tenantId }).ids();
+// ok
+```
+
+Nullable `sqlOnly` fields, or fields with DB defaults/default values, are optional in the second argument.
+
+The connected table hover should look like this for a required hidden field:
+
+```ts
+(data: UserInsert, dbOnlyData: { tenantId: string }) => ...
+```
+
+This depends on `createSchemaBox()` preserving concrete table definitions. If an agent sees `any`, `unknown`, or a broad index signature in this path, fix the schema-box typing instead of hiding the problem with casts.
+
 ### `insert(data).full()`
 
 ```ts
@@ -343,6 +384,20 @@ Validates `patch` through the partial server schema, transforms it through `pars
 Throws `RecordNotFoundError` if no row was updated.
 
 For DB-backed derived fields, the ORM recomputes affected derives and fetches only missing dependency fields.
+
+SQL-only fields can be supplied as the third argument:
+
+```ts
+await bx.users.db.update(
+  1,
+  { email: "new@example.com" },
+  { updatedByUserId: userId },
+).ids();
+```
+
+As with insert, the third argument is only for fields marked `sqlOnly: true`.
+
+Update `sqlOnly` fields are always partial. A non-null hidden column may be required when the row is first inserted, but it should not be required on every later update.
 
 ### `update(id, patch).full()`
 
@@ -452,6 +507,8 @@ Solid/currently covered:
 - client temporary primary keys
 - DB field aliases with `field`
 - `sqlOnly` DB fields
+- inserting and updating `sqlOnly` DB fields through the explicit second/third ORM parameter
+- required insert typing for non-null `sqlOnly` fields without DB defaults
 - full insert validation
 - partial update validation
 - insert ID return via `.ids()`

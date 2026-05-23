@@ -10,7 +10,16 @@ const userSchema = schema({
         clientPk: true,
     }),
     name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
-    email: s.sql({ type: "varchar", length: 255 }).server(({ sql }) => sql.email()),
+    email: s
+        .sql({ type: "varchar", length: 255 })
+        .server(({ sql }) => sql.email()),
+    tenantId: s.sql({
+        type: "varchar",
+        length: 100,
+        nullable: true,
+        field: "tenant_id",
+        sqlOnly: true,
+    }),
     isActive: s
         .sql({ type: "int" })
         .clientInput({ value: false })
@@ -48,6 +57,21 @@ const derivedUserSchema = schema({
     fullName: (row) => `${row.firstName} ${row.lastName}`,
 });
 const derivedBox = createSchemaBox({ derivedUsers: derivedUserSchema }, { derivedUsers: {} });
+const sqlOnlyRequiredSchema = schema({
+    _tableName: "sql_only_required_users",
+    id: s.sql({ type: "int", pk: true }).clientInput({
+        value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+        clientPk: true,
+    }),
+    name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+    tenantId: s.sql({
+        type: "varchar",
+        length: 100,
+        field: "tenant_id",
+        sqlOnly: true,
+    }),
+});
+const sqlOnlyRequiredBox = createSchemaBox({ sqlOnlyRequiredUsers: sqlOnlyRequiredSchema }, { sqlOnlyRequiredUsers: {} });
 let db;
 describe("cogsbox-shape-db", () => {
     beforeAll(async () => {
@@ -57,6 +81,7 @@ describe("cogsbox-shape-db", () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(100) NOT NULL,
         email VARCHAR(255) NOT NULL,
+        tenant_id VARCHAR(100),
         isActive INTEGER NOT NULL DEFAULT 0
       )
     `.execute(db);
@@ -72,6 +97,13 @@ describe("cogsbox-shape-db", () => {
         firstName VARCHAR(100) NOT NULL,
         lastName VARCHAR(100) NOT NULL,
         fullName VARCHAR(220) NOT NULL
+      )
+    `.execute(db);
+        await sql `
+      CREATE TABLE IF NOT EXISTS sql_only_required_users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(100) NOT NULL,
+        tenant_id VARCHAR(100) NOT NULL
       )
     `.execute(db);
     });
@@ -90,12 +122,14 @@ describe("cogsbox-shape-db", () => {
     it("insert(...).ids inserts a record and returns PK from the db", async () => {
         const b = connect(box, db);
         const defaults = box.users.generateDefaults();
-        const pkResult = await b.users.db.insert({
+        const pkResult = await b.users.db
+            .insert({
             ...defaults,
             name: "Alice",
             email: "alice@test.com",
             isActive: true,
-        }).ids();
+        })
+            .ids();
         expect(pkResult.id).toBeDefined();
         expect(typeof pkResult.id).toBe("number");
         const user = await b.users.db.findById(pkResult.id);
@@ -186,6 +220,73 @@ describe("cogsbox-shape-db", () => {
             email: "plain-insert-full@test.com",
             isActive: true,
         });
+        expect(stored).not.toHaveProperty("tenantId");
+    });
+    it("insert accepts sqlOnly fields as the second parameter", async () => {
+        const b = connect(box, db);
+        const ids = await b.users.db
+            .insert({
+            ...box.users.generateDefaults(),
+            name: "SQL Only Insert",
+            email: "sql-only-insert@test.com",
+            isActive: true,
+        }, {
+            tenantId: "tenant_insert",
+        })
+            .ids();
+        const stored = await b.users.db.findById(ids.id);
+        expect(stored).toMatchObject({
+            id: ids.id,
+            name: "SQL Only Insert",
+            email: "sql-only-insert@test.com",
+            isActive: true,
+        });
+        expect(stored).not.toHaveProperty("tenantId");
+        const raw = await db
+            .selectFrom("users")
+            .select(["tenant_id"])
+            .where("id", "=", ids.id)
+            .executeTakeFirst();
+        expect(raw.tenant_id).toBe("tenant_insert");
+    });
+    it("insert rejects non-sqlOnly fields in the second parameter", async () => {
+        const b = connect(box, db);
+        await expect(b.users.db
+            .insert({
+            ...box.users.generateDefaults(),
+            name: "SQL Only Reject",
+            email: "sql-only-reject@test.com",
+            isActive: true,
+        }, {
+            name: "not allowed here",
+        })
+            .ids()).rejects.toThrow(/not a sqlOnly field/);
+    });
+    it("insert requires non-null sqlOnly fields without db defaults", async () => {
+        const b = connect(sqlOnlyRequiredBox, db);
+        const table = b.sqlOnlyRequiredUsers;
+        const defaults = sqlOnlyRequiredBox.sqlOnlyRequiredUsers.generateDefaults();
+        await expect(table.db
+            // @ts-expect-error tenantId is required because it is sqlOnly, non-null, and has no DB default.
+            .insert({
+            ...defaults,
+            name: "Missing Tenant",
+        })
+            .ids()).rejects.toThrow(/Missing required sqlOnly field "tenantId"/);
+        const ids = await table.db
+            .insert({
+            ...defaults,
+            name: "Has Tenant",
+        }, {
+            tenantId: "tenant_required",
+        })
+            .ids();
+        const raw = await db
+            .selectFrom("sql_only_required_users")
+            .select(["tenant_id"])
+            .where("id", "=", ids.id)
+            .executeTakeFirst();
+        expect(raw.tenant_id).toBe("tenant_required");
     });
     it("reconcileIds maps aliased db primary keys onto non-view client fields", async () => {
         const b = connect(aliasedBox, db);
@@ -269,12 +370,14 @@ describe("cogsbox-shape-db", () => {
     it("findById returns record by auto-increment id", async () => {
         const b = connect(box, db);
         const defaults = box.users.generateDefaults();
-        const created = await b.users.db.insert({
+        const created = await b.users.db
+            .insert({
             ...defaults,
             name: "Bob",
             email: "bob@test.com",
             isActive: false,
-        }).ids();
+        })
+            .ids();
         const found = await b.users.db.findById(created.id);
         expect(found).not.toBeNull();
         expect(found.name).toBe("Bob");
@@ -308,16 +411,20 @@ describe("cogsbox-shape-db", () => {
     it("update modifies fields and returns PK from the db", async () => {
         const b = connect(box, db);
         const defaults = box.users.generateDefaults();
-        const pkResult = await b.users.db.insert({
+        const pkResult = await b.users.db
+            .insert({
             ...defaults,
             name: "Charlie",
             email: "charlie@test.com",
             isActive: false,
-        }).ids();
-        const updatePk = await b.users.db.update(pkResult.id, {
+        })
+            .ids();
+        const updatePk = await b.users.db
+            .update(pkResult.id, {
             name: "Charlie Updated",
             isActive: true,
-        }).ids();
+        })
+            .ids();
         expect(updatePk.id).toBe(pkResult.id);
         const updated = await b.users.db.findById(pkResult.id);
         expect(updated).not.toBeNull();
@@ -326,18 +433,24 @@ describe("cogsbox-shape-db", () => {
     });
     it("update validates partial patches with the schema server rules", async () => {
         const b = connect(box, db);
-        const pkResult = await b.users.db.insert({
+        const pkResult = await b.users.db
+            .insert({
             ...box.users.generateDefaults(),
             name: "Patch Validation",
             email: "patch-validation@test.com",
             isActive: false,
-        }).ids();
-        await expect(b.users.db.update(pkResult.id, {
+        })
+            .ids();
+        await expect(b.users.db
+            .update(pkResult.id, {
             email: "not-an-email",
-        }).ids()).rejects.toThrow();
-        const updatePk = await b.users.db.update(pkResult.id, {
+        })
+            .ids()).rejects.toThrow();
+        const updatePk = await b.users.db
+            .update(pkResult.id, {
             email: "patch-validation-updated@test.com",
-        }).ids();
+        })
+            .ids();
         expect(updatePk.id).toBe(pkResult.id);
         const updated = await b.users.db.findById(pkResult.id);
         expect(updated).toMatchObject({
@@ -347,29 +460,71 @@ describe("cogsbox-shape-db", () => {
             isActive: false,
         });
     });
+    it("update accepts sqlOnly fields as the third parameter", async () => {
+        const b = connect(box, db);
+        const ids = await b.users.db
+            .insert({
+            ...box.users.generateDefaults(),
+            name: "SQL Only Update",
+            email: "sql-only-update@test.com",
+            isActive: false,
+        }, {
+            tenantId: "tenant_before",
+        })
+            .ids();
+        await b.users.db
+            .update(ids.id, {
+            name: "SQL Only Update Changed",
+        }, {
+            tenantId: "tenant_after",
+        })
+            .ids();
+        const stored = await b.users.db.findById(ids.id);
+        expect(stored).toMatchObject({
+            id: ids.id,
+            name: "SQL Only Update Changed",
+            email: "sql-only-update@test.com",
+            isActive: false,
+        });
+        expect(stored).not.toHaveProperty("tenantId");
+        const raw = await db
+            .selectFrom("users")
+            .select(["tenant_id"])
+            .where("id", "=", ids.id)
+            .executeTakeFirst();
+        expect(raw.tenant_id).toBe("tenant_after");
+    });
     it("view update validates partial patches with the view server schema", async () => {
         const b = connect(box, db);
         const userView = b.users.createView({});
-        const inserted = await userView.db.insert({
+        const inserted = await userView.db
+            .insert({
             ...userView.defaults(),
             name: "View Patch Validation",
             email: "view-patch-validation@test.com",
             isActive: false,
-        }).full();
-        await expect(userView.db.update(inserted.id, {
+        })
+            .full();
+        await expect(userView.db
+            .update(inserted.id, {
             email: "not-an-email",
-        }).ids()).rejects.toThrow();
+        })
+            .ids()).rejects.toThrow();
     });
     it("update recomputes db-backed derived fields from fetched dependencies", async () => {
         const b = connect(derivedBox, db);
-        const inserted = await b.derivedUsers.db.insert({
+        const inserted = await b.derivedUsers.db
+            .insert({
             ...derivedBox.derivedUsers.generateDefaults(),
             firstName: "Ada",
             lastName: "Lovelace",
-        }).full();
-        const updatePk = await b.derivedUsers.db.update(inserted.id, {
+        })
+            .full();
+        const updatePk = await b.derivedUsers.db
+            .update(inserted.id, {
             firstName: "Grace",
-        }).ids();
+        })
+            .ids();
         expect(updatePk.id).toBe(inserted.id);
         const updated = await b.derivedUsers.db.findById(inserted.id);
         expect(updated).toMatchObject({
@@ -382,16 +537,20 @@ describe("cogsbox-shape-db", () => {
     it("update(...).full returns the stored row after update", async () => {
         const b = connect(box, db);
         const userView = b.users.createView({});
-        const inserted = await userView.db.insert({
+        const inserted = await userView.db
+            .insert({
             ...userView.defaults(),
             name: "Update Full",
             email: "update-full@test.com",
             isActive: false,
-        }).full();
-        const updated = await userView.db.update(inserted.id, {
+        })
+            .full();
+        const updated = await userView.db
+            .update(inserted.id, {
             name: "Update Full Changed",
             isActive: true,
-        }).full();
+        })
+            .full();
         expect(updated).toMatchObject({
             id: inserted.id,
             name: "Update Full Changed",
@@ -402,12 +561,14 @@ describe("cogsbox-shape-db", () => {
     it("delete removes a record", async () => {
         const b = connect(box, db);
         const defaults = box.users.generateDefaults();
-        const user = await b.users.db.insert({
+        const user = await b.users.db
+            .insert({
             ...defaults,
             name: "DeleteMe",
             email: "delete@test.com",
             isActive: false,
-        }).ids();
+        })
+            .ids();
         const result = await b.users.db.delete(user.id);
         expect(result.deleted).toBe(true);
         const found = await b.users.db.findById(user.id);
@@ -426,18 +587,22 @@ describe("cogsbox-shape-db", () => {
     it("transaction commits all operations atomically", async () => {
         const b = connect(box, db);
         const result = await b.db.transaction(async (txBox) => {
-            const u1 = await txBox.users.db.insert({
+            const u1 = await txBox.users.db
+                .insert({
                 ...box.users.generateDefaults(),
                 name: "TxUser1",
                 email: "tx1@test.com",
                 isActive: true,
-            }).ids();
-            const u2 = await txBox.users.db.insert({
+            })
+                .ids();
+            const u2 = await txBox.users.db
+                .insert({
                 ...box.users.generateDefaults(),
                 name: "TxUser2",
                 email: "tx2@test.com",
                 isActive: true,
-            }).ids();
+            })
+                .ids();
             return { u1, u2 };
         });
         expect(result.u1.id).toBeDefined();

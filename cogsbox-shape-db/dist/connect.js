@@ -8,9 +8,24 @@ function extractTableMeta(entry) {
     const pkFields = [];
     const clientPkFields = [];
     const sqlOnlyFields = new Set();
+    const sqlOnlyClientFields = new Set();
+    const sqlOnlyRequiredClientFields = new Set();
+    const sqlOnlyValidators = new Map();
     const deriveDependencies = new Map(Object.entries((entry.deriveDependencies ?? {})));
-    if (!definition)
-        return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields, deriveDependencies };
+    if (!definition) {
+        return {
+            tableName,
+            dbFields,
+            clientToDbName,
+            pkFields,
+            clientPkFields,
+            sqlOnlyFields,
+            sqlOnlyClientFields,
+            sqlOnlyRequiredClientFields,
+            sqlOnlyValidators,
+            deriveDependencies,
+        };
+    }
     for (const [key, field] of Object.entries(definition)) {
         if (key === "_tableName" || key.startsWith("__"))
             continue;
@@ -37,10 +52,32 @@ function extractTableMeta(entry) {
             pkFields.push(dbName);
         if (sqlConfig.isClientPk)
             clientPkFields.push(key);
-        if (sqlConfig.sqlOnly)
+        if (sqlConfig.sqlOnly) {
             sqlOnlyFields.add(dbName);
+            sqlOnlyClientFields.add(key);
+            if (!sqlConfig.nullable &&
+                !Object.prototype.hasOwnProperty.call(sqlConfig, "default") &&
+                !Object.prototype.hasOwnProperty.call(sqlConfig, "defaultValue")) {
+                sqlOnlyRequiredClientFields.add(key);
+            }
+            const zodSqlSchema = config.zodSqlSchema;
+            if (zodSqlSchema?.parse) {
+                sqlOnlyValidators.set(key, (val) => zodSqlSchema.parse(val));
+            }
+        }
     }
-    return { tableName, dbFields, clientToDbName, pkFields, clientPkFields, sqlOnlyFields, deriveDependencies };
+    return {
+        tableName,
+        dbFields,
+        clientToDbName,
+        pkFields,
+        clientPkFields,
+        sqlOnlyFields,
+        sqlOnlyClientFields,
+        sqlOnlyRequiredClientFields,
+        sqlOnlyValidators,
+        deriveDependencies,
+    };
 }
 function enhanceTable(entry, meta, db) {
     const transforms = entry.transforms ?? {};

@@ -3,7 +3,23 @@ import type { TableMeta, FindManyOpts, WhereInput } from "./types.js";
 import { buildWhereConditions, buildPkConditions } from "./where-builder.js";
 import { RecordNotFoundError } from "./errors.js";
 
-export class TableDB<TClient extends Record<string, unknown>, TCreate> {
+type DbOnlyArg<T extends Record<string, unknown>> =
+  keyof T extends never ? never : Partial<T>;
+type RequiredKeys<T> = {
+  [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K;
+}[keyof T];
+type InsertDbOnlyArgs<T extends Record<string, unknown>> =
+  keyof T extends never
+    ? []
+    : RequiredKeys<T> extends never
+      ? [dbOnlyData?: Partial<T>]
+      : [dbOnlyData: T];
+
+export class TableDB<
+  TClient extends Record<string, unknown>,
+  TCreate,
+  TDbOnly extends Record<string, unknown> = Record<string, never>,
+> {
   constructor(
     private db: Kysely<unknown>,
     private meta: TableMeta,
@@ -76,25 +92,39 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
     return this.transforms.parseFromDb(row);
   }
 
-  insert(data: TCreate): {
+  insert(
+    data: TCreate,
+    ...args: InsertDbOnlyArgs<TDbOnly>
+  ): {
     ids: () => Promise<Record<string, unknown>>;
     full: () => Promise<TClient>;
   } {
+    const dbOnlyData = args[0] as DbOnlyArg<TDbOnly> | undefined;
     return {
-      ids: () => this.insertIds(data),
+      ids: () => this.insertIds(data, dbOnlyData),
       full: async () => {
-        const ids = await this.insertIds(data);
+        const ids = await this.insertIds(data, dbOnlyData);
         return this.reconcileIds(data, ids) as TClient;
       },
     };
   }
 
-  async create(data: TCreate): Promise<Record<string, unknown>> {
-    return this.insert(data).ids();
+  async create(
+    data: TCreate,
+    ...args: InsertDbOnlyArgs<TDbOnly>
+  ): Promise<Record<string, unknown>> {
+    const dbOnlyData = args[0] as DbOnlyArg<TDbOnly> | undefined;
+    return this.insertIds(data, dbOnlyData);
   }
 
-  private async insertIds(data: TCreate): Promise<Record<string, unknown>> {
+  private async insertIds(
+    data: TCreate,
+    dbOnlyData?: DbOnlyArg<TDbOnly>,
+  ): Promise<Record<string, unknown>> {
     const dbData = this.transforms.parseForDb(data as Record<string, unknown>);
+    const parsedDbOnlyData = this.parseDbOnlyData(dbOnlyData, {
+      requireRequired: true,
+    });
 
     const clientPkClientKeys = this.meta.clientPkFields;
     const pkDbNames = new Set(clientPkClientKeys.map((k) => {
@@ -108,6 +138,7 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
         insertData[key] = dbData[key];
       }
     }
+    Object.assign(insertData, parsedDbOnlyData);
 
     const qb = this.db as any;
     const result = await qb
@@ -124,14 +155,18 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
     return {};
   }
 
-  update(id: unknown, data: Partial<TCreate>): {
+  update(
+    id: unknown,
+    data: Partial<TCreate>,
+    dbOnlyData?: DbOnlyArg<TDbOnly>,
+  ): {
     ids: () => Promise<Record<string, unknown>>;
     full: () => Promise<TClient>;
   } {
     return {
-      ids: () => this.updateIds(id, data),
+      ids: () => this.updateIds(id, data, dbOnlyData),
       full: async () => {
-        const ids = await this.updateIds(id, data);
+        const ids = await this.updateIds(id, data, dbOnlyData);
         const idValue = this.firstPkValue(ids);
         const row = await this.findById(idValue);
         if (!row) {
@@ -145,6 +180,7 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
   private async updateIds(
     id: unknown,
     data: Partial<TCreate>,
+    dbOnlyData?: DbOnlyArg<TDbOnly>,
   ): Promise<Record<string, unknown>> {
     const pkValues = Array.isArray(id) ? id : [id];
     const pkFields =
@@ -165,6 +201,10 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
       ...Object.keys(patchData),
       ...deriveKeys,
     ]);
+    Object.assign(
+      dbData,
+      this.parseDbOnlyData(dbOnlyData, { requireRequired: false }),
+    );
     const conditions = buildPkConditions(pkValues, pkFields);
 
     const qb = this.db as any;
@@ -266,6 +306,42 @@ export class TableDB<TClient extends Record<string, unknown>, TCreate> {
     }
 
     return picked;
+  }
+
+  private parseDbOnlyData(
+    dbOnlyData?: DbOnlyArg<TDbOnly>,
+    opts: { requireRequired: boolean } = { requireRequired: false },
+  ): Record<string, unknown> {
+    if (opts.requireRequired) {
+      for (const requiredKey of this.meta.sqlOnlyRequiredClientFields) {
+        if (!dbOnlyData || dbOnlyData[requiredKey] === undefined) {
+          throw new Error(
+            `Missing required sqlOnly field "${requiredKey}" for "${this.meta.tableName}".`,
+          );
+        }
+      }
+    }
+
+    if (!dbOnlyData) return {};
+
+    const parsed: Record<string, unknown> = {};
+
+    for (const [clientKey, value] of Object.entries(dbOnlyData)) {
+      if (!this.meta.sqlOnlyClientFields.has(clientKey)) {
+        throw new Error(
+          `Field "${clientKey}" is not a sqlOnly field on "${this.meta.tableName}".`,
+        );
+      }
+
+      const validator = this.meta.sqlOnlyValidators.get(clientKey);
+      const validValue = validator ? validator(value) : value;
+      const field = this.meta.dbFields.get(clientKey);
+      const dbName = field?.dbName ?? clientKey;
+
+      parsed[dbName] = field?.toDb ? field.toDb(validValue) : validValue;
+    }
+
+    return parsed;
   }
 
   reconcileIds(clientData: unknown, ids: unknown): unknown {

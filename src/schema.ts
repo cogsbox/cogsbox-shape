@@ -2129,12 +2129,7 @@ type RegistryShape = Record<
 type CreateSchemaBoxReturn<
   S extends Record<string, SchemaWithPlaceholders>,
   R extends ResolutionMap<S>,
-  Resolved extends RegistryShape = ResolvedRegistryWithSchemas<
-    S,
-    R
-  > extends RegistryShape
-    ? ResolvedRegistryWithSchemas<S, R>
-    : RegistryShape,
+  Resolved extends Record<string, any> = ResolvedRegistryWithSchemas<S, R>,
 > = {
   [K in keyof Resolved]: {
     definition: Resolved[K]["rawSchema"];

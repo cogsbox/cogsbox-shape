@@ -56,20 +56,25 @@ export class TableDB {
             return null;
         return this.transforms.parseFromDb(row);
     }
-    insert(data) {
+    insert(data, ...args) {
+        const dbOnlyData = args[0];
         return {
-            ids: () => this.insertIds(data),
+            ids: () => this.insertIds(data, dbOnlyData),
             full: async () => {
-                const ids = await this.insertIds(data);
+                const ids = await this.insertIds(data, dbOnlyData);
                 return this.reconcileIds(data, ids);
             },
         };
     }
-    async create(data) {
-        return this.insert(data).ids();
+    async create(data, ...args) {
+        const dbOnlyData = args[0];
+        return this.insertIds(data, dbOnlyData);
     }
-    async insertIds(data) {
+    async insertIds(data, dbOnlyData) {
         const dbData = this.transforms.parseForDb(data);
+        const parsedDbOnlyData = this.parseDbOnlyData(dbOnlyData, {
+            requireRequired: true,
+        });
         const clientPkClientKeys = this.meta.clientPkFields;
         const pkDbNames = new Set(clientPkClientKeys.map((k) => {
             const field = this.meta.dbFields.get(k);
@@ -81,6 +86,7 @@ export class TableDB {
                 insertData[key] = dbData[key];
             }
         }
+        Object.assign(insertData, parsedDbOnlyData);
         const qb = this.db;
         const result = await qb
             .insertInto(this.meta.tableName)
@@ -93,11 +99,11 @@ export class TableDB {
         }
         return {};
     }
-    update(id, data) {
+    update(id, data, dbOnlyData) {
         return {
-            ids: () => this.updateIds(id, data),
+            ids: () => this.updateIds(id, data, dbOnlyData),
             full: async () => {
-                const ids = await this.updateIds(id, data);
+                const ids = await this.updateIds(id, data, dbOnlyData);
                 const idValue = this.firstPkValue(ids);
                 const row = await this.findById(idValue);
                 if (!row) {
@@ -107,7 +113,7 @@ export class TableDB {
             },
         };
     }
-    async updateIds(id, data) {
+    async updateIds(id, data, dbOnlyData) {
         const pkValues = Array.isArray(id) ? id : [id];
         const pkFields = this.meta.pkFields.length > 0
             ? this.meta.pkFields
@@ -124,6 +130,7 @@ export class TableDB {
             ...Object.keys(patchData),
             ...deriveKeys,
         ]);
+        Object.assign(dbData, this.parseDbOnlyData(dbOnlyData, { requireRequired: false }));
         const conditions = buildPkConditions(pkValues, pkFields);
         const qb = this.db;
         const result = await qb
@@ -199,6 +206,29 @@ export class TableDB {
             }
         }
         return picked;
+    }
+    parseDbOnlyData(dbOnlyData, opts = { requireRequired: false }) {
+        if (opts.requireRequired) {
+            for (const requiredKey of this.meta.sqlOnlyRequiredClientFields) {
+                if (!dbOnlyData || dbOnlyData[requiredKey] === undefined) {
+                    throw new Error(`Missing required sqlOnly field "${requiredKey}" for "${this.meta.tableName}".`);
+                }
+            }
+        }
+        if (!dbOnlyData)
+            return {};
+        const parsed = {};
+        for (const [clientKey, value] of Object.entries(dbOnlyData)) {
+            if (!this.meta.sqlOnlyClientFields.has(clientKey)) {
+                throw new Error(`Field "${clientKey}" is not a sqlOnly field on "${this.meta.tableName}".`);
+            }
+            const validator = this.meta.sqlOnlyValidators.get(clientKey);
+            const validValue = validator ? validator(value) : value;
+            const field = this.meta.dbFields.get(clientKey);
+            const dbName = field?.dbName ?? clientKey;
+            parsed[dbName] = field?.toDb ? field.toDb(validValue) : validValue;
+        }
+        return parsed;
     }
     reconcileIds(clientData, ids) {
         if (this.reconcile) {
