@@ -1,10 +1,12 @@
 import { Kysely, SqliteDialect } from "kysely";
 
-export async function createSqliteDb(path: string): Promise<Kysely<unknown>> {
+export async function createSqliteDb<TDb = unknown>(
+  path: string,
+): Promise<Kysely<TDb>> {
   try {
     const mod = await import("better-sqlite3");
     const Database = mod.default;
-    return new Kysely({
+    return new Kysely<TDb>({
       dialect: new SqliteDialect({
         database: new Database(path),
       }),

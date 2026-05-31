@@ -62,6 +62,13 @@ export class TableDB {
         const hydratedRow = this.hydrateRow ? await this.hydrateRow(row) : row;
         return this.transforms.parseFromDb(hydratedRow);
     }
+    byId(id) {
+        return {
+            find: () => this.findById(id),
+            update: (data, dbOnlyData) => this.update(id, data, dbOnlyData),
+            delete: () => this.delete(id),
+        };
+    }
     insert(data, ...args) {
         const dbOnlyData = args[0];
         return {

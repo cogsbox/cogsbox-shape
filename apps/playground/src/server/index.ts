@@ -29,7 +29,7 @@ app.get("/api/defaults", (c) => {
 });
 
 app.get("/api/users", async (c) => {
-  const users = await bx.users.db.findMany({
+  const users = await bx.users.findMany({
     orderBy: { id: "desc" },
     limit: 50,
   });
@@ -38,20 +38,20 @@ app.get("/api/users", async (c) => {
 
 app.post("/api/users", async (c) => {
   const body = await c.req.json();
-  const user = await bx.users.db.insert(body).full();
+  const user = await bx.users.insert(body).full();
   return c.json(user, 201);
 });
 
 app.patch("/api/users/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json();
-  const user = await bx.users.db.update(id, body).full();
+  const user = await bx.users.update(id, body).full();
   return c.json(user);
 });
 
 app.delete("/api/users/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const result = await bx.users.db.delete(id);
+  const result = await bx.users.delete(id);
   return c.json(result);
 });
 

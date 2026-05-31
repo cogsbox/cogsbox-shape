@@ -112,27 +112,60 @@ If an agent changes write behavior, it must preserve that contract.
 
 ## Defining Fields
 
-Use `s.sql()` for DB-backed fields.
+Use the database engine function for DB-backed fields:
+
+- `s.sqlite(config)`
+- `s.postgres(config)`
+- `s.mysql(config)`
+
+Do not use `s.sql(...)`; the public API is engine-specific.
 
 ```ts
 const users = schema("users", {
-  id: s.sql({ type: "int", pk: true }),
-  email: s.sql({ type: "varchar", length: 255 }),
-  name: s.sql({ type: "varchar", length: 120 }),
-  createdAt: s.sql({ type: "timestamp", default: "CURRENT_TIMESTAMP" }),
+  id: s.sqlite({ type: "int", pk: true }),
+  email: s.sqlite({ type: "varchar", length: 255 }),
+  name: s.sqlite({ type: "varchar", length: 120 }),
+  createdAt: s.sqlite({ type: "timestamp", default: "CURRENT_TIMESTAMP" }),
 });
 ```
 
 Supported SQL field config includes:
 
-- `type`: `"int"`, `"boolean"`, `"date"`, `"datetime"`, `"timestamp"`, `"varchar"`, `"char"`, `"text"`, `"longtext"`
+- `type`: `"int"`, `"boolean"`, `"date"`, `"datetime"`, `"timestamp"`, `"varchar"`, `"char"`, `"text"`, `"longtext"`, `"enum"`
 - `pk: true`
 - `nullable: true`
 - `default`
 - `defaultValue`
 - `length`
+- `values` for enum values
+- `name` for named Postgres enum types
 - `field`: DB column name when it differs from the client key
 - `sqlOnly: true`: exists in DB but should be hidden from client shapes
+
+Enum examples:
+
+```ts
+status: s.sqlite({
+  type: "enum",
+  values: ["draft", "published", "archived"],
+});
+// SQLite SQL generation: TEXT CHECK (status IN (...))
+
+status: s.postgres({
+  type: "enum",
+  name: "post_status",
+  values: ["draft", "published", "archived"],
+});
+// Postgres SQL generation: CREATE TYPE post_status AS ENUM (...), then status post_status
+
+status: s.mysql({
+  type: "enum",
+  values: ["draft", "published", "archived"],
+});
+// MySQL SQL generation: ENUM('draft', 'published', 'archived')
+```
+
+`generateSQL()` rejects mixed SQL dialects inside the same table.
 
 Use `s.clientInput()` for client-only/default fields.
 
@@ -143,7 +176,7 @@ localId: s.clientInput(({ uuid }) => `new_${uuid()}`);
 For optimistic records, a DB primary key can also have a client-side temporary value.
 
 ```ts
-id: s.sql({ type: "int", pk: true }).clientInput({
+id: s.sqlite({ type: "int", pk: true }).clientInput({
   value: ({ uuid }) => `new_${uuid()}`,
   clientPk: true,
 });
@@ -152,11 +185,11 @@ id: s.sql({ type: "int", pk: true }).clientInput({
 Use `.client()`, `.server()`, and `.transform()` to customize client validation, server validation, and DB/client conversion.
 
 ```ts
-email: s.sql({ type: "varchar", length: 255 }).server((t) => t.sql.email());
+email: s.sqlite({ type: "varchar", length: 255 }).server((t) => t.sql.email());
 ```
 
 ```ts
-published: s.sql({ type: "boolean" })
+published: s.sqlite({ type: "boolean" })
   .client((t) => t.sql.boolean())
   .transform({
     toClient: (value) => Boolean(value),
@@ -170,13 +203,13 @@ Define an individual table with `schema(tableName, fields)`.
 
 ```ts
 const users = schema("users", {
-  id: s.sql({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).clientInput({
     value: ({ uuid }) => `new_${uuid()}`,
     clientPk: true,
   }),
-  email: s.sql({ type: "varchar", length: 255 }),
-  firstName: s.sql({ type: "varchar", length: 120 }),
-  lastName: s.sql({ type: "varchar", length: 120 }),
+  email: s.sqlite({ type: "varchar", length: 255 }),
+  firstName: s.sqlite({ type: "varchar", length: 120 }),
+  lastName: s.sqlite({ type: "varchar", length: 120 }),
 });
 ```
 
@@ -216,15 +249,15 @@ Use schema-level `.derive()` for same-row deterministic derived values. Derivati
 ```ts
 const users = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }),
-  firstName: s.sql({ type: "varchar", length: 120 }),
-  lastName: s.sql({ type: "varchar", length: 120 }),
+  id: s.sqlite({ type: "int", pk: true }),
+  firstName: s.sqlite({ type: "varchar", length: 120 }),
+  lastName: s.sqlite({ type: "varchar", length: 120 }),
 
   // Virtual field (no DB column): allowed in forClient
   statusLabel: s.clientInput(""),
 
   // Computed DB column hidden from the client: allowed in forDb
-  searchVector: s.sql({ type: "varchar", length: 255, sqlOnly: true }),
+  searchVector: s.sqlite({ type: "varchar", length: 255, sqlOnly: true }),
 }).derive({
   forClient: {
     statusLabel: (row) => `${row.firstName} ${row.lastName} - Active`,
@@ -282,13 +315,13 @@ Views provide:
 - reconciliation support for nested optimistic data
 - the base table's PK/client PK information
 
-After `connect()`, views also get `.db`.
+After `connect()`, views also get direct ORM methods.
 
 ```ts
 const bx = connect(box, db);
 const userView = bx.users.createView({ posts: true });
 
-await userView.db.insert(draft).full();
+await userView.insert(draft).full();
 ```
 
 Use views when the client shape includes selected relations or nested optimistic records. Use plain tables for table-local CRUD.
@@ -300,11 +333,11 @@ const factoryView = bx.factory.createView({
   boxes: { variant: true },
 });
 
-const factory = await factoryView.db.findById(id);
+const factory = await factoryView.findById(id);
 // includes boxes[] and each box.variant
 ```
 
-This belongs in the ORM, not in route/sync overrides. Automatic server routes that receive a view should be able to call `view.db.findById()` / `view.db.findMany()` and get the selected relation shape.
+This belongs in the ORM, not in route/sync overrides. Automatic server routes that receive a view should be able to call `view.findById()` / `view.findMany()` and get the selected relation shape.
 
 ## ORM Setup
 
@@ -313,14 +346,14 @@ const db = await createSqliteDb("app.sqlite");
 const bx = connect(box, db);
 ```
 
-`connect(box, db)` returns an enhanced box where each table has `.db`, and `createView()` returns enhanced views with `.db`.
+`connect(box, db)` returns an enhanced box where each table has direct ORM methods, and `createView()` returns enhanced views with direct ORM methods.
 
 It also exposes transactions:
 
 ```ts
-await bx.db.transaction(async (txBox) => {
-  const user = await txBox.users.db.insert(draftUser).full();
-  await txBox.posts.db.insert({ ...draftPost, userId: user.id }).ids();
+await bx.transaction(async (txBox) => {
+  const user = await txBox.users.insert(draftUser).full();
+  await txBox.posts.insert({ ...draftPost, userId: user.id }).ids();
 });
 ```
 
@@ -331,7 +364,7 @@ Tables must currently exist in the database. SQL generation exists in the root p
 ### `findMany(opts?)`
 
 ```ts
-const users = await bx.users.db.findMany({
+const users = await bx.users.findMany({
   where: {
     email: { contains: "@example.com" },
   },
@@ -364,7 +397,7 @@ Important current gap: filter objects are not fully schema-validated yet. Unknow
 ### `findById(id)`
 
 ```ts
-const user = await bx.users.db.findById(1);
+const user = await bx.users.findById(1);
 ```
 
 Returns a client row or `null`. Composite IDs can be passed as an array.
@@ -374,7 +407,7 @@ On connected views, `findById()` hydrates selected relations before parsing. A b
 ### `insert(data).ids()`
 
 ```ts
-const ids = await bx.users.db.insert(draft).ids();
+const ids = await bx.users.insert(draft).ids();
 ```
 
 Validates the full server schema and inserts the row.
@@ -396,8 +429,7 @@ For DB-generated PKs, the ORM omits client temporary PK fields before insert.
 SQL-only fields can be supplied as the second argument:
 
 ```ts
-const ids = await bx.users.db
-  .insert(draft, {
+const ids = await bx.users.insert(draft, {
     tenantId,
     createdByUserId: userId,
   })
@@ -409,17 +441,17 @@ The second argument only accepts fields marked `sqlOnly: true`. Those fields are
 TypeScript treats non-null `sqlOnly` fields without DB defaults as required on insert:
 
 ```ts
-tenantId: s.sql({
+tenantId: s.sqlite({
   type: "varchar",
   length: 100,
   field: "tenant_id",
   sqlOnly: true,
 });
 
-await bx.users.db.insert(draft).ids();
+await bx.users.insert(draft).ids();
 // Type error and runtime error: missing tenantId
 
-await bx.users.db.insert(draft, { tenantId }).ids();
+await bx.users.insert(draft, { tenantId }).ids();
 // ok
 ```
 
@@ -436,7 +468,7 @@ This depends on `createSchemaBox()` preserving concrete table definitions. If an
 ### `insert(data).full()`
 
 ```ts
-const created = await bx.users.db.insert(draft).full();
+const created = await bx.users.insert(draft).full();
 ```
 
 Validates and inserts, then reconciles returned DB IDs into the original client object.
@@ -456,8 +488,7 @@ Prefer `insert()` in new code.
 ### `update(id, patch).ids()`
 
 ```ts
-const ids = await bx.users.db
-  .update(1, {
+const ids = await bx.users.update(1, {
     email: "new@example.com",
   })
   .ids();
@@ -472,8 +503,7 @@ For DB-backed derived fields, the ORM recomputes affected derives and fetches on
 SQL-only fields can be supplied as the third argument:
 
 ```ts
-await bx.users.db
-  .update(1, { email: "new@example.com" }, { updatedByUserId: userId })
+await bx.users.update(1, { email: "new@example.com" }, { updatedByUserId: userId })
   .ids();
 ```
 
@@ -484,8 +514,7 @@ Update `sqlOnly` fields are always partial. A non-null hidden column may be requ
 ### `update(id, patch).full()`
 
 ```ts
-const user = await bx.users.db
-  .update(1, {
+const user = await bx.users.update(1, {
     firstName: "Ada",
   })
   .full();
@@ -498,14 +527,14 @@ Unlike `insert(...).full()`, this currently means "stored row after update".
 ### `delete(id)`
 
 ```ts
-const result = await bx.users.db.delete(1);
+const result = await bx.users.delete(1);
 // { deleted: true } or { deleted: false }
 ```
 
 ### `count(where?)`
 
 ```ts
-const total = await bx.users.db.count({
+const total = await bx.users.count({
   email: { contains: "@example.com" },
 });
 ```
@@ -515,8 +544,8 @@ Uses the same current filter limitations as `findMany()`.
 ### `reconcileIds(clientData, ids)`
 
 ```ts
-const ids = await bx.users.db.insert(draft).ids();
-const created = bx.users.db.reconcileIds(draft, ids);
+const ids = await bx.users.insert(draft).ids();
+const created = bx.users.reconcileIds(draft, ids);
 ```
 
 Maps DB primary key payloads back onto client data.
@@ -550,8 +579,7 @@ For optimistic UI:
 const draft = bx.users.generateDefaults();
 
 // draft.id might be "new_xxx"
-const created = await bx.users.db
-  .insert({
+const created = await bx.users.insert({
     ...draft,
     email: "ada@example.com",
   })

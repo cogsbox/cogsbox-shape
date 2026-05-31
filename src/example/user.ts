@@ -7,20 +7,20 @@ import { v4 as uuidv4 } from "uuid";
 const users = schema({
   _tableName: "users",
   id: s
-    .sql({ type: "int", pk: true })
+    .sqlite({ type: "int", pk: true })
     .clientInput({ value: ({ uuid }) => uuid() }),
   petId: s.reference(() => pets.id),
   pets: s.hasMany([]),
 });
 const pets = schema({
   _tableName: "pets",
-  id: s.sql({ type: "int", pk: true }),
+  id: s.sqlite({ type: "int", pk: true }),
   userId: s.reference(() => users.id),
   owner: s.hasOne(true),
 });
 const posts = schema({
   _tableName: "posts",
-  id: s.sql({ type: "int", pk: true }),
+  id: s.sqlite({ type: "int", pk: true }),
   userId: s.reference(() => users.id),
 
   aboutPet: s.hasOne(true),

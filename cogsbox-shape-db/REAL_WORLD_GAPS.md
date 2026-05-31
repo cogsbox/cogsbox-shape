@@ -17,7 +17,7 @@ That gives us a useful foundation for real app workflows:
 
 ```ts
 const draft = box.users.generateDefaults();
-const created = await bx.users.db.insert(draft).full();
+const created = await bx.users.insert(draft).full();
 ```
 
 ## Fixed Core Contract
@@ -39,10 +39,10 @@ update(id, patch)
 Real-world behavior:
 
 ```ts
-await bx.users.db.update(id, { email: "bad-email" }).ids();
+await bx.users.update(id, { email: "bad-email" }).ids();
 // rejects if email fails the schema's server validation
 
-await bx.users.db.update(id, { email: "valid@test.com" }).ids();
+await bx.users.update(id, { email: "valid@test.com" }).ids();
 // validates only email, does not require the whole row
 ```
 
@@ -57,7 +57,7 @@ Writes now use the schema validation path. Reads and filters are different becau
 Example:
 
 ```ts
-await bx.users.db.findMany({
+await bx.users.findMany({
   where: { email: { contains: "test.com" } },
 });
 ```
@@ -113,7 +113,7 @@ That is useful, but we should document the difference clearly and maybe tighten 
 Real-world issue:
 
 ```ts
-const created = await bx.posts.db.insert(draft).full();
+const created = await bx.posts.insert(draft).full();
 ```
 
 If the DB adds `createdAt`, `slug`, or trigger-generated data, the returned object may not include it unless insert `.full()` fetches after insert or uses database `returning`.
@@ -155,8 +155,8 @@ Views support manual batch reconciliation, but ORM-level batch APIs are missing.
 Useful APIs:
 
 ```ts
-await bx.users.db.insertMany(drafts).ids();
-await bx.users.db.insertMany(drafts).full();
+await bx.users.insertMany(drafts).ids();
+await bx.users.insertMany(drafts).full();
 ```
 
 Needed behavior:
@@ -171,7 +171,7 @@ Needed behavior:
 Many apps need idempotent writes:
 
 ```ts
-await bx.users.db.upsert(draft).onConflict("email").full();
+await bx.users.upsert(draft).onConflict("email").full();
 ```
 
 This needs careful design because SQLite/Postgres/MySQL differ, but it is a common production need.
@@ -243,7 +243,7 @@ Option B: ORM merges schema defaults before validation.
 Real app ergonomics lean toward B, but API predictability may prefer A. A middle path:
 
 ```ts
-bx.users.db.insert(data).withDefaults().full()
+bx.users.insert(data).withDefaults().full()
 ```
 
 ### Should Insert `.full()` Fetch From DB?

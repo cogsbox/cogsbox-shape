@@ -91,8 +91,10 @@ function enhanceTable(entry, meta, db) {
     });
     return new Proxy(entry, {
         get(target, prop, receiver) {
-            if (prop === "db")
-                return tableDb;
+            if (prop in tableDb) {
+                const value = Reflect.get(tableDb, prop, tableDb);
+                return typeof value === "function" ? value.bind(tableDb) : value;
+            }
             return Reflect.get(target, prop, receiver);
         },
     });
@@ -208,8 +210,10 @@ export function connect(box, db) {
                     }, reconcile, hydrateRow);
                     return new Proxy(view, {
                         get(target, prop, receiver) {
-                            if (prop === "db")
-                                return viewDb;
+                            if (prop in viewDb) {
+                                const value = Reflect.get(viewDb, prop, viewDb);
+                                return typeof value === "function" ? value.bind(viewDb) : value;
+                            }
                             return Reflect.get(target, prop, receiver);
                         },
                     });
@@ -226,6 +230,6 @@ export function connect(box, db) {
             return fn(txBox);
         });
     };
-    result.db = { transaction };
+    result.transaction = transaction;
     return result;
 }

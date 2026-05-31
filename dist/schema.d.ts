@@ -9,7 +9,8 @@ type CurrentTimestampConfig = {
 export declare const isFunction: (fn: unknown) => fn is Function;
 export declare function currentTimeStamp(): CurrentTimestampConfig;
 type DbConfig = SQLType | RelationConfig<any> | null;
-export type SQLType = ({
+export type SQLDialect = "sqlite" | "postgres" | "mysql";
+type SQLTypeConfig = ({
     type: "int";
     nullable?: boolean;
     default?: number;
@@ -31,16 +32,33 @@ export type SQLType = ({
     nullable?: boolean;
     length?: number;
     default?: string;
+} | {
+    type: "enum";
+    values: readonly [string, ...string[]];
+    nullable?: boolean;
+    default?: string;
+    name?: string;
 }) & BaseConfig;
+export type SQLType = SQLTypeConfig & {
+    dialect: SQLDialect;
+};
+type SQLTypeInput = SQLTypeConfig;
+type WithDialect<T extends SQLTypeInput, TDialect extends SQLDialect> = SQLType & T & {
+    dialect: TDialect;
+};
 type BaseConfig = {
     nullable?: boolean;
     pk?: true;
     field?: string;
     sqlOnly?: true;
 };
-type SQLToZodType<T extends SQLType, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+type SQLToZodType<T extends SQLTypeInput, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "enum" ? T extends {
+    values: infer TValues extends readonly [string, ...string[]];
+} ? z.ZodNullable<z.ZodType<TValues[number]>> : never : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
-} ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodNumber : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+} ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "enum" ? T extends {
+    values: infer TValues extends readonly [string, ...string[]];
+} ? z.ZodType<TValues[number]> : never : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodNumber : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
 } ? TDefault extends true ? never : z.ZodDate : z.ZodDate : never;
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;
@@ -164,7 +182,9 @@ interface ShapeAPI {
     clientInput: <const TValue>(value: TValue | ((tools: {
         uuid: () => string;
     }) => TValue)) => Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
-    sql: <const T extends SQLType>(sqlConfig: T) => Builder<"sql", T, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
+    sqlite: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "sqlite">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
+    postgres: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "postgres">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
+    mysql: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "mysql">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
     reference: <TGetter extends () => any>(getter: TGetter) => Reference<TGetter>;
     hasMany: <T extends HasManyDefault>(config?: T) => PlaceholderRelation<"hasMany">;
     hasOne: (config?: HasOneDefault) => PlaceholderRelation<"hasOne">;
@@ -245,7 +265,7 @@ export type Schema<T extends Record<string, SchemaField | (() => Relation<any>)>
     __schemaId?: string;
     [key: string]: T[keyof T] | string | ((id: number) => string) | true | undefined;
 };
-type ValidShapeField = ReturnType<typeof s.sql>;
+type ValidShapeField = ReturnType<typeof s.sqlite> | ReturnType<typeof s.postgres> | ReturnType<typeof s.mysql>;
 export type ShapeSchema<T extends string = string> = {
     _tableName: T;
     [SchemaWrapperBrand]?: true;

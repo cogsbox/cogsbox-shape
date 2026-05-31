@@ -9,10 +9,10 @@ import { s, schema, createSchemaBox } from "cogsbox-shape";
 
 const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }).clientInput({ value: () => crypto.randomUUID(), clientPk: true }),
-  name: s.sql({ type: "varchar", length: 100 }).clientInput({ value: "" }),
-  email: s.sql({ type: "varchar", length: 255 }),
-  isActive: s.sql({ type: "int" }).clientInput({ value: false }).transform({
+  id: s.sqlite({ type: "int", pk: true }).clientInput({ value: () => crypto.randomUUID(), clientPk: true }),
+  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  email: s.sqlite({ type: "varchar", length: 255 }),
+  isActive: s.sqlite({ type: "int" }).clientInput({ value: false }).transform({
     toClient: (v: number) => v === 1,
     toDb: (v: boolean) => (v ? 1 : 0),
   }),
@@ -27,21 +27,21 @@ const bx = connect(box, db);
 
 ## `connect(box, db)`
 
-Enhances every table in the schema box with a `.db` property exposing CRUD methods. Also adds `bx.db.transaction()`.
+Reshapes every table in the schema box into an ORM table with direct CRUD methods. Also adds `bx.transaction()`.
 
 | Argument | Type | Description |
 |----------|------|-------------|
 | `box` | Schema box from `createSchemaBox` | The shape definition |
 | `db` | `Kysely<unknown>` | A Kysely database instance |
 
-Returns a proxy of the box where every table entry is augmented with `.db: TableDB`.
+Returns a proxy of the box where every table entry exposes the `TableDB` methods directly.
 
 ### Transactions
 
 ```ts
-const result = await bx.db.transaction(async (txBox) => {
-  const u1 = await txBox.users.db.insert({ name: "Alice", email: "a@a.com" }).ids();
-  const u2 = await txBox.users.db.insert({ name: "Bob", email: "b@b.com" }).ids();
+const result = await bx.transaction(async (txBox) => {
+  const u1 = await txBox.users.insert({ name: "Alice", email: "a@a.com" }).ids();
+  const u2 = await txBox.users.insert({ name: "Bob", email: "b@b.com" }).ids();
   return { u1, u2 };
 });
 ```
@@ -50,7 +50,7 @@ const result = await bx.db.transaction(async (txBox) => {
 
 ## `TableDB` Methods
 
-Every table gets these methods via `.db`:
+Every table gets these methods directly:
 
 ---
 
@@ -59,10 +59,10 @@ Every table gets these methods via `.db`:
 Query multiple records.
 
 ```ts
-bx.users.db.findMany()                                           // all
-bx.users.db.findMany({ where: { isActive: true } })              // filter
-bx.users.db.findMany({ where: { name: { contains: "Ali" } } })   // operator
-bx.users.db.findMany({ orderBy: { name: "asc" }, limit: 10, offset: 20 })
+bx.users.findMany()                                           // all
+bx.users.findMany({ where: { isActive: true } })              // filter
+bx.users.findMany({ where: { name: { contains: "Ali" } } })   // operator
+bx.users.findMany({ orderBy: { name: "asc" }, limit: 10, offset: 20 })
 ```
 
 **`FindManyOpts<T>`:**
@@ -81,8 +81,8 @@ Returns `Promise<TClient[]>`
 ### `.findById(id)`
 
 ```ts
-const user = await bx.users.db.findById(1);   // single-column PK
-const rel = await bx.parents.db.findById([1, "en"]);  // composite PK
+const user = await bx.users.findById(1);   // single-column PK
+const rel = await bx.parents.findById([1, "en"]);  // composite PK
 ```
 
 Returns `Promise<TClient | null>`.
@@ -94,7 +94,7 @@ Returns `Promise<TClient | null>`.
 Inserts a record and returns only the generated primary key(s).
 
 ```ts
-const pk = await bx.users.db.insert({
+const pk = await bx.users.insert({
   name: "Alice",
   email: "alice@test.com",
   isActive: true,
@@ -109,7 +109,7 @@ Inserts a record and returns the client-side row with DB-assigned primary keys r
 For plain tables, returned DB PK columns are mapped onto the matching client fields. For views, the view reconciler is used, so nested view data can be merged with the server response.
 
 ```ts
-const user = await bx.users.db.insert(bx.users.generateDefaults()).full();
+const user = await bx.users.insert(bx.users.generateDefaults()).full();
 // { id: 1, name: "...", email: "...", isActive: false }
 ```
 
@@ -124,7 +124,7 @@ Alias for `.insert(data).ids()`.
 Updates a record by primary key and returns the PK.
 
 ```ts
-const pk = await bx.users.db.update(1, { name: "Alice Updated", isActive: true }).ids();
+const pk = await bx.users.update(1, { name: "Alice Updated", isActive: true }).ids();
 ```
 
 ### `.update(id, data).full()`
@@ -138,7 +138,7 @@ Throws `RecordNotFoundError` if no row matched.
 ### `.delete(id)`
 
 ```ts
-const { deleted } = await bx.users.db.delete(1);
+const { deleted } = await bx.users.delete(1);
 // { deleted: true } or { deleted: false }
 ```
 
@@ -147,8 +147,8 @@ const { deleted } = await bx.users.db.delete(1);
 ### `.count(where?)`
 
 ```ts
-const total = await bx.users.db.count();
-const active = await bx.users.db.count({ isActive: true });
+const total = await bx.users.count();
+const active = await bx.users.count({ isActive: true });
 ```
 
 ---
@@ -160,7 +160,7 @@ Maps DB-assigned IDs back onto client data without doing a database insert.
 For plain tables, DB column names are mapped back to client field names, so `{ user_id: 1 }` can become `{ publicId: 1 }` when `publicId` is configured with `field: "user_id"`. For views, this delegates to the view reconciler.
 
 ```ts
-const reconciled = bx.users.db.reconcileIds(draft, { id: 1 });
+const reconciled = bx.users.reconcileIds(draft, { id: 1 });
 // { id: 1, name: "...", ... }
 ```
 
@@ -211,7 +211,7 @@ const draft = view.defaults();
 ### Inserting with reconciliation
 
 ```ts
-const pk = await view.db.insert(draft).ids();
+const pk = await view.insert(draft).ids();
 const user = view.reconcile(draft).withServer(pk);
 // { id: 1, name: "", email: "", isActive: false }
 ```
@@ -219,14 +219,14 @@ const user = view.reconcile(draft).withServer(pk);
 Or use the shorthand:
 
 ```ts
-const user = await view.db.insert(draft).full();
+const user = await view.insert(draft).full();
 ```
 
 ### Batch reconciliation
 
 ```ts
 const drafts = [view.defaults(), view.defaults()];
-const pks = await Promise.all(drafts.map(d => view.db.insert(d).ids()));
+const pks = await Promise.all(drafts.map(d => view.insert(d).ids()));
 const users = view.reconcile(drafts).withServer(pks);
 ```
 

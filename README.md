@@ -33,12 +33,12 @@ Traditional approaches require defining these layers separately, leading to type
 Define a field by chaining methods. Each step is optional — use only what you need.
 
 ```
-s.sql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
+s.sqlite()/s.postgres()/s.mysql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
 ```
 
 | Method                            | Purpose                                                        |
 | --------------------------------- | -------------------------------------------------------------- |
-| `s.sql({ type, sqlOnly })`        | Database column type. `sqlOnly` excludes from client layer.    |
+| `s.sqlite/postgres/mysql({ type, sqlOnly })` | Database column type. `sqlOnly` excludes from client layer. |
 | `.clientInput({ value, schema })` | Client-side input schema and default value for new records.    |
 | `.client(fn)`                     | Client-side validation on the final client union type.         |
 | `.server(fn)`                     | Server-side validation. Stricter rules before database writes. |
@@ -55,13 +55,38 @@ import { s, schema } from "cogsbox-shape";
 
 const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }),
-  email: s.sql({ type: "varchar", length: 255 }),
-  createdAt: s.sql({ type: "datetime", default: "CURRENT_TIMESTAMP" }),
+  id: s.sqlite({ type: "int", pk: true }),
+  email: s.sqlite({ type: "varchar", length: 255 }),
+  createdAt: s.sqlite({ type: "datetime", default: "CURRENT_TIMESTAMP" }),
 });
 ```
 
 This generates a Zod schema matching your SQL types exactly.
+
+Use the SQL engine function that matches the database this schema targets:
+
+```typescript
+s.sqlite({ type: "text" });
+s.postgres({ type: "varchar", length: 255 });
+s.mysql({ type: "varchar", length: 255 });
+```
+
+Enums are real SQL column configs:
+
+```typescript
+s.sqlite({ type: "enum", values: ["draft", "published"] });
+// SQL: TEXT CHECK (...)
+
+s.postgres({
+  type: "enum",
+  name: "post_status",
+  values: ["draft", "published"],
+});
+// SQL: CREATE TYPE post_status AS ENUM (...), then column uses post_status
+
+s.mysql({ type: "enum", values: ["draft", "published"] });
+// SQL: ENUM('draft', 'published')
+```
 
 ### 2. Client Input — Defaults and Client-Side Validation
 
@@ -71,7 +96,7 @@ This generates a Zod schema matching your SQL types exactly.
 const userSchema = schema({
   _tableName: "users",
   // DB stores auto-increment integers, but new records need a temp string ID
-  id: s.sql({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).clientInput({
     value: () => crypto.randomUUID(),
     schema: z.string(),
   }),
@@ -79,12 +104,12 @@ const userSchema = schema({
   // Default value: a generated UUID string
 
   // Simple default without type override
-  name: s.sql({ type: "varchar" }).clientInput({ value: "Anonymous" }),
+  name: s.sqlite({ type: "varchar" }).clientInput({ value: "Anonymous" }),
   // clientInput type: string (inherits from SQL)
   // Default value: "Anonymous"
 
   // Type-only override (no default value change)
-  count: s.sql({ type: "int" }).clientInput(() => z.number().min(0)),
+  count: s.sqlite({ type: "int" }).clientInput(() => z.number().min(0)),
   // clientInput type: number (with min validation)
   // Default value: inferred from type (0 for number)
 });
@@ -97,7 +122,7 @@ const userSchema = schema({
 `.client()` adds validation rules to the final `client` schema (the union of sql | clientInput). Use it for client-side validation that operates on the complete client type.
 
 ```typescript
-name: s.sql({ type: "varchar" })
+name: s.sqlite({ type: "varchar" })
   .clientInput({ value: "" })
   .client((tools) => tools.clientInput.min(3, "Too short"))
   .server((tools) => tools.clientInput.min(5, "Must be at least 5 chars")),
@@ -113,11 +138,11 @@ The `.client()` callback receives `tools` with `sql`, `clientInput`, and `client
 const userSchema = schema({
   _tableName: "users",
   email: s
-    .sql({ type: "varchar", length: 255 })
+    .sqlite({ type: "varchar", length: 255 })
     .server(({ sql }) => sql.email("Invalid email")),
 
   age: s
-    .sql({ type: "int" })
+    .sqlite({ type: "int" })
     .server(({ sql }) => sql.min(18, "Must be 18+").max(120)),
 });
 ```
@@ -126,7 +151,7 @@ The callback receives the previous schema in the chain so you can refine it:
 
 ```typescript
 name: s
-  .sql({ type: "varchar" })
+  .sqlite({ type: "varchar" })
   .clientInput(() => z.string().trim())
   .server(({ clientInput }) => clientInput.min(2, "Too short")),
 ```
@@ -137,7 +162,7 @@ name: s
 
 ```typescript
 status: s
-  .sql({ type: "int" })                              // DB: 0 or 1
+  .sqlite({ type: "int" })                              // DB: 0 or 1
   .clientInput(() => z.enum(["active", "inactive"])) // Client input: string enum
   .transform({
     toClient: (dbValue) => dbValue === 1 ? "active" : "inactive",
@@ -158,9 +183,9 @@ Use `sqlOnly: true` to define fields that belong to the database exclusively (li
 ```typescript
 const userSchema = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }),
-  email: s.sql({ type: "varchar" }),
-  internalToken: s.sql({ type: "varchar", sqlOnly: true }),
+  id: s.sqlite({ type: "int", pk: true }),
+  email: s.sqlite({ type: "varchar" }),
+  internalToken: s.sqlite({ type: "varchar", sqlOnly: true }),
 });
 // DB reads/writes: { id, email, internalToken }
 // Client sees: { id, email }
@@ -168,12 +193,12 @@ const userSchema = schema({
 
 #### Client-Only Fields
 
-By skipping `s.sql()` entirely and just using `s.clientInput()`, you can define fields that exist purely on the client (like a temporary UI state or computed field) and will not be sent to the database.
+By skipping `s.sqlite()` entirely and just using `s.clientInput()`, you can define fields that exist purely on the client (like a temporary UI state or computed field) and will not be sent to the database.
 
 ```typescript
 const products = schema({
   _tableName: "products",
-  price: s.sql({ type: "int" }),
+  price: s.sqlite({ type: "int" }),
   formattedPrice: s.clientInput(""), // Client-only field!
 });
 ```
@@ -188,14 +213,14 @@ const products = schema({
 ```typescript
 const users = schema({
   _tableName: "users",
-  firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
-  lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
+  firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+  lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "Doe" }),
 
   // Virtual field. It exists in app/view state, not SQL.
   fullName: s.clientInput(""),
 
   // Hidden DB column. It is written to SQL, but not sent to the client.
-  searchIndex: s.sql({ type: "varchar", sqlOnly: true }),
+  searchIndex: s.sqlite({ type: "varchar", sqlOnly: true }),
 }).derive({
   forClient: {
     fullName: (row) => `${row.firstName} ${row.lastName}`,
@@ -235,14 +260,14 @@ import { s, schema, createSchema } from "cogsbox-shape";
 
 const contactSchema = schema({
   _tableName: "contacts",
-  id: s.sql({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).clientInput({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
   }),
-  name: s.sql({ type: "varchar" }).server(({ sql }) => sql.min(2)),
-  email: s.sql({ type: "varchar" }).server(({ sql }) => sql.email()),
+  name: s.sqlite({ type: "varchar" }).server(({ sql }) => sql.min(2)),
+  email: s.sqlite({ type: "varchar" }).server(({ sql }) => sql.email()),
   isActive: s
-    .sql({ type: "boolean", default: true })
+    .sqlite({ type: "boolean", default: true })
     .clientInput(() => z.boolean())
     .transform({
       toClient: (val) => Boolean(val),
@@ -282,15 +307,15 @@ import { s, schema, createSchemaBox } from "cogsbox-shape";
 
 const users = schema({
   _tableName: "users",
-  id: s.sql({ type: "int", pk: true }),
-  name: s.sql({ type: "varchar" }),
+  id: s.sqlite({ type: "int", pk: true }),
+  name: s.sqlite({ type: "varchar" }),
   posts: s.hasMany(), // Placeholder — resolved later
 });
 
 const posts = schema({
   _tableName: "posts",
-  id: s.sql({ type: "int", pk: true }),
-  title: s.sql({ type: "varchar" }),
+  id: s.sqlite({ type: "int", pk: true }),
+  title: s.sqlite({ type: "varchar" }),
   authorId: s.reference(() => users.id), // Foreign key
 });
 ```
@@ -364,7 +389,7 @@ const userView = bx.users.createView({
   posts: true,
 });
 
-const user = await userView.db.findById(1);
+const user = await userView.findById(1);
 // user.posts is loaded and validated as part of the view shape
 ```
 

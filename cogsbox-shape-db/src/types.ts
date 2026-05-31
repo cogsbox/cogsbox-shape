@@ -1,16 +1,25 @@
-export type WhereValue<T> =
-  | T
-  | {
+type ComparableWhereValue<T> = {
+  gt?: T;
+  gte?: T;
+  lt?: T;
+  lte?: T;
+};
+
+type StringWhereValue<T> = Extract<T, string> extends never
+  ? {}
+  : {
       contains?: string;
       startsWith?: string;
       endsWith?: string;
-      gt?: T;
-      gte?: T;
-      lt?: T;
-      lte?: T;
-      in?: T[];
-      not?: T | Exclude<WhereValue<T>, T>;
     };
+
+export type WhereValue<T> =
+  | T
+  | ({
+      in?: Exclude<T, undefined>[];
+      not?: T;
+    } & ComparableWhereValue<T> &
+      StringWhereValue<T>);
 
 export type WhereInput<T> = {
   [K in keyof T]?: WhereValue<T[K]>;

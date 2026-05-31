@@ -24,7 +24,9 @@ export function currentTimeStamp(): CurrentTimestampConfig {
 
 type DbConfig = SQLType | RelationConfig<any> | null;
 
-export type SQLType = (
+export type SQLDialect = "sqlite" | "postgres" | "mysql";
+
+type SQLTypeConfig = (
   | { type: "int"; nullable?: boolean; default?: number }
   | { type: "boolean"; nullable?: boolean; default?: boolean }
   | {
@@ -40,8 +42,25 @@ export type SQLType = (
       length?: number;
       default?: string;
     }
+  | {
+      type: "enum";
+      values: readonly [string, ...string[]];
+      nullable?: boolean;
+      default?: string;
+      name?: string;
+    }
 ) &
   BaseConfig;
+
+export type SQLType = SQLTypeConfig & { dialect: SQLDialect };
+
+type SQLTypeInput = SQLTypeConfig;
+
+type WithDialect<T extends SQLTypeInput, TDialect extends SQLDialect> =
+  SQLType &
+    T & {
+      dialect: TDialect;
+    };
 
 type BaseConfig = {
   nullable?: boolean;
@@ -51,7 +70,7 @@ type BaseConfig = {
 };
 
 type SQLToZodType<
-  T extends SQLType,
+  T extends SQLTypeInput,
   TDefault extends boolean,
 > = T["pk"] extends true
   ? TDefault extends true
@@ -60,6 +79,10 @@ type SQLToZodType<
   : T["nullable"] extends true
     ? T["type"] extends "varchar" | "char" | "text" | "longtext"
       ? z.ZodNullable<z.ZodString>
+      : T["type"] extends "enum"
+        ? T extends { values: infer TValues extends readonly [string, ...string[]] }
+          ? z.ZodNullable<z.ZodType<TValues[number]>>
+          : never
       : T["type"] extends "int"
         ? z.ZodNullable<z.ZodNumber>
         : T["type"] extends "boolean"
@@ -73,6 +96,10 @@ type SQLToZodType<
             : never
     : T["type"] extends "varchar" | "char" | "text" | "longtext"
       ? z.ZodString
+      : T["type"] extends "enum"
+        ? T extends { values: infer TValues extends readonly [string, ...string[]] }
+          ? z.ZodType<TValues[number]>
+          : never
       : T["type"] extends "int"
         ? z.ZodNumber
         : T["type"] extends "boolean"
@@ -348,11 +375,31 @@ interface ShapeAPI {
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
     ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
   >;
-  sql: <const T extends SQLType>(
+  sqlite: <const T extends SQLTypeInput>(
     sqlConfig: T,
   ) => Builder<
     "sql",
-    T,
+    WithDialect<T, "sqlite">,
+    SQLToZodType<T, false>,
+    z.infer<SQLToZodType<T, false>>,
+    SQLToZodType<T, false>,
+    SQLToZodType<T, false>
+  >;
+  postgres: <const T extends SQLTypeInput>(
+    sqlConfig: T,
+  ) => Builder<
+    "sql",
+    WithDialect<T, "postgres">,
+    SQLToZodType<T, false>,
+    z.infer<SQLToZodType<T, false>>,
+    SQLToZodType<T, false>,
+    SQLToZodType<T, false>
+  >;
+  mysql: <const T extends SQLTypeInput>(
+    sqlConfig: T,
+  ) => Builder<
+    "sql",
+    WithDialect<T, "mysql">,
     SQLToZodType<T, false>,
     z.infer<SQLToZodType<T, false>>,
     SQLToZodType<T, false>,
@@ -369,6 +416,60 @@ interface ShapeAPI {
     defaultCount?: number;
     defaultConfig?: HasManyDefault;
   }) => PlaceholderRelation<"manyToMany">;
+}
+
+function createSqlBuilder<
+  const T extends SQLTypeInput,
+  const TDialect extends SQLDialect,
+>(dialect: TDialect, sqlConfig: T) {
+  const sqlZodType = (() => {
+    let baseType: z.ZodTypeAny;
+    if (sqlConfig.pk) {
+      baseType = z.number();
+    } else {
+      switch (sqlConfig.type) {
+        case "int":
+          baseType = z.number();
+          break;
+        case "boolean":
+          baseType = z.number();
+          break;
+        case "date":
+        case "datetime":
+        case "timestamp":
+          baseType = z.date();
+          break;
+        case "enum":
+          baseType = z.enum(sqlConfig.values);
+          break;
+        default:
+          baseType = z.string();
+          break;
+      }
+    }
+    if (sqlConfig.nullable) {
+      baseType = baseType.nullable();
+    }
+    return baseType;
+  })();
+
+  const dialectConfig = { ...sqlConfig, dialect } as WithDialect<T, TDialect>;
+
+  return createBuilder({
+    stage: "sql",
+    sqlConfig: dialectConfig,
+    sqlZod: sqlZodType as SQLToZodType<T, false>,
+    initialValue: inferDefaultFromZod(sqlZodType, dialectConfig),
+    clientZod: sqlZodType as SQLToZodType<T, false>,
+    validationZod: sqlZodType as SQLToZodType<T, false>,
+  }) as Builder<
+    "sql",
+    WithDialect<T, TDialect>,
+    SQLToZodType<T, false>,
+    z.infer<SQLToZodType<T, false>>,
+    SQLToZodType<T, false>,
+    SQLToZodType<T, false>
+  >;
 }
 
 export const s: ShapeAPI = {
@@ -429,53 +530,12 @@ export const s: ShapeAPI = {
     relationType: "manyToMany" as const,
     defaultCount: config?.defaultCount ?? 0,
   }),
-  sql: <const T extends SQLType>(sqlConfig: T) => {
-    const sqlZodType = (() => {
-      let baseType: z.ZodTypeAny;
-      if (sqlConfig.pk) {
-        baseType = z.number();
-      } else {
-        switch (sqlConfig.type) {
-          case "int":
-            baseType = z.number();
-            break;
-          case "boolean":
-            baseType = z.number();
-            break;
-          case "date":
-          case "datetime":
-          case "timestamp":
-            baseType = z.date();
-            break;
-          default:
-            baseType = z.string();
-            break;
-        }
-      }
-      if (sqlConfig.nullable) {
-        baseType = baseType.nullable();
-      }
-      return baseType;
-    })();
-
-    return createBuilder({
-      stage: "sql",
-      sqlConfig: sqlConfig,
-      sqlZod: sqlZodType as SQLToZodType<T, false>,
-      initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
-      clientZod: sqlZodType as SQLToZodType<T, false>,
-      validationZod: sqlZodType as SQLToZodType<T, false>,
-    }) as Prettify<
-      Builder<
-        "sql",
-        T,
-        SQLToZodType<T, false>,
-        z.infer<SQLToZodType<T, false>>,
-        SQLToZodType<T, false>,
-        SQLToZodType<T, false>
-      >
-    >;
-  },
+  sqlite: <const T extends SQLTypeInput>(sqlConfig: T) =>
+    createSqlBuilder("sqlite", sqlConfig),
+  postgres: <const T extends SQLTypeInput>(sqlConfig: T) =>
+    createSqlBuilder("postgres", sqlConfig),
+  mysql: <const T extends SQLTypeInput>(sqlConfig: T) =>
+    createSqlBuilder("mysql", sqlConfig),
 };
 
 function createBuilder<
@@ -933,7 +993,10 @@ export type Schema<
     | true
     | undefined;
 };
-type ValidShapeField = ReturnType<typeof s.sql>;
+type ValidShapeField =
+  | ReturnType<typeof s.sqlite>
+  | ReturnType<typeof s.postgres>
+  | ReturnType<typeof s.mysql>;
 
 export type ShapeSchema<T extends string = string> = {
   _tableName: T;
@@ -979,6 +1042,8 @@ function inferDefaultFromZod(
         case "char":
         case "longtext":
           return "";
+        case "enum":
+          return sqlTypeConfig.default ?? sqlTypeConfig.values[0];
         case "int":
           return 0;
         case "boolean":
@@ -1360,7 +1425,7 @@ export function createSchema<
     // 2. Map Database ONLY derives directly to the dbObject
     if (derives?.forDb) {
       for (const schemaKey in derives.forDb) {
-        // Resolve custom DB column name if they used s.sql({ field: "custom_name" })
+        // Resolve custom DB column name if they used s.sqlite({ field: "custom_name" })
         const sqlConfig = (fullSchema as any)[schemaKey]?.config?.sql;
         const dbKey = sqlConfig?.field || schemaKey;
 

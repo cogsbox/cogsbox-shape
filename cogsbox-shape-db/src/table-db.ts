@@ -15,13 +15,30 @@ type InsertDbOnlyArgs<T extends Record<string, unknown>> =
       ? [dbOnlyData?: Partial<T>]
       : [dbOnlyData: T];
 
+export type TableDBApi<
+  TClient extends Record<string, unknown>,
+  TCreate,
+  TDbOnly extends Record<string, unknown> = Record<string, never>,
+> = Pick<
+  TableDB<TClient, TCreate, TDbOnly>,
+  | "findMany"
+  | "findById"
+  | "byId"
+  | "insert"
+  | "create"
+  | "update"
+  | "delete"
+  | "count"
+  | "reconcileIds"
+>;
+
 export class TableDB<
   TClient extends Record<string, unknown>,
   TCreate,
   TDbOnly extends Record<string, unknown> = Record<string, never>,
 > {
   constructor(
-    private db: Kysely<unknown>,
+    private db: Kysely<any>,
     private meta: TableMeta,
     private transforms: {
       toClient: (row: Record<string, unknown>) => TClient;
@@ -99,6 +116,21 @@ export class TableDB<
     return this.transforms.parseFromDb(hydratedRow);
   }
 
+  byId(id: unknown): {
+    find: () => Promise<TClient | null>;
+    update: (
+      data: Partial<TCreate>,
+      dbOnlyData?: DbOnlyArg<TDbOnly>,
+    ) => ReturnType<TableDB<TClient, TCreate, TDbOnly>["update"]>;
+    delete: () => Promise<{ deleted: boolean }>;
+  } {
+    return {
+      find: () => this.findById(id),
+      update: (data, dbOnlyData) => this.update(id, data, dbOnlyData),
+      delete: () => this.delete(id),
+    };
+  }
+
   insert(
     data: TCreate,
     ...args: InsertDbOnlyArgs<TDbOnly>
@@ -111,7 +143,7 @@ export class TableDB<
       ids: () => this.insertIds(data, dbOnlyData),
       full: async () => {
         const ids = await this.insertIds(data, dbOnlyData);
-        return this.reconcileIds(data, ids) as TClient;
+        return this.reconcileIds(data, ids) as unknown as TClient;
       },
     };
   }
@@ -371,12 +403,12 @@ export class TableDB<
     return parsed;
   }
 
-  reconcileIds(clientData: unknown, ids: unknown): unknown {
+  reconcileIds<TData>(clientData: TData, ids: unknown): TData {
     if (this.reconcile) {
-      return this.reconcile(clientData).withServer(ids);
+      return this.reconcile(clientData).withServer(ids) as TData;
     }
 
-    return this.reconcileFlatIds(clientData, ids);
+    return this.reconcileFlatIds(clientData, ids) as TData;
   }
 
   private reconcileFlatIds(clientData: unknown, ids: unknown): unknown {

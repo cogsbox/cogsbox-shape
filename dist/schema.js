@@ -7,6 +7,48 @@ export function currentTimeStamp() {
         defaultValue: new Date(),
     };
 }
+function createSqlBuilder(dialect, sqlConfig) {
+    const sqlZodType = (() => {
+        let baseType;
+        if (sqlConfig.pk) {
+            baseType = z.number();
+        }
+        else {
+            switch (sqlConfig.type) {
+                case "int":
+                    baseType = z.number();
+                    break;
+                case "boolean":
+                    baseType = z.number();
+                    break;
+                case "date":
+                case "datetime":
+                case "timestamp":
+                    baseType = z.date();
+                    break;
+                case "enum":
+                    baseType = z.enum(sqlConfig.values);
+                    break;
+                default:
+                    baseType = z.string();
+                    break;
+            }
+        }
+        if (sqlConfig.nullable) {
+            baseType = baseType.nullable();
+        }
+        return baseType;
+    })();
+    const dialectConfig = { ...sqlConfig, dialect };
+    return createBuilder({
+        stage: "sql",
+        sqlConfig: dialectConfig,
+        sqlZod: sqlZodType,
+        initialValue: inferDefaultFromZod(sqlZodType, dialectConfig),
+        clientZod: sqlZodType,
+        validationZod: sqlZodType,
+    });
+}
 export const s = {
     clientInput: (value) => {
         const sample = isFunction(value) ? value({ uuid }) : value;
@@ -60,44 +102,9 @@ export const s = {
         relationType: "manyToMany",
         defaultCount: config?.defaultCount ?? 0,
     }),
-    sql: (sqlConfig) => {
-        const sqlZodType = (() => {
-            let baseType;
-            if (sqlConfig.pk) {
-                baseType = z.number();
-            }
-            else {
-                switch (sqlConfig.type) {
-                    case "int":
-                        baseType = z.number();
-                        break;
-                    case "boolean":
-                        baseType = z.number();
-                        break;
-                    case "date":
-                    case "datetime":
-                    case "timestamp":
-                        baseType = z.date();
-                        break;
-                    default:
-                        baseType = z.string();
-                        break;
-                }
-            }
-            if (sqlConfig.nullable) {
-                baseType = baseType.nullable();
-            }
-            return baseType;
-        })();
-        return createBuilder({
-            stage: "sql",
-            sqlConfig: sqlConfig,
-            sqlZod: sqlZodType,
-            initialValue: inferDefaultFromZod(sqlZodType, sqlConfig),
-            clientZod: sqlZodType,
-            validationZod: sqlZodType,
-        });
-    },
+    sqlite: (sqlConfig) => createSqlBuilder("sqlite", sqlConfig),
+    postgres: (sqlConfig) => createSqlBuilder("postgres", sqlConfig),
+    mysql: (sqlConfig) => createSqlBuilder("mysql", sqlConfig),
 };
 function createBuilder(config) {
     const completedStages = config.completedStages || new Set([config.stage]);
@@ -387,6 +394,8 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                 case "char":
                 case "longtext":
                     return "";
+                case "enum":
+                    return sqlTypeConfig.default ?? sqlTypeConfig.values[0];
                 case "int":
                     return 0;
                 case "boolean":
@@ -633,7 +642,7 @@ export function createSchema(schema, relations) {
         // 2. Map Database ONLY derives directly to the dbObject
         if (derives?.forDb) {
             for (const schemaKey in derives.forDb) {
-                // Resolve custom DB column name if they used s.sql({ field: "custom_name" })
+                // Resolve custom DB column name if they used s.sqlite({ field: "custom_name" })
                 const sqlConfig = fullSchema[schemaKey]?.config?.sql;
                 const dbKey = sqlConfig?.field || schemaKey;
                 dbObject[dbKey] = derives.forDb[schemaKey]?.(clientObject);

@@ -1,30 +1,11 @@
 import fs from "fs/promises";
 
-type SQLTypeKey =
-  | "int"
-  | "varchar"
-  | "char"
-  | "text"
-  | "longtext"
-  | "boolean"
-  | "date"
-  | "datetime";
-
-const sqlTypeMap = {
-  int: "INTEGER",
-  varchar: (length = 255) => `VARCHAR(${length})`,
-  char: (length = 1) => `CHAR(${length})`,
-  text: "TEXT",
-  longtext: "LONGTEXT",
-  boolean: "TINYINT(1)",
-  date: "DATE",
-  datetime: "DATETIME",
-};
+type SQLDialect = "sqlite" | "postgres" | "mysql";
 
 type SchemaInput = Record<string, any> | { schemas: Record<string, any> };
 
 function isWrappedSchema(
-  input: SchemaInput
+  input: SchemaInput,
 ): input is { schemas: Record<string, any> } {
   return (
     input !== null &&
@@ -35,10 +16,136 @@ function isWrappedSchema(
   );
 }
 
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function quoteEnumValues(values: readonly string[]): string {
+  return values.map((value) => `'${escapeSqlString(value)}'`).join(", ");
+}
+
+function columnName(fieldName: string, sqlConfig: Record<string, any>): string {
+  return sqlConfig.field ?? fieldName;
+}
+
+function assertDialect(
+  current: SQLDialect | undefined,
+  next: SQLDialect,
+  tableName: string,
+): SQLDialect {
+  if (current && current !== next) {
+    throw new Error(
+      `Mixed SQL dialects in table "${tableName}": "${current}" and "${next}".`,
+    );
+  }
+  return next;
+}
+
+function sqlType(
+  dialect: SQLDialect,
+  fieldName: string,
+  tableName: string,
+  config: Record<string, any>,
+): string {
+  switch (dialect) {
+    case "sqlite":
+      switch (config.type) {
+        case "int":
+          return "INTEGER";
+        case "boolean":
+          return "INTEGER";
+        case "varchar":
+        case "char":
+        case "text":
+        case "longtext":
+        case "enum":
+          return "TEXT";
+        case "date":
+        case "datetime":
+        case "timestamp":
+          return "TEXT";
+      }
+      break;
+
+    case "postgres":
+      switch (config.type) {
+        case "int":
+          return "INTEGER";
+        case "boolean":
+          return "BOOLEAN";
+        case "varchar":
+          return `VARCHAR(${config.length ?? 255})`;
+        case "char":
+          return `CHAR(${config.length ?? 1})`;
+        case "text":
+        case "longtext":
+          return "TEXT";
+        case "enum":
+          if (!config.name) {
+            throw new Error(
+              `Postgres enum field "${tableName}.${fieldName}" requires a name.`,
+            );
+          }
+          return config.name;
+        case "date":
+          return "DATE";
+        case "datetime":
+        case "timestamp":
+          return "TIMESTAMP";
+      }
+      break;
+
+    case "mysql":
+      switch (config.type) {
+        case "int":
+          return "INTEGER";
+        case "boolean":
+          return "TINYINT(1)";
+        case "varchar":
+          return `VARCHAR(${config.length ?? 255})`;
+        case "char":
+          return `CHAR(${config.length ?? 1})`;
+        case "text":
+          return "TEXT";
+        case "longtext":
+          return "LONGTEXT";
+        case "enum":
+          return `ENUM(${quoteEnumValues(config.values ?? [])})`;
+        case "date":
+          return "DATE";
+        case "datetime":
+          return "DATETIME";
+        case "timestamp":
+          return "TIMESTAMP";
+      }
+      break;
+  }
+
+  throw new Error(
+    `Unknown ${dialect} SQL type "${config.type}" for field "${tableName}.${fieldName}".`,
+  );
+}
+
+function defaultSql(value: unknown): string {
+  if (value === "CURRENT_TIMESTAMP") return "CURRENT_TIMESTAMP";
+  if (typeof value === "string") return `'${escapeSqlString(value)}'`;
+  if (value instanceof Date) return `'${value.toISOString()}'`;
+  return String(value);
+}
+
+function enumCheck(
+  dialect: SQLDialect,
+  fieldName: string,
+  config: Record<string, any>,
+): string | undefined {
+  if (dialect !== "sqlite" || config.type !== "enum") return undefined;
+  return `CHECK (${fieldName} IN (${quoteEnumValues(config.values ?? [])}))`;
+}
+
 export async function generateSQL(
   input: SchemaInput,
   outputPath = "cogsbox-shape-sql.sql",
-  options: { includeForeignKeys?: boolean } = { includeForeignKeys: true }
+  options: { includeForeignKeys?: boolean } = { includeForeignKeys: true },
 ) {
   if (!input) {
     throw new Error("No schema input provided");
@@ -50,7 +157,8 @@ export async function generateSQL(
     throw new Error("Invalid schemas input");
   }
 
-  const sql: string[] = [];
+  const statements: string[] = [];
+  const postgresEnums = new Map<string, readonly string[]>();
 
   for (const [name, schema] of Object.entries(schemas)) {
     const tableName = schema._tableName;
@@ -59,123 +167,113 @@ export async function generateSQL(
       continue;
     }
 
-    const fields: any[] = [];
+    const fields: string[] = [];
     const foreignKeys: string[] = [];
+    let tableDialect: SQLDialect | undefined;
 
     for (const [fieldName, field] of Object.entries(schema)) {
-      // Skip metadata fields
-      const f = field as any; // Just cast once
-      console.log(`Processing field: ${fieldName}`, f);
-      // Skip metadata fields
+      const f = field as any;
       if (
         fieldName === "_tableName" ||
         fieldName === "SchemaWrapperBrand" ||
         fieldName.startsWith("__") ||
         typeof f !== "object" ||
         !f
-      )
+      ) {
         continue;
+      }
 
-      // Handle reference fields
       if (f.type === "reference" && f.to) {
         const referencedField = f.to();
         const targetTableName = referencedField.__parentTableType._tableName;
         const targetFieldName = referencedField.__meta._key;
 
-        console.log(
-          `Found reference field: ${fieldName} -> ${targetTableName}.${targetFieldName}`
-        );
-
         fields.push(`  ${fieldName} INTEGER NOT NULL`);
         if (options.includeForeignKeys) {
           foreignKeys.push(
-            `  FOREIGN KEY (${fieldName}) REFERENCES ${targetTableName}(${targetFieldName})`
+            `  FOREIGN KEY (${fieldName}) REFERENCES ${targetTableName}(${targetFieldName})`,
           );
         }
         continue;
       }
 
-      // Get the actual field definition from enriched structure
-      let fieldDef = f as any;
+      const fieldDef = f.__meta?._fieldType ?? f;
+      const sqlConfig = fieldDef?.config?.sql;
+      if (!sqlConfig) continue;
 
-      // If it's an enriched field, extract the original field definition
-      if (f.__meta && f.__meta._fieldType) {
-        fieldDef = f.__meta._fieldType;
-      }
-
-      // Now check if fieldDef has config
-      if (fieldDef && fieldDef.config && fieldDef.config.sql) {
-        const sqlConfig = fieldDef.config.sql;
-
-        // Handle relation configs (hasMany, hasOne, etc.)
+      if (
+        ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
+          sqlConfig.type,
+        )
+      ) {
         if (
-          ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(
-            sqlConfig.type
-          )
+          sqlConfig.type === "belongsTo" &&
+          sqlConfig.fromKey &&
+          sqlConfig.schema
         ) {
-          // Only belongsTo creates a column
-          if (
-            sqlConfig.type === "belongsTo" &&
-            sqlConfig.fromKey &&
-            sqlConfig.schema
-          ) {
-            fields.push(`  ${sqlConfig.fromKey} INTEGER`);
-            if (options.includeForeignKeys) {
-              const targetSchema = sqlConfig.schema();
-              foreignKeys.push(
-                `  FOREIGN KEY (${sqlConfig.fromKey}) REFERENCES ${targetSchema._tableName}(id)`
-              );
-            }
+          fields.push(`  ${sqlConfig.fromKey} INTEGER`);
+          if (options.includeForeignKeys) {
+            const targetSchema = sqlConfig.schema();
+            foreignKeys.push(
+              `  FOREIGN KEY (${sqlConfig.fromKey}) REFERENCES ${targetSchema._tableName}(id)`,
+            );
           }
-          continue;
         }
-
-        // Handle regular SQL types
-        const { type, nullable, pk, length, default: defaultValue } = sqlConfig;
-        if (!sqlTypeMap[type as SQLTypeKey]) {
-          console.warn(`Unknown SQL type: ${type} for field ${fieldName}`);
-          continue;
-        }
-
-        const sqlType =
-          typeof sqlTypeMap[type as SQLTypeKey] === "function"
-            ? (sqlTypeMap[type as SQLTypeKey] as Function)(length)
-            : sqlTypeMap[type as SQLTypeKey];
-
-        let fieldDefStr = `  ${fieldName} ${sqlType}`;
-
-        if (pk) fieldDefStr += " PRIMARY KEY AUTO_INCREMENT";
-        if (!nullable && !pk) fieldDefStr += " NOT NULL";
-
-        // Handle defaults
-        if (
-          defaultValue !== undefined &&
-          defaultValue !== "CURRENT_TIMESTAMP"
-        ) {
-          fieldDefStr += ` DEFAULT ${typeof defaultValue === "string" ? `'${defaultValue}'` : defaultValue}`;
-        } else if (defaultValue === "CURRENT_TIMESTAMP") {
-          fieldDefStr += " DEFAULT CURRENT_TIMESTAMP";
-        }
-
-        fields.push(fieldDefStr);
+        continue;
       }
+
+      const dialect = sqlConfig.dialect as SQLDialect | undefined;
+      if (!dialect) {
+        throw new Error(
+          `Field "${tableName}.${fieldName}" is missing a SQL dialect.`,
+        );
+      }
+      tableDialect = assertDialect(tableDialect, dialect, tableName);
+
+      if (dialect === "postgres" && sqlConfig.type === "enum") {
+        postgresEnums.set(sqlConfig.name, sqlConfig.values);
+      }
+
+      const dbFieldName = columnName(fieldName, sqlConfig);
+      const parts = [
+        dbFieldName,
+        sqlType(dialect, fieldName, tableName, sqlConfig),
+      ];
+
+      if (sqlConfig.pk) {
+        parts.push(
+          dialect === "mysql" ? "PRIMARY KEY AUTO_INCREMENT" : "PRIMARY KEY",
+        );
+      }
+      if (!sqlConfig.nullable && !sqlConfig.pk) parts.push("NOT NULL");
+      if (sqlConfig.default !== undefined) {
+        parts.push(`DEFAULT ${defaultSql(sqlConfig.default)}`);
+      }
+
+      const check = enumCheck(dialect, dbFieldName, sqlConfig);
+      if (check) parts.push(check);
+
+      fields.push(`  ${parts.join(" ")}`);
     }
 
-    // Combine fields and foreign keys based on option
     const allFields = options.includeForeignKeys
       ? [...fields, ...foreignKeys]
       : fields;
 
-    // Create table SQL
     if (allFields.length > 0) {
-      sql.push(`CREATE TABLE ${tableName} (\n${allFields.join(",\n")}\n);\n`);
+      statements.push(
+        `CREATE TABLE ${tableName} (\n${allFields.join(",\n")}\n);`,
+      );
     } else {
       console.warn(`Warning: Table ${tableName} has no fields`);
     }
   }
 
-  // Write to file
-  const sqlContent = sql.join("\n");
+  const enumStatements = Array.from(postgresEnums.entries()).map(
+    ([name, values]) =>
+      `CREATE TYPE ${name} AS ENUM (${quoteEnumValues(values)});`,
+  );
+  const sqlContent = [...enumStatements, ...statements].join("\n\n");
   await fs.writeFile(outputPath, sqlContent, "utf-8");
 
   return sqlContent;
