@@ -131,6 +131,7 @@ export class TableDB<
     const dbData = this.transforms.parseForDb(data as Record<string, unknown>);
     const parsedDbOnlyData = this.parseDbOnlyData(dbOnlyData, {
       requireRequired: true,
+      presentDbData: dbData,
     });
 
     const clientPkClientKeys = this.meta.clientPkFields;
@@ -327,11 +328,20 @@ export class TableDB<
 
   private parseDbOnlyData(
     dbOnlyData?: DbOnlyArg<TDbOnly>,
-    opts: { requireRequired: boolean } = { requireRequired: false },
+    opts: {
+      requireRequired: boolean;
+      presentDbData?: Record<string, unknown>;
+    } = { requireRequired: false },
   ): Record<string, unknown> {
     if (opts.requireRequired) {
       for (const requiredKey of this.meta.sqlOnlyRequiredClientFields) {
-        if (!dbOnlyData || dbOnlyData[requiredKey] === undefined) {
+        const field = this.meta.dbFields.get(requiredKey);
+        const dbName = field?.dbName ?? requiredKey;
+        const alreadyPresent = opts.presentDbData?.[dbName] !== undefined;
+        if (
+          !alreadyPresent &&
+          (!dbOnlyData || dbOnlyData[requiredKey] === undefined)
+        ) {
           throw new Error(
             `Missing required sqlOnly field "${requiredKey}" for "${this.meta.tableName}".`,
           );

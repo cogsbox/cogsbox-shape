@@ -22,16 +22,20 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./db": {
       "types": "./cogsbox-shape-db/dist/index.d.ts",
-      "import": "./cogsbox-shape-db/dist/index.js"
+      "import": "./cogsbox-shape-db/dist/index.js",
+      "default": "./cogsbox-shape-db/dist/index.js"
     },
     "./db/sqlite": {
       "types": "./cogsbox-shape-db/dist/sqlite/index.d.ts",
-      "import": "./cogsbox-shape-db/dist/sqlite/index.js"
-    }
+      "import": "./cogsbox-shape-db/dist/sqlite/index.js",
+      "default": "./cogsbox-shape-db/dist/sqlite/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "keywords": [
     "typescript",

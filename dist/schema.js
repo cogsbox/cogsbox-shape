@@ -622,7 +622,9 @@ export function createSchema(schema, relations) {
         for (const clientKey in clientObject) {
             if (clientObject[clientKey] === undefined)
                 continue;
-            const dbKey = clientToDbKeys[clientKey] || clientKey;
+            const dbKey = clientToDbKeys[clientKey];
+            if (!dbKey)
+                continue;
             const transform = fieldTransforms[clientKey]?.toDb;
             dbObject[dbKey] = transform
                 ? transform(clientObject[clientKey])
@@ -644,9 +646,11 @@ export function createSchema(schema, relations) {
     const finalClientSchema = z.object(clientFields);
     const finalValidationSchema = z.object(serverFields);
     const deriveDependencies = {};
-    if (derives?.forClient) {
+    const trackDeriveDependencies = (deriveGroup) => {
+        if (!deriveGroup)
+            return;
         const trackingSeed = { ...defaultValues };
-        for (const key in derives.forClient) {
+        for (const key in deriveGroup) {
             const accessed = new Set();
             const trackingRow = new Proxy(trackingSeed, {
                 get(target, prop, receiver) {
@@ -657,12 +661,14 @@ export function createSchema(schema, relations) {
                 },
             });
             try {
-                derives.forClient[key]?.(trackingRow);
+                deriveGroup[key]?.(trackingRow);
             }
             catch (e) { }
-            deriveDependencies[key] = Array.from(accessed);
+            deriveDependencies[key] = Array.from(new Set([...(deriveDependencies[key] ?? []), ...accessed]));
         }
-    }
+    };
+    trackDeriveDependencies(derives?.forClient);
+    trackDeriveDependencies(derives?.forDb);
     return {
         pk: pkKeys.length ? pkKeys : null,
         clientPk: clientPkKeys.length ? clientPkKeys : null,
@@ -706,10 +712,6 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
                 registryEntry.zodSchemas.clientPk.length > 0);
             checkedTables[currentRegistryKey] = hasPks;
             if (!hasPks) {
-                console.log(`Table ${currentRegistryKey} missing pk/clientPk:`, {
-                    pk: registryEntry.zodSchemas?.pk,
-                    clientPk: registryEntry.zodSchemas?.clientPk,
-                });
                 allTablesSupportsReconciliation = false;
             }
         }

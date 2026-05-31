@@ -813,9 +813,15 @@ type PickClientOnlyKeys<T extends ShapeSchema> = {
   [K in keyof T]: T[K] extends { config: { sql: null } } ? K : never;
 }[keyof T];
 
-type PickSqlOnlyKeys<T extends ShapeSchema> = {
-  [K in keyof T]: T[K] extends { config: { sql: { sqlOnly: true } } }
-    ? K
+type PickDbFieldKeys<T extends ShapeSchema> = {
+  [K in keyof T]: T[K] extends { config: { sql: infer TSql } }
+    ? TSql extends null
+      ? never
+      : TSql extends {
+            type: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
+          }
+        ? never
+        : K
     : never;
 }[keyof T];
 
@@ -841,7 +847,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
       [K in PickClientOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
     };
     forDb?: {
-      [K in PickSqlOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+      [K in PickDbFieldKeys<T>]?: (row: InferClientRow<T>) => any;
     };
   }) => SchemaBuilder<T>;
 };
@@ -1341,7 +1347,9 @@ export function createSchema<
     for (const clientKey in clientObject) {
       if (clientObject[clientKey] === undefined) continue;
 
-      const dbKey = clientToDbKeys[clientKey] || clientKey;
+      const dbKey = clientToDbKeys[clientKey];
+      if (!dbKey) continue;
+
       const transform = fieldTransforms[clientKey]?.toDb;
 
       dbObject[dbKey] = transform
@@ -1367,10 +1375,13 @@ export function createSchema<
   const finalClientSchema = z.object(clientFields) as any;
   const finalValidationSchema = z.object(serverFields) as any;
   const deriveDependencies: Record<string, string[]> = {};
+  const trackDeriveDependencies = (
+    deriveGroup: Record<string, (row: any) => any> | undefined,
+  ) => {
+    if (!deriveGroup) return;
 
-  if (derives?.forClient) {
     const trackingSeed = { ...defaultValues };
-    for (const key in derives.forClient) {
+    for (const key in deriveGroup) {
       const accessed = new Set<string>();
       const trackingRow = new Proxy(trackingSeed, {
         get(target, prop, receiver) {
@@ -1382,12 +1393,17 @@ export function createSchema<
       });
 
       try {
-        derives.forClient[key]?.(trackingRow);
+        deriveGroup[key]?.(trackingRow);
       } catch (e) {}
 
-      deriveDependencies[key] = Array.from(accessed);
+      deriveDependencies[key] = Array.from(
+        new Set([...(deriveDependencies[key] ?? []), ...accessed]),
+      );
     }
-  }
+  };
+
+  trackDeriveDependencies(derives?.forClient);
+  trackDeriveDependencies(derives?.forDb);
 
   return {
     pk: pkKeys.length ? pkKeys : null,
@@ -1627,10 +1643,6 @@ function createViewObject(
       checkedTables[currentRegistryKey] = hasPks;
 
       if (!hasPks) {
-        console.log(`Table ${currentRegistryKey} missing pk/clientPk:`, {
-          pk: registryEntry.zodSchemas?.pk,
-          clientPk: registryEntry.zodSchemas?.clientPk,
-        });
         allTablesSupportsReconciliation = false;
       }
     }

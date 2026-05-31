@@ -42,6 +42,32 @@ Packaging expectation:
 - `cogsbox-shape/db/sqlite` publishes the SQLite helper.
 - The internal `cogsbox-shape-db` workspace package should stay private unless there is an intentional decision to split packages later.
 
+The package export map must expose all public runtime entries:
+
+```json
+{
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./db": {
+      "types": "./cogsbox-shape-db/dist/index.d.ts",
+      "import": "./cogsbox-shape-db/dist/index.js",
+      "default": "./cogsbox-shape-db/dist/index.js"
+    },
+    "./db/sqlite": {
+      "types": "./cogsbox-shape-db/dist/sqlite/index.d.ts",
+      "import": "./cogsbox-shape-db/dist/sqlite/index.js",
+      "default": "./cogsbox-shape-db/dist/sqlite/index.js"
+    }
+  }
+}
+```
+
+There is a runtime package export test in `src/vitest/packageExports.test.ts`. Keep it: it catches the exact server-side failure where Node/tsx tries to resolve `import { s, schema } from "cogsbox-shape"` and the package root is not exported.
+
 Install expectation for consumers:
 
 ```bash
@@ -185,10 +211,11 @@ Prefer using the transform methods over calling lower-level Zod schemas manually
 
 ## Derived Fields
 
-Use schema-level `.derive()` for same-row deterministic derived values. Derivations are strictly split into two directions: `forClient` (virtual fields) and `forDb` (computed SQL fields).
+Use schema-level `.derive()` for same-row deterministic derived values. Derivations are strictly split into two directions: `forClient` (virtual fields) and `forDb` (computed DB-backed fields).
 
 ```ts
-const users = schema("users", {
+const users = schema({
+  _tableName: "users",
   id: s.sql({ type: "int", pk: true }),
   firstName: s.sql({ type: "varchar", length: 120 }),
   lastName: s.sql({ type: "varchar", length: 120 }),
@@ -196,7 +223,7 @@ const users = schema("users", {
   // Virtual field (no DB column): allowed in forClient
   statusLabel: s.clientInput(""),
 
-  // Computed DB column (no client input): allowed in forDb
+  // Computed DB column hidden from the client: allowed in forDb
   searchVector: s.sql({ type: "varchar", length: 255, sqlOnly: true }),
 }).derive({
   forClient: {
@@ -211,7 +238,7 @@ const users = schema("users", {
 TypeScript strictly enforces this split:
 
 - `forClient` can only target fields defined without SQL (`s.clientInput(...)`). These fields are ignored during SQL inserts/updates but dynamically computed when formatting data for the client.
-- `forDb` can only target fields defined as `sqlOnly: true`. These fields are dynamically computed from the client payload during `insert` and `update`, and written directly to the database.
+- `forDb` can target any DB-backed scalar field. Use `sqlOnly: true` when the computed column should be written to SQL but hidden from client output.
 
 The library tracks which row fields a derive function reads by running it against a Proxy. The ORM uses those dependencies during partial updates.
 
@@ -547,7 +574,7 @@ Current guarantees:
 - `update()` validates partial data.
 - view updates validate through the view/server patch schema.
 - DB transforms run after validation.
-- client-only fields such as `s.clientInput("")` are ignored by ORM insert/update SQL generation.
+- client-only fields such as `s.clientInput("")` are removed by `parseForDb()` / `parsePatchForDb()` and ignored by ORM insert/update SQL generation.
 - only schema-mapped DB-backed fields are written to SQL.
 - DB-backed derived fields (`forDb`) are recomputed during relevant partial updates, while client derivations (`forClient`) safely append to fetched data without triggering SQL errors.
 

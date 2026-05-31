@@ -180,7 +180,10 @@ const products = schema({
 
 #### Derived Fields (`.derive()`)
 
-`.derive()` populates _existing fields_ dynamically on read and default generation. Because you define the fields first, derived fields can be either standard DB fields or Client-only fields.
+`.derive()` populates _existing fields_ dynamically. Define the target field first, then choose where the derivation runs:
+
+- `forClient` computes client-only fields during `generateDefaults()` and `toClient()`.
+- `forDb` computes DB-backed fields during `toDb()`, `parseForDb()`, and ORM writes. Use `sqlOnly: true` when the computed column should stay hidden from the client.
 
 ```typescript
 const users = schema({
@@ -188,16 +191,22 @@ const users = schema({
   firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
   lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
 
-  // 1. Defined purely as a client field
+  // Virtual field. It exists in app/view state, not SQL.
   fullName: s.clientInput(""),
-  // 2. Defined as a DB field
-  searchIndex: s.sql({ type: "varchar" }),
+
+  // Hidden DB column. It is written to SQL, but not sent to the client.
+  searchIndex: s.sql({ type: "varchar", sqlOnly: true }),
 }).derive({
-  // Computes on toClient() and generateDefaults()
-  fullName: (row) => `${row.firstName} ${row.lastName}`,
-  searchIndex: (row) => `${row.firstName} ${row.lastName}`.toLowerCase(),
+  forClient: {
+    fullName: (row) => `${row.firstName} ${row.lastName}`,
+  },
+  forDb: {
+    searchIndex: (row) => `${row.firstName} ${row.lastName}`.toLowerCase(),
+  },
 });
 ```
+
+During partial ORM updates, DB-backed derivations fetch only missing dependency fields they actually read, then recompute the affected `forDb` fields. Client-only derived fields are ignored by SQL writes.
 
 ### Schema Object Structure
 
@@ -341,6 +350,25 @@ type UserWithPosts = z.infer<typeof userWithPosts.schemas.client>;
 const { defaults, transforms } = userWithPosts;
 // transforms.toClient() handles nested relation transforms automatically
 ```
+
+When a box is connected to the ORM, view reads hydrate the selected relation tree before parsing:
+
+```typescript
+import { connect } from "cogsbox-shape/db";
+import { createSqliteDb } from "cogsbox-shape/db/sqlite";
+
+const db = createSqliteDb("app.sqlite");
+const bx = connect(box, db);
+
+const userView = bx.users.createView({
+  posts: true,
+});
+
+const user = await userView.db.findById(1);
+// user.posts is loaded and validated as part of the view shape
+```
+
+Use `insert(data).ids()` when you only need the database identity, or `insert(data).full()` when you want optimistic client IDs reconciled back into the submitted client object. `create()` is kept as an alias for older code; prefer `insert()` in new code.
 
 ### 5. Nested Defaults and Form Definitions (`defaultsDefinition`)
 

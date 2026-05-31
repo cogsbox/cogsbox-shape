@@ -1114,7 +1114,9 @@ describe("derive - computed fields", () => {
     firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
     lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
   }).derive({
-    fullName: (row) => `${row.firstName} ${row.lastName}`,
+    forClient: {
+      fullName: (row) => `${row.firstName} ${row.lastName}`,
+    },
   });
 
   const box = createSchemaBox({ users }, { users: {} });
@@ -1150,8 +1152,10 @@ describe("derive - computed fields", () => {
       total: s.clientInput(0),
       formattedPrice: s.clientInput(""),
     }).derive({
-      total: (row) => row.price * row.quantity,
-      formattedPrice: (row) => `$${row.price}`,
+      forClient: {
+        total: (row) => row.price * row.quantity,
+        formattedPrice: (row) => `$${row.price}`,
+      },
     });
 
     const box = createSchemaBox({ products }, { products: {} });
@@ -1159,6 +1163,86 @@ describe("derive - computed fields", () => {
 
     expect(defaults.total).toBe(500);
     expect(defaults.formattedPrice).toBe("$100");
+  });
+
+  it("should track dependencies for forDb derived fields", () => {
+    const contacts = schema({
+      _tableName: "contacts",
+      id: s.sql({ type: "int", pk: true }),
+      firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+      lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
+      searchName: s.sql({ type: "varchar", sqlOnly: true }),
+    }).derive({
+      forDb: {
+        searchName: (row) =>
+          `${row.firstName} ${row.lastName}`.trim().toLowerCase(),
+      },
+    });
+
+    const contactBox = createSchemaBox({ contacts }, { contacts: {} });
+
+    expect(contactBox.contacts.deriveDependencies.searchName).toEqual([
+      "firstName",
+      "lastName",
+    ]);
+    expect(
+      contactBox.contacts.transforms.parseForDb({
+        id: 1,
+        firstName: "Ada",
+        lastName: "Lovelace",
+      }),
+    ).toMatchObject({ searchName: "ada lovelace" });
+  });
+
+  it("should allow forDb derived fields on visible DB columns", () => {
+    const contacts = schema({
+      _tableName: "contacts",
+      id: s.sql({ type: "int", pk: true }),
+      firstName: s.sql({ type: "varchar" }).clientInput({ value: "John" }),
+      lastName: s.sql({ type: "varchar" }).clientInput({ value: "Doe" }),
+      fullName: s.sql({ type: "varchar" }).clientInput({ value: "" }),
+    }).derive({
+      forDb: {
+        fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
+      },
+    });
+
+    const contactBox = createSchemaBox({ contacts }, { contacts: {} });
+
+    expect(
+      contactBox.contacts.transforms.parseForDb({
+        id: 1,
+        firstName: "Ada",
+        lastName: "Lovelace",
+        fullName: "stale",
+      }),
+    ).toMatchObject({ fullName: "Ada Lovelace" });
+  });
+});
+
+describe("client-only fields", () => {
+  it("should exclude client-only fields from database transforms", () => {
+    const tasks = schema({
+      _tableName: "tasks",
+      id: s.sql({ type: "int", pk: true }),
+      title: s.sql({ type: "varchar" }).clientInput({ value: "" }),
+      statusLabel: s.clientInput(""),
+    });
+
+    const taskBox = createSchemaBox({ tasks }, { tasks: {} });
+
+    expect(
+      taskBox.tasks.transforms.parseForDb({
+        id: 1,
+        title: "Ship it",
+        statusLabel: "Local only",
+      }),
+    ).toEqual({ id: 1, title: "Ship it" });
+    expect(
+      taskBox.tasks.transforms.parsePatchForDb({
+        statusLabel: "Still local only",
+      }),
+    ).toEqual({});
   });
 });
 
@@ -1180,7 +1264,9 @@ describe("sqlOnly with derive in relations", () => {
     authorId: s.reference(() => users.id),
     preview: s.clientInput(""),
   }).derive({
-    preview: (row) => row.title.substring(0, 5),
+    forClient: {
+      preview: (row) => row.title.substring(0, 5),
+    },
   });
 
   const box = createSchemaBox(

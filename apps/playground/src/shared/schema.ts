@@ -26,7 +26,9 @@ export const userSchema = schema({
       toDb: (value: boolean) => (value ? 1 : 0),
     }),
 }).derive({
-  fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
+  forDb: {
+    fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
+  },
 });
 
 export const box = createSchemaBox({ users: userSchema }, { users: {} });

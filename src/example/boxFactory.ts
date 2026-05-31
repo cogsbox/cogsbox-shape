@@ -17,7 +17,10 @@ const factory = schema({
   boxes: s.hasMany([]),
   statusLabel: s.clientInput(""),
 }).derive({
-  statusLabel: (row) => `${row.name} - ${row.isActive ? "Active" : "Inactive"}`,
+  forClient: {
+    statusLabel: (row) =>
+      `${row.name} - ${row.isActive ? "Active" : "Inactive"}`,
+  },
 });
 
 const box = schema({

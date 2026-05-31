@@ -201,14 +201,14 @@ type PickClientOnlyKeys<T extends ShapeSchema> = {
         };
     } ? K : never;
 }[keyof T];
-type PickSqlOnlyKeys<T extends ShapeSchema> = {
+type PickDbFieldKeys<T extends ShapeSchema> = {
     [K in keyof T]: T[K] extends {
         config: {
-            sql: {
-                sqlOnly: true;
-            };
+            sql: infer TSql;
         };
-    } ? K : never;
+    } ? TSql extends null ? never : TSql extends {
+        type: "hasMany" | "hasOne" | "belongsTo" | "manyToMany";
+    } ? never : K : never;
 }[keyof T];
 type InferClientRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>>;
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
@@ -223,7 +223,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
             [K in PickClientOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
         };
         forDb?: {
-            [K in PickSqlOnlyKeys<T>]?: (row: InferClientRow<T>) => any;
+            [K in PickDbFieldKeys<T>]?: (row: InferClientRow<T>) => any;
         };
     }) => SchemaBuilder<T>;
 };
