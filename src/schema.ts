@@ -1542,11 +1542,31 @@ export function createSchema<
   }
 
   let refinedClientInputSchema = finalClientInputSchema;
+  let refinedClientSchema = finalClientSchema;
   if (refinements?.client) {
     const clientRefine = refinements.client;
-    refinedClientInputSchema = finalClientInputSchema.superRefine(
+    const refineFn = (data: any, ctx: any) => {
+      const result = clientRefine(data);
+      if (!result) return;
+      const errors = Array.isArray(result) ? result : [result];
+      for (const err of errors) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: err.message,
+          path: err.path,
+        });
+      }
+    };
+    refinedClientInputSchema = finalClientInputSchema.superRefine(refineFn) as any;
+    refinedClientSchema = finalClientSchema.superRefine(refineFn) as any;
+  }
+
+  let refinedSqlSchema = finalSqlSchema;
+  if (refinements?.server) {
+    const serverRefine = refinements.server;
+    refinedSqlSchema = finalSqlSchema.superRefine(
       (data: any, ctx: any) => {
-        const result = clientRefine(data);
+        const result = serverRefine(data);
         if (!result) return;
         const errors = Array.isArray(result) ? result : [result];
         for (const err of errors) {
@@ -1566,9 +1586,9 @@ export function createSchema<
     deriveDependencies,
     refineDependencies,
     isClientRecord,
-    sqlSchema: finalSqlSchema,
+    sqlSchema: refinedSqlSchema,
     clientInputSchema: refinedClientInputSchema,
-    clientSchema: finalClientSchema,
+    clientSchema: refinedClientSchema,
     serverSchema: refinedValidationSchema,
     defaultValues: defaultValues as any,
     stateType: {} as any,
@@ -1585,7 +1605,7 @@ export function createSchema<
     },
 
     parseFromDb: (dbData) => {
-      const parsed = finalSqlSchema.parse(dbData);
+      const parsed = refinedSqlSchema.parse(dbData);
       return toClient(parsed);
     },
   };
