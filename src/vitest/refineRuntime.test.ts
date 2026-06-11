@@ -10,14 +10,14 @@ describe("refine runtime behavior", () => {
       min: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
       max: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
       label: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-    }).refine({
-      client: (row) => {
+    }).refine((r) => [
+      r(["clientInput", "client"], (row) => {
         if (row.min !== null && row.max !== null && row.min >= row.max) {
           return { path: ["max"], message: "Max must be > min" };
         }
         return undefined;
-      },
-      server: (row) => {
+      }),
+      r(["server", "sql"], (row) => {
         if (row.min !== null && row.max !== null && row.min >= row.max) {
           return { path: ["max"], message: "Max must be > min" };
         }
@@ -25,8 +25,8 @@ describe("refine runtime behavior", () => {
           return { path: ["label"], message: "Label required" };
         }
         return undefined;
-      },
-    });
+      }),
+    ]);
     return createSchemaBox({ rules }, { rules: {} });
   }
 

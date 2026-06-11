@@ -864,9 +864,23 @@ export type EnrichFields<T extends ShapeSchema> = {
 export const SchemaWrapperBrand = Symbol("SchemaWrapper");
 
 export type RefinementError = { path: string[]; message: string };
-export type RefinementFn<T> = (
-  row: T,
-) => RefinementError | RefinementError[] | undefined | null;
+type RefineLayer = "client" | "server" | "sql" | "clientInput" | "all";
+type RefineEntry = {
+  layers: RefineLayer[];
+  deps: string[] | null;
+  check: (row: any) => RefinementError | RefinementError[] | undefined | null;
+};
+type RefineHelper = {
+  (
+    layers: RefineLayer | RefineLayer[],
+    check: (row: any) => RefinementError | RefinementError[] | undefined | null,
+  ): RefineEntry;
+  (
+    layers: RefineLayer | RefineLayer[],
+    check: (row: any) => RefinementError | RefinementError[] | undefined | null,
+    deps: string | string[],
+  ): RefineEntry;
+};
 
 type PickPrimaryKeys<T extends ShapeSchema> = {
   [K in keyof T as T[K] extends { config: { sql: { pk: true } } }
@@ -901,10 +915,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
     forClient?: Record<string, (row: any) => any>;
     forDb?: Record<string, (row: any) => any>;
   };
-  __refinements?: {
-    server?: RefinementFn<InferClientRow<T>>;
-    client?: RefinementFn<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<EnrichFields<T>, "zodClientInputSchema">>>>>;
-  };
+  __refines?: RefineEntry[];
 
   primaryKeySQL: (
     definer: (pkFields: PickPrimaryKeys<T>) => string,
@@ -920,10 +931,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
     };
   }) => SchemaBuilder<T>;
 
-  refine: (refinements: {
-    server?: RefinementFn<InferClientRow<T>>;
-    client?: RefinementFn<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<EnrichFields<T>, "zodClientInputSchema">>>>>;
-  }) => SchemaBuilder<T>;
+  refine: (fn: (r: RefineHelper) => RefineEntry[]) => SchemaBuilder<T>;
 };
 export function schema<T extends string, U extends ShapeSchema<T>>(
   schema: U,
@@ -947,7 +955,7 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
   enrichedSchema[SchemaWrapperBrand] = true;
   enrichedSchema.__primaryKeySQL = undefined;
   enrichedSchema.__derives = undefined;
-  enrichedSchema.__refinements = undefined;
+  enrichedSchema.__refines = undefined;
 
   enrichedSchema.primaryKeySQL = function (
     definer: (pkFields: PickPrimaryKeys<U>) => string,
@@ -976,8 +984,16 @@ export function schema<T extends string, U extends ShapeSchema<T>>(
     return enrichedSchema;
   };
 
-  enrichedSchema.refine = function (refinements: any): SchemaBuilder<U> {
-    enrichedSchema.__refinements = refinements;
+  enrichedSchema.refine = function (fn: any): SchemaBuilder<U> {
+    const r = (layers: any, check: any, deps?: any): RefineEntry => {
+      const layerArr = Array.isArray(layers) ? layers : [layers];
+      return {
+        layers: layerArr,
+        deps: deps ? (Array.isArray(deps) ? deps : [deps]) : null,
+        check,
+      };
+    };
+    enrichedSchema.__refines = fn(r);
     return enrichedSchema;
   };
 
@@ -1112,7 +1128,7 @@ export function createSchema<
     pk: string[] | null;
     clientPk: string[] | null;
     deriveDependencies: Record<string, string[]>;
-    refineDependencies: { server: string[]; client: string[] };
+    refineInfo: { groups: RefineEntry[]; fieldToGroup: Record<string, number[]> };
     isClientRecord: (record: any) => boolean;
   sqlSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>
@@ -1207,12 +1223,7 @@ export function createSchema<
         forDb?: Record<string, (row: any) => any>;
       }
     | undefined;
-  const refinements = (schema as any).__refinements as
-    | {
-        server?: RefinementFn<any>;
-        client?: RefinementFn<any>;
-      }
-    | undefined;
+  const refineGroups = (schema as any).__refines as RefineEntry[] | undefined;
 
   for (const key in fullSchema) {
     const value = (fullSchema as any)[key];
@@ -1497,76 +1508,42 @@ export function createSchema<
   trackDeriveDependencies(derives?.forClient);
   trackDeriveDependencies(derives?.forDb);
 
-  const refineDependencies = { server: [] as string[], client: [] as string[] };
-
-  const trackRefinementDependencies = (
-    fn: RefinementFn<any> | undefined,
-    key: "server" | "client",
-  ) => {
-    if (!fn) return;
-    const accessed = new Set<string>();
-    const trackingRow = new Proxy(defaultValues, {
-      get(target, prop, receiver) {
-        if (typeof prop === "string") {
-          accessed.add(prop);
-        }
-        return Reflect.get(target, prop, receiver);
-      },
-    });
-    try {
-      fn(trackingRow);
-    } catch (e) {}
-    refineDependencies[key] = Array.from(accessed);
-  };
-
-  trackRefinementDependencies(refinements?.server, "server");
-  trackRefinementDependencies(refinements?.client, "client");
-
-  let refinedValidationSchema = finalValidationSchema;
-  if (refinements?.server) {
-    const serverRefine = refinements.server;
-    refinedValidationSchema = finalValidationSchema.superRefine(
-      (data: any, ctx: any) => {
-        const result = serverRefine(data);
-        if (!result) return;
-        const errors = Array.isArray(result) ? result : [result];
-        for (const err of errors) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: err.message,
-            path: err.path,
-          });
-        }
-      },
-    ) as any;
-  }
-
+  let refinedSqlSchema = finalSqlSchema;
   let refinedClientInputSchema = finalClientInputSchema;
   let refinedClientSchema = finalClientSchema;
-  if (refinements?.client) {
-    const clientRefine = refinements.client;
-    const refineFn = (data: any, ctx: any) => {
-      const result = clientRefine(data);
-      if (!result) return;
-      const errors = Array.isArray(result) ? result : [result];
-      for (const err of errors) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: err.message,
-          path: err.path,
-        });
-      }
-    };
-    refinedClientInputSchema = finalClientInputSchema.superRefine(refineFn) as any;
-    refinedClientSchema = finalClientSchema.superRefine(refineFn) as any;
-  }
+  let refinedValidationSchema = finalValidationSchema;
+  const fieldToGroup: Record<string, number[]> = {};
 
-  let refinedSqlSchema = finalSqlSchema;
-  if (refinements?.server) {
-    const serverRefine = refinements.server;
-    refinedSqlSchema = finalSqlSchema.superRefine(
-      (data: any, ctx: any) => {
-        const result = serverRefine(data);
+  if (refineGroups) {
+    for (let i = 0; i < refineGroups.length; i++) {
+      const entry = refineGroups[i]!;
+      let { layers, deps, check } = entry;
+
+      const applyTo = layers.includes("all")
+        ? (["sql", "clientInput", "client", "server"] as const)
+        : layers;
+
+      // Track deps from proxy if not provided explicitly
+      if (!deps) {
+        const accessed = new Set<string>();
+        const trackingRow = new Proxy(defaultValues, {
+          get(target, prop, receiver) {
+            if (typeof prop === "string") accessed.add(prop);
+            return Reflect.get(target, prop, receiver);
+          },
+        });
+        try { check(trackingRow); } catch (e) {}
+        deps = Array.from(accessed);
+        entry.deps = deps;
+      }
+
+      for (const dep of deps) {
+        if (!fieldToGroup[dep]) fieldToGroup[dep] = [];
+        fieldToGroup[dep].push(i);
+      }
+
+      const refineFn = (data: any, ctx: any) => {
+        const result = check(data);
         if (!result) return;
         const errors = Array.isArray(result) ? result : [result];
         for (const err of errors) {
@@ -1576,15 +1553,32 @@ export function createSchema<
             path: err.path,
           });
         }
-      },
-    ) as any;
+      };
+
+      for (const layer of applyTo) {
+        switch (layer) {
+          case "sql":
+            refinedSqlSchema = refinedSqlSchema.superRefine(refineFn) as any;
+            break;
+          case "clientInput":
+            refinedClientInputSchema = refinedClientInputSchema.superRefine(refineFn) as any;
+            break;
+          case "client":
+            refinedClientSchema = refinedClientSchema.superRefine(refineFn) as any;
+            break;
+          case "server":
+            refinedValidationSchema = refinedValidationSchema.superRefine(refineFn) as any;
+            break;
+        }
+      }
+    }
   }
 
   return {
     pk: pkKeys.length ? pkKeys : null,
     clientPk: clientPkKeys.length ? clientPkKeys : null,
     deriveDependencies,
-    refineDependencies,
+    refineInfo: { groups: refineGroups ?? [], fieldToGroup },
     isClientRecord,
     sqlSchema: refinedSqlSchema,
     clientInputSchema: refinedClientInputSchema,
@@ -1775,7 +1769,7 @@ type ResolvedRegistryWithSchemas<
     };
     pk: string[] | null;
     clientPk: string[] | null;
-    refineDependencies: { server: string[]; client: string[] };
+    refineInfo: { groups: RefineEntry[]; fieldToGroup: Record<string, number[]> };
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => Prettify<
       DeriveDefaults<
@@ -2322,7 +2316,7 @@ type RegistryShape = Record<
       defaultValues: any;
       stateType: any;
       deriveDependencies: Record<string, string[]>;
-      refineDependencies: { server: string[]; client: string[] };
+      refineInfo: { groups: RefineEntry[]; fieldToGroup: Record<string, number[]> };
     };
     transforms: {
       toClient: (dbObject: any) => any;
@@ -2334,7 +2328,7 @@ type RegistryShape = Record<
     pk: string[] | null;
     clientPk: string[] | null;
     deriveDependencies: Record<string, string[]>;
-    refineDependencies: { server: string[]; client: string[] };
+    refineInfo: { groups: RefineEntry[]; fieldToGroup: Record<string, number[]> };
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => any;
   }
@@ -2385,7 +2379,7 @@ type CreateSchemaBoxReturn<
     pk: string[] | null;
     clientPk: string[] | null;
     deriveDependencies: Record<string, string[]>;
-    refineDependencies: { server: string[]; client: string[] };
+    refineInfo: { groups: RefineEntry[]; fieldToGroup: Record<string, number[]> };
     isClientRecord: (record: any) => boolean;
 
     nav: NavigationProxy<K & string, Resolved>;
@@ -2505,7 +2499,7 @@ export function createSchemaBox<
       pk: zodSchemas.pk,
       clientPk: zodSchemas.clientPk,
       deriveDependencies: zodSchemas.deriveDependencies,
-      refineDependencies: zodSchemas.refineDependencies,
+      refineInfo: zodSchemas.refineInfo,
       isClientRecord: zodSchemas.isClientRecord,
       generateDefaults: zodSchemas.generateDefaults,
     };
@@ -2609,7 +2603,7 @@ export function createSchemaBox<
       pk: entry.pk,
       clientPk: entry.clientPk,
       deriveDependencies: entry.deriveDependencies,
-      refineDependencies: entry.refineDependencies,
+      refineInfo: entry.refineInfo,
       isClientRecord: entry.isClientRecord,
 
       nav: createNavProxy(tableName, finalRegistry),
@@ -3087,7 +3081,7 @@ type DeriveSchemaByKey<
         | "derive"
         | "__derives"
         | "refine"
-        | "__refinements"
+        | "__refines"
         ? never
         : K extends keyof T
           ? T[K] extends { config: { sql: { sqlOnly: true } } }
@@ -3140,7 +3134,7 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<
           | "derive"
           | "__derives"
           | "refine"
-          | "__refinements"
+          | "__refines"
           ? never
           : K extends keyof T
             ? T[K] extends { config: { sql: { sqlOnly: true } } }
@@ -3190,7 +3184,7 @@ type DeriveStateType<T, Depth extends any[] = []> = Prettify<
           | "derive"
           | "__derives"
           | "refine"
-          | "__refinements"
+          | "__refines"
           ? never
           : K extends keyof T
             ? T[K] extends { config: { sql: { sqlOnly: true } } }

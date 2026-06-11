@@ -6,7 +6,7 @@ type Row<T> = T extends readonly (infer TItem)[] ? TItem : T;
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
-type SchemaMetaKey = "_tableName" | "__primaryKeySQL" | "__derives" | "__refinements" | "primaryKeySQL" | "derive" | "refine";
+type SchemaMetaKey = "_tableName" | "__primaryKeySQL" | "__derives" | "__refines" | "primaryKeySQL" | "derive" | "refine";
 type SqlConfigOf<TField> = TField extends {
     config: {
         sql: infer TSql;

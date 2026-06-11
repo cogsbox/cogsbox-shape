@@ -357,7 +357,7 @@ export function schema(schema) {
     enrichedSchema[SchemaWrapperBrand] = true;
     enrichedSchema.__primaryKeySQL = undefined;
     enrichedSchema.__derives = undefined;
-    enrichedSchema.__refinements = undefined;
+    enrichedSchema.__refines = undefined;
     enrichedSchema.primaryKeySQL = function (definer) {
         const pkFieldsOnly = {};
         for (const key in schema) {
@@ -375,8 +375,16 @@ export function schema(schema) {
         enrichedSchema.__derives = derivers;
         return enrichedSchema;
     };
-    enrichedSchema.refine = function (refinements) {
-        enrichedSchema.__refinements = refinements;
+    enrichedSchema.refine = function (fn) {
+        const r = (layers, check, deps) => {
+            const layerArr = Array.isArray(layers) ? layers : [layers];
+            return {
+                layers: layerArr,
+                deps: deps ? (Array.isArray(deps) ? deps : [deps]) : null,
+                check,
+            };
+        };
+        enrichedSchema.__refines = fn(r);
         return enrichedSchema;
     };
     return enrichedSchema;
@@ -445,7 +453,7 @@ export function createSchema(schema, relations) {
     let pkKeys = [];
     let clientPkKeys = [];
     const derives = schema.__derives;
-    const refinements = schema.__refinements;
+    const refineGroups = schema.__refines;
     for (const key in fullSchema) {
         const value = fullSchema[key];
         if (key === "_tableName" ||
@@ -684,86 +692,76 @@ export function createSchema(schema, relations) {
     };
     trackDeriveDependencies(derives?.forClient);
     trackDeriveDependencies(derives?.forDb);
-    const refineDependencies = { server: [], client: [] };
-    const trackRefinementDependencies = (fn, key) => {
-        if (!fn)
-            return;
-        const accessed = new Set();
-        const trackingRow = new Proxy(defaultValues, {
-            get(target, prop, receiver) {
-                if (typeof prop === "string") {
-                    accessed.add(prop);
-                }
-                return Reflect.get(target, prop, receiver);
-            },
-        });
-        try {
-            fn(trackingRow);
-        }
-        catch (e) { }
-        refineDependencies[key] = Array.from(accessed);
-    };
-    trackRefinementDependencies(refinements?.server, "server");
-    trackRefinementDependencies(refinements?.client, "client");
-    let refinedValidationSchema = finalValidationSchema;
-    if (refinements?.server) {
-        const serverRefine = refinements.server;
-        refinedValidationSchema = finalValidationSchema.superRefine((data, ctx) => {
-            const result = serverRefine(data);
-            if (!result)
-                return;
-            const errors = Array.isArray(result) ? result : [result];
-            for (const err of errors) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: err.message,
-                    path: err.path,
-                });
-            }
-        });
-    }
+    let refinedSqlSchema = finalSqlSchema;
     let refinedClientInputSchema = finalClientInputSchema;
     let refinedClientSchema = finalClientSchema;
-    if (refinements?.client) {
-        const clientRefine = refinements.client;
-        const refineFn = (data, ctx) => {
-            const result = clientRefine(data);
-            if (!result)
-                return;
-            const errors = Array.isArray(result) ? result : [result];
-            for (const err of errors) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: err.message,
-                    path: err.path,
+    let refinedValidationSchema = finalValidationSchema;
+    const fieldToGroup = {};
+    if (refineGroups) {
+        for (let i = 0; i < refineGroups.length; i++) {
+            const entry = refineGroups[i];
+            let { layers, deps, check } = entry;
+            const applyTo = layers.includes("all")
+                ? ["sql", "clientInput", "client", "server"]
+                : layers;
+            // Track deps from proxy if not provided explicitly
+            if (!deps) {
+                const accessed = new Set();
+                const trackingRow = new Proxy(defaultValues, {
+                    get(target, prop, receiver) {
+                        if (typeof prop === "string")
+                            accessed.add(prop);
+                        return Reflect.get(target, prop, receiver);
+                    },
                 });
+                try {
+                    check(trackingRow);
+                }
+                catch (e) { }
+                deps = Array.from(accessed);
+                entry.deps = deps;
             }
-        };
-        refinedClientInputSchema = finalClientInputSchema.superRefine(refineFn);
-        refinedClientSchema = finalClientSchema.superRefine(refineFn);
-    }
-    let refinedSqlSchema = finalSqlSchema;
-    if (refinements?.server) {
-        const serverRefine = refinements.server;
-        refinedSqlSchema = finalSqlSchema.superRefine((data, ctx) => {
-            const result = serverRefine(data);
-            if (!result)
-                return;
-            const errors = Array.isArray(result) ? result : [result];
-            for (const err of errors) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: err.message,
-                    path: err.path,
-                });
+            for (const dep of deps) {
+                if (!fieldToGroup[dep])
+                    fieldToGroup[dep] = [];
+                fieldToGroup[dep].push(i);
             }
-        });
+            const refineFn = (data, ctx) => {
+                const result = check(data);
+                if (!result)
+                    return;
+                const errors = Array.isArray(result) ? result : [result];
+                for (const err of errors) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        message: err.message,
+                        path: err.path,
+                    });
+                }
+            };
+            for (const layer of applyTo) {
+                switch (layer) {
+                    case "sql":
+                        refinedSqlSchema = refinedSqlSchema.superRefine(refineFn);
+                        break;
+                    case "clientInput":
+                        refinedClientInputSchema = refinedClientInputSchema.superRefine(refineFn);
+                        break;
+                    case "client":
+                        refinedClientSchema = refinedClientSchema.superRefine(refineFn);
+                        break;
+                    case "server":
+                        refinedValidationSchema = refinedValidationSchema.superRefine(refineFn);
+                        break;
+                }
+            }
+        }
     }
     return {
         pk: pkKeys.length ? pkKeys : null,
         clientPk: clientPkKeys.length ? clientPkKeys : null,
         deriveDependencies,
-        refineDependencies,
+        refineInfo: { groups: refineGroups ?? [], fieldToGroup },
         isClientRecord,
         sqlSchema: refinedSqlSchema,
         clientInputSchema: refinedClientInputSchema,
@@ -931,7 +929,7 @@ export function createSchemaBox(schemas, resolutions) {
             pk: zodSchemas.pk,
             clientPk: zodSchemas.clientPk,
             deriveDependencies: zodSchemas.deriveDependencies,
-            refineDependencies: zodSchemas.refineDependencies,
+            refineInfo: zodSchemas.refineInfo,
             isClientRecord: zodSchemas.isClientRecord,
             generateDefaults: zodSchemas.generateDefaults,
         };
@@ -1017,7 +1015,7 @@ export function createSchemaBox(schemas, resolutions) {
             pk: entry.pk,
             clientPk: entry.clientPk,
             deriveDependencies: entry.deriveDependencies,
-            refineDependencies: entry.refineDependencies,
+            refineInfo: entry.refineInfo,
             isClientRecord: entry.isClientRecord,
             nav: createNavProxy(tableName, finalRegistry),
             createView: (selection) => {

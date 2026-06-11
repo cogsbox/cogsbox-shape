@@ -100,8 +100,8 @@ const refinedSchema = schema({
   content: s.sqlite({ type: "varchar", length: 500, nullable: true }).clientInput({
     value: "",
   }),
-}).refine({
-  server: (row: any) => {
+}).refine((r) => [
+  r("server", (row: any) => {
     const errors: { path: string[]; message: string }[] = [];
     if (row.startDate && row.endDate && row.startDate > row.endDate) {
       errors.push({
@@ -116,8 +116,8 @@ const refinedSchema = schema({
       });
     }
     return errors.length > 0 ? errors : undefined;
-  },
-});
+  }),
+]);
 
 const refinedBox = createSchemaBox(
   { refinedEvents: refinedSchema },
@@ -1239,12 +1239,12 @@ describe("cogsbox-shape-db", () => {
   });
 
   it("refine dependencies are tracked correctly", () => {
-    expect(refinedBox.refinedEvents.refineDependencies).toBeDefined();
+    expect(refinedBox.refinedEvents.refineInfo).toBeDefined();
     // Note: Due to short-circuit evaluation with default values,
     // only properties accessed before any falsy condition are tracked.
     // This is the same caveat as derive - the proxy can't catch properties
     // behind conditional branches that aren't taken with default values.
-    expect(refinedBox.refinedEvents.refineDependencies.server).toContain("startDate");
-    expect(refinedBox.refinedEvents.refineDependencies.server).toContain("isPublished");
+    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty("startDate");
+    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty("isPublished");
   });
 });

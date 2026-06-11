@@ -12,7 +12,7 @@ type SchemaMetaKey =
   | "_tableName"
   | "__primaryKeySQL"
   | "__derives"
-  | "__refinements"
+  | "__refines"
   | "primaryKeySQL"
   | "derive"
   | "refine";

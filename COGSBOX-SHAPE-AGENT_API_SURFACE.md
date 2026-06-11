@@ -238,7 +238,7 @@ A box entry provides:
 - `clientPk`
 - `isClientRecord`
 - `deriveDependencies`
-- `refineDependencies`
+- `refineInfo`
 - `createView(selection)`
 
 Prefer using the transform methods over calling lower-level Zod schemas manually.
@@ -313,8 +313,8 @@ const events = schema({
     schema: z.string().nullable(),
   }),
   isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
-}).refine({
-  server: (row) => {
+}).refine((r) => [
+  r("server", (row) => {
     const errors: { path: string[]; message: string }[] = [];
     if (row.startDate && row.endDate && row.startDate > row.endDate) {
       errors.push({ path: ["endDate"], message: "End date must be after start date" });
@@ -323,24 +323,35 @@ const events = schema({
       errors.push({ path: ["content"], message: "Published events must have content" });
     }
     return errors.length > 0 ? errors : undefined;
-  },
-});
+  }),
+]);
 ```
 
-The `refine()` config accepts two optional callbacks, `server` and `client`:
+The `refine()` method takes a callback that receives an `r` helper. Each `r()` call creates a refine entry:
 
-- **`server`** — runs on `parseForDb()` (before DB writes). Applied via `superRefine` on the final validation schema.
-- **`client`** — runs on the `clientInput` schema (client-side validation). Applied via `superRefine` on the final client input schema.
+```ts
+r(layer, check)       // deps tracked via Proxy
+r(layer, check, deps) // explicit deps
+```
 
-Each callback receives the full row and returns:
+| Layer | Applies to |
+|-------|-----------|
+| `"server"` | validation schema (parseForDb) |
+| `"client"` | client schema |
+| `"clientInput"` | client input schema |
+| `"sql"` | sql schema (parseFromDb) |
+| `"all"` | all four schemas |
+| `string[]` | specified layers |
+
+Each check callback receives the full row and returns:
 - `undefined` or `null` — validation passes
 - `{ path: string[]; message: string }` — single error
 - `{ path: string[]; message: string }[]` — multiple errors
 
-Dependency tracking uses the same Proxy approach as `derive()`. The tracked dependencies are exposed as `refineDependencies` on the box entry:
+Dependency tracking uses the same Proxy approach as `derive()`. The tracked dependencies are exposed as `refineInfo` on the box entry:
 ```ts
-box.events.refineDependencies;
-// { server: string[], client: string[] }
+box.events.refineInfo;
+// { groups: RefineEntry[], fieldToGroup: Record<string, number[]> }
 ```
 
 **Important**: `parsePatchForDb()` uses the base schema without refinements, because partial patch data may not satisfy cross-field rules (Zod v4 limitation).
@@ -349,7 +360,7 @@ Can be chained after `derive()`:
 ```ts
 schema({ ... })
   .derive({ forDb: { fullName: (row) => `${row.firstName} ${row.lastName}` } })
-  .refine({ server: (row) => { ... } });
+  .refine((r) => [r("server", (row) => { ... })]);
 ```
 
 ## Views
@@ -692,8 +703,8 @@ Solid/currently covered:
 - transactions through connected boxes
 - strict type-safe derivations splitting virtual client fields (`forClient`) and computed DB columns (`forDb`)
 - DB-backed derived field (`forDb`) recomputation during partial update
-- cross-field refinement (`refine()`) with `server` and `client` callbacks
-- refinement dependency tracking for ORM-aware partial updates
+- cross-field refinement (`refine()`) with multi-layer support (`server`, `client`, `clientInput`, `sql`, `all`, or custom combinations)
+- refinement dependency tracking (auto via Proxy or explicit) for ORM-aware partial updates
 - private playground app using the ORM in a real React/Hono flow
 
 Partial/limited:

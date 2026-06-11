@@ -1017,8 +1017,8 @@ describe("refine", () => {
                 schema: z.string().nullable(),
             }),
             isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
-        }).refine({
-            server: (row) => {
+        }).refine((r) => [
+            r("server", (row) => {
                 const errors = [];
                 if (row.startDate && row.endDate && row.startDate > row.endDate) {
                     errors.push({
@@ -1033,8 +1033,8 @@ describe("refine", () => {
                     });
                 }
                 return errors.length > 0 ? errors : undefined;
-            },
-        });
+            }),
+        ]);
         const box = createSchemaBox({ events }, { events: {} });
         expect(() => box.events.transforms.parseForDb({
             id: 1,
@@ -1070,8 +1070,8 @@ describe("refine", () => {
             id: s.sqlite({ type: "int", pk: true }),
             password: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
             confirmPassword: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-        }).refine({
-            client: (row) => {
+        }).refine((r) => [
+            r("clientInput", (row) => {
                 if (row.password !== row.confirmPassword) {
                     return {
                         path: ["confirmPassword"],
@@ -1079,8 +1079,8 @@ describe("refine", () => {
                     };
                 }
                 return undefined;
-            },
-        });
+            }),
+        ]);
         const box = createSchemaBox({ forms }, { forms: {} });
         const result = box.forms.schemas.clientInput.safeParse({
             id: 1,
@@ -1098,23 +1098,25 @@ describe("refine", () => {
         });
         expect(validResult.success).toBe(true);
     });
-    it("should track refinement dependencies", () => {
+    it("should track refinement dependencies via fieldToGroup", () => {
         const items = schema({
             _tableName: "items",
             id: s.sqlite({ type: "int", pk: true }),
             min: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
             max: s.sqlite({ type: "int" }).clientInput({ value: 100 }),
-        }).refine({
-            server: (row) => {
+        }).refine((r) => [
+            r("server", (row) => {
                 if (row.min > row.max) {
                     return { path: ["max"], message: "Max must be >= min" };
                 }
                 return undefined;
-            },
-        });
+            }),
+        ]);
         const box = createSchemaBox({ items }, { items: {} });
-        expect(box.items.refineDependencies.server).toEqual(["min", "max"]);
-        expect(box.items.refineDependencies.client).toEqual([]);
+        expect(box.items.refineInfo.fieldToGroup).toHaveProperty("min");
+        expect(box.items.refineInfo.fieldToGroup).toHaveProperty("max");
+        expect(box.items.refineInfo.groups[0].deps).toContain("min");
+        expect(box.items.refineInfo.groups[0].deps).toContain("max");
     });
     it("should support chaining derive and refine", () => {
         const records = schema({
@@ -1129,23 +1131,21 @@ describe("refine", () => {
                 fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
             },
         })
-            .refine({
-            server: (row) => {
+            .refine((r) => [
+            r("server", (row) => {
                 if (!row.firstName && !row.lastName) {
                     return { path: ["firstName"], message: "Name is required" };
                 }
                 return undefined;
-            },
-        });
+            }),
+        ]);
         const box = createSchemaBox({ records }, { records: {} });
         expect(box.records.deriveDependencies.fullName).toEqual([
             "firstName",
             "lastName",
         ]);
-        expect(box.records.refineDependencies.server).toEqual([
-            "firstName",
-            "lastName",
-        ]);
+        expect(box.records.refineInfo.fieldToGroup).toHaveProperty("firstName");
+        expect(box.records.refineInfo.fieldToGroup).toHaveProperty("lastName");
         const result = box.records.transforms.parseForDb({
             id: 1,
             firstName: "John",

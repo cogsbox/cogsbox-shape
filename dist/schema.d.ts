@@ -209,7 +209,16 @@ export type RefinementError = {
     path: string[];
     message: string;
 };
-export type RefinementFn<T> = (row: T) => RefinementError | RefinementError[] | undefined | null;
+type RefineLayer = "client" | "server" | "sql" | "clientInput" | "all";
+type RefineEntry = {
+    layers: RefineLayer[];
+    deps: string[] | null;
+    check: (row: any) => RefinementError | RefinementError[] | undefined | null;
+};
+type RefineHelper = {
+    (layers: RefineLayer | RefineLayer[], check: (row: any) => RefinementError | RefinementError[] | undefined | null): RefineEntry;
+    (layers: RefineLayer | RefineLayer[], check: (row: any) => RefinementError | RefinementError[] | undefined | null, deps: string | string[]): RefineEntry;
+};
 type PickPrimaryKeys<T extends ShapeSchema> = {
     [K in keyof T as T[K] extends {
         config: {
@@ -242,10 +251,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
         forClient?: Record<string, (row: any) => any>;
         forDb?: Record<string, (row: any) => any>;
     };
-    __refinements?: {
-        server?: RefinementFn<InferClientRow<T>>;
-        client?: RefinementFn<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<EnrichFields<T>, "zodClientInputSchema">>>>>;
-    };
+    __refines?: RefineEntry[];
     primaryKeySQL: (definer: (pkFields: PickPrimaryKeys<T>) => string) => SchemaBuilder<T>;
     derive: (derivers: {
         forClient?: {
@@ -255,10 +261,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
             [K in PickDbFieldKeys<T>]?: (row: InferClientRow<T>) => any;
         };
     }) => SchemaBuilder<T>;
-    refine: (refinements: {
-        server?: RefinementFn<InferClientRow<T>>;
-        client?: RefinementFn<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<EnrichFields<T>, "zodClientInputSchema">>>>>;
-    }) => SchemaBuilder<T>;
+    refine: (fn: (r: RefineHelper) => RefineEntry[]) => SchemaBuilder<T>;
 };
 export declare function schema<T extends string, U extends ShapeSchema<T>>(schema: U): SchemaBuilder<U>;
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";
@@ -298,9 +301,9 @@ export declare function createSchema<T extends {
     pk: string[] | null;
     clientPk: string[] | null;
     deriveDependencies: Record<string, string[]>;
-    refineDependencies: {
-        server: string[];
-        client: string[];
+    refineInfo: {
+        groups: RefineEntry[];
+        fieldToGroup: Record<string, number[]>;
     };
     isClientRecord: (record: any) => boolean;
     sqlSchema: z.ZodObject<Prettify<DeriveSchemaByKey<TActualSchema, "zodSqlSchema">>>;
@@ -383,9 +386,9 @@ type ResolvedRegistryWithSchemas<S extends Record<string, SchemaWithPlaceholders
         };
         pk: string[] | null;
         clientPk: string[] | null;
-        refineDependencies: {
-            server: string[];
-            client: string[];
+        refineInfo: {
+            groups: RefineEntry[];
+            fieldToGroup: Record<string, number[]>;
         };
         isClientRecord: (record: any) => boolean;
         generateDefaults: () => Prettify<DeriveDefaults<ResolveSchema<S[K], K extends keyof R ? (R[K] extends object ? R[K] : {}) : {}>>>;
@@ -533,9 +536,9 @@ type RegistryShape = Record<string, {
         defaultValues: any;
         stateType: any;
         deriveDependencies: Record<string, string[]>;
-        refineDependencies: {
-            server: string[];
-            client: string[];
+        refineInfo: {
+            groups: RefineEntry[];
+            fieldToGroup: Record<string, number[]>;
         };
     };
     transforms: {
@@ -548,9 +551,9 @@ type RegistryShape = Record<string, {
     pk: string[] | null;
     clientPk: string[] | null;
     deriveDependencies: Record<string, string[]>;
-    refineDependencies: {
-        server: string[];
-        client: string[];
+    refineInfo: {
+        groups: RefineEntry[];
+        fieldToGroup: Record<string, number[]>;
     };
     isClientRecord: (record: any) => boolean;
     generateDefaults: () => any;
@@ -579,9 +582,9 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
         pk: string[] | null;
         clientPk: string[] | null;
         deriveDependencies: Record<string, string[]>;
-        refineDependencies: {
-            server: string[];
-            client: string[];
+        refineInfo: {
+            groups: RefineEntry[];
+            fieldToGroup: Record<string, number[]>;
         };
         isClientRecord: (record: any) => boolean;
         nav: NavigationProxy<K & string, Resolved>;
@@ -608,7 +611,7 @@ type GetDbKey<K, Field> = Field extends Reference<infer TGetter> ? ReturnType<TG
     };
 } ? string extends F ? K : F : K;
 type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientInputSchema" | "zodClientSchema" | "zodValidationSchema", Depth extends any[] = []> = Depth["length"] extends 10 ? any : {
-    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refinements" ? never : K extends keyof T ? T[K] extends {
+    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refines" ? never : K extends keyof T ? T[K] extends {
         config: {
             sql: {
                 sqlOnly: true;
@@ -635,7 +638,7 @@ type DeriveSchemaByKey<T, Key extends "zodSqlSchema" | "zodClientInputSchema" | 
     } ? ZodSchema : never;
 };
 type DeriveDefaults<T, Depth extends any[] = []> = Prettify<Depth["length"] extends 10 ? any : {
-    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refinements" ? never : K extends keyof T ? T[K] extends {
+    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refines" ? never : K extends keyof T ? T[K] extends {
         config: {
             sql: {
                 sqlOnly: true;
@@ -658,7 +661,7 @@ type DeriveDefaults<T, Depth extends any[] = []> = Prettify<Depth["length"] exte
     } ? z.infer<TClient> : never;
 }>;
 type DeriveStateType<T, Depth extends any[] = []> = Prettify<Depth["length"] extends 10 ? any : {
-    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refinements" ? never : K extends keyof T ? T[K] extends {
+    [K in keyof T as K extends "_tableName" | typeof SchemaWrapperBrand | "__primaryKeySQL" | "primaryKeySQL" | "derive" | "__derives" | "refine" | "__refines" ? never : K extends keyof T ? T[K] extends {
         config: {
             sql: {
                 sqlOnly: true;

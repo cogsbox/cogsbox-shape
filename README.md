@@ -248,8 +248,8 @@ const events = schema({
     schema: z.string().nullable(),
   }),
   isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
-}).refine({
-  server: (row) => {
+}).refine((r) => [
+  r("server", (row) => {
     const errors: { path: string[]; message: string }[] = [];
     if (row.startDate && row.endDate && row.startDate > row.endDate) {
       errors.push({ path: ["endDate"], message: "End date must be after start date" });
@@ -258,8 +258,8 @@ const events = schema({
       errors.push({ path: ["content"], message: "Published events must have content" });
     }
     return errors.length > 0 ? errors : undefined;
-  },
-});
+  }),
+]);
 
 const box = createSchemaBox({ events }, { events: {} });
 
@@ -271,26 +271,36 @@ box.events.transforms.parseForDb({
 // Throws: "End date must be after start date"
 ```
 
-The `refine()` config accepts two optional callbacks:
+The `refine()` method takes a callback that receives an `r` helper function. Each call to `r(layer, check, deps?)` creates a refine entry:
 
-| Callback | Runs on | Purpose |
-|----------|---------|---------|
-| `server` | `parseForDb()` | Cross-field validation before DB writes |
-| `client` | `clientInput` schema | Cross-field validation on client input |
+| Layer | Applies to | Purpose |
+|-------|-----------|---------|
+| `"server"` | `parseForDb()`, `server` schema | Cross-field validation before DB writes |
+| `"client"` | `client` schema | Cross-field validation on client output |
+| `"clientInput"` | `clientInput` schema | Cross-field validation on raw client input |
+| `"sql"` | `parseFromDb()`, `sql` schema | Cross-field validation on DB reads |
+| `"all"` | all of the above | Universal cross-field validation |
+| `string[]` | specified layers | Apply to multiple layers at once |
 
-Each callback receives the full row and returns:
+The check function receives the full row and returns:
 - `undefined` or `null` — validation passes
 - A single `{ path: string[]; message: string }` — one error
 - An array of `{ path: string[]; message: string }` — multiple errors
 
-**Dependency tracking**: Same proxy-based approach as `derive()` — the library tracks which fields the refine function reads. This is used by the ORM to know which fields to include during partial updates. The same caveat applies: conditional branches with falsy defaults can hide dependencies.
+Optional third argument `deps` specifies explicit dependency fields as a string or string array. If omitted, the library uses proxy-based tracking (same caveat as `derive()` — conditional branches with falsy defaults can hide dependencies).
+
+**Dependency tracking**: Dependencies are exposed as `refineInfo` on the box entry:
+```typescript
+box.events.refineInfo;
+// { groups: RefineEntry[], fieldToGroup: Record<string, number[]> }
+```
 
 **Chaining**: `refine()` can be chained after `derive()`:
 
 ```typescript
 schema({ ... })
   .derive({ forDb: { fullName: (row) => `${row.firstName} ${row.lastName}` } })
-  .refine({ server: (row) => { ... } });
+  .refine((r) => [r("server", (row) => { ... })]);
 ```
 
 **Note**: `parsePatchForDb` uses the base schema (without refinement) since partial data may not satisfy cross-field rules.
@@ -310,7 +320,7 @@ schema.pk; // Primary key field names
 schema.clientPk; // Client-side primary key field names
 schema.isClientRecord; // Function to check if a record is client-created
 schema.deriveDependencies; // Derive function dependencies ({ [field]: string[] })
-schema.refineDependencies; // Refinement dependencies ({ server: string[], client: string[] })
+schema.refineInfo; // Refinement info ({ groups: RefineEntry[], fieldToGroup: Record<string, number[]> })
 ```
 
 ## Using Schemas
