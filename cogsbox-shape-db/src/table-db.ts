@@ -55,9 +55,9 @@ export class TableDB<
     private reconcile?: (
       clientData: unknown,
     ) => { withServer: (serverData: unknown) => unknown },
-    private hydrateRow?: (
-      row: Record<string, unknown>,
-    ) => Promise<Record<string, unknown>>,
+    private hydrateRows?: (
+      rows: Record<string, unknown>[],
+    ) => Promise<Record<string, unknown>[]>,
   ) {}
 
   get kysely(): Kysely<any> {
@@ -95,8 +95,8 @@ export class TableDB<
     }
 
     const rows = (await query.execute()) as Record<string, unknown>[];
-    const hydratedRows = this.hydrateRow
-      ? await Promise.all(rows.map((row) => this.hydrateRow!(row)))
+    const hydratedRows = this.hydrateRows
+      ? await this.hydrateRows(rows)
       : rows;
     return hydratedRows.map((r) => this.transforms.parseFromDb(r));
   }
@@ -119,8 +119,10 @@ export class TableDB<
 
     const row = (rows[0] as Record<string, unknown>) ?? null;
     if (!row) return null;
-    const hydratedRow = this.hydrateRow ? await this.hydrateRow(row) : row;
-    return this.transforms.parseFromDb(hydratedRow);
+    const hydratedRows = this.hydrateRows
+      ? await this.hydrateRows([row])
+      : [row];
+    return this.transforms.parseFromDb(hydratedRows[0]!);
   }
 
   byId(id: unknown): {

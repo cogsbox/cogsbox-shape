@@ -289,7 +289,7 @@ function createViewHydrator(
   registry: Record<string, any>,
   baseRegistryKey: string,
   selection: Record<string, any> | boolean,
-): (row: Record<string, unknown>) => Promise<Record<string, unknown>> {
+): (rows: Record<string, unknown>[]) => Promise<Record<string, unknown>[]> {
   const metas = new Map<string, TableMeta>();
   const getMeta = (registryKey: string) => {
     let meta = metas.get(registryKey);
@@ -305,17 +305,16 @@ function createViewHydrator(
   };
 
   const hydrate = async (
-    row: Record<string, unknown>,
+    rows: Record<string, unknown>[],
     currentRegistryKey: string,
     currentSelection: Record<string, any> | boolean,
-  ): Promise<Record<string, unknown>> => {
-    if (!row || typeof currentSelection !== "object") return row;
+  ): Promise<Record<string, unknown>[]> => {
+    if (!rows.length || typeof currentSelection !== "object") return rows;
 
     const currentEntry = registry[currentRegistryKey];
-    if (!currentEntry) return row;
+    if (!currentEntry) return rows;
 
     const currentMeta = getMeta(currentRegistryKey);
-    const hydrated = { ...row };
 
     for (const [relationKey, relationSelection] of Object.entries(
       currentSelection,
@@ -343,13 +342,18 @@ function createViewHydrator(
       if (!targetClientKey) continue;
 
       const targetDbName = dbNameForClientKey(targetMeta, targetClientKey);
-      const fromValue = row[fromDbName];
-      if (fromValue === undefined || fromValue === null) {
-        hydrated[relationKey] = ["hasMany", "manyToMany"].includes(
-          relationConfig.type,
-        )
-          ? []
-          : null;
+      const isCollection = ["hasMany", "manyToMany"].includes(
+        relationConfig.type,
+      );
+
+      const fromValues = rows
+        .map((row) => row[fromDbName])
+        .filter((v) => v !== undefined && v !== null);
+
+      if (fromValues.length === 0) {
+        for (const row of rows) {
+          row[relationKey] = isCollection ? [] : null;
+        }
         continue;
       }
 
@@ -357,26 +361,36 @@ function createViewHydrator(
       const relatedRows = (await qb
         .selectFrom(targetMeta.tableName)
         .selectAll()
-        .where(targetDbName, "=", fromValue)
+        .where(targetDbName, "in", fromValues)
         .execute()) as Record<string, unknown>[];
 
-      const hydratedRelated = await Promise.all(
-        relatedRows.map((relatedRow) =>
-          hydrate(relatedRow, targetRegistryKey, relationSelection as any),
-        ),
+      const hydratedRelated = await hydrate(
+        relatedRows,
+        targetRegistryKey,
+        relationSelection as any,
       );
 
-      hydrated[relationKey] = ["hasMany", "manyToMany"].includes(
-        relationConfig.type,
-      )
-        ? hydratedRelated
-        : hydratedRelated[0] ?? null;
+      const grouped = new Map<unknown, Record<string, unknown>[]>();
+      for (const related of hydratedRelated) {
+        const key = related[targetDbName];
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(related);
+      }
+
+      for (const row of rows) {
+        const fk = row[fromDbName];
+        const matches =
+          fk !== undefined && fk !== null ? grouped.get(fk) : undefined;
+        row[relationKey] = isCollection
+          ? (matches ?? [])
+          : (matches?.[0] ?? null);
+      }
     }
 
-    return hydrated;
+    return rows;
   };
 
-  return (row) => hydrate(row, baseRegistryKey, selection);
+  return (rows) => hydrate(rows, baseRegistryKey, selection);
 }
 
 export function connect<T extends Record<string, unknown>>(
@@ -414,7 +428,7 @@ export function connect<T extends Record<string, unknown>>(
             | Record<string, any>
             | boolean
             | undefined;
-          const hydrateRow =
+          const hydrateRows =
             registry && baseTable && viewSelection
               ? createViewHydrator(db, registry, baseTable, viewSelection)
               : undefined;
@@ -429,7 +443,7 @@ export function connect<T extends Record<string, unknown>>(
               parseFromDb: viewTransforms.parseFromDb ?? ((r: any) => r),
             },
             reconcile,
-            hydrateRow,
+            hydrateRows,
           );
 
           return new Proxy(view, {

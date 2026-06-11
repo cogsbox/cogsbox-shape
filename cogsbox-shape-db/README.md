@@ -144,6 +144,46 @@ const { deleted } = await bx.users.delete(1);
 
 ---
 
+### `.deleteMany(where)`
+
+```ts
+const { deleted } = await bx.users.deleteMany({ isActive: false });
+// { deleted: 3 }
+```
+
+Deletes all rows matching the filter. `where` is required.
+
+---
+
+### `.insertOrIgnore(data).ids()`
+
+```ts
+const ids = await bx.users.insertOrIgnore({
+  name: "Alice",
+  email: "alice@test.com",
+  isActive: true,
+}).ids();
+// { id: 1 }
+```
+
+Like `insert()` but generates `ON CONFLICT DO NOTHING`. Silently skips rows that violate unique constraints.
+
+---
+
+### `.kysely` (raw access)
+
+```ts
+const rows = await bx.users.kysely
+  .selectFrom("users")
+  .selectAll()
+  .where("id", ">", 10)
+  .execute();
+```
+
+Exposes the underlying `Kysely<any>` instance for ad-hoc queries (aggregates, raw JOINs, dialect-specific SQL).
+
+---
+
 ### `.count(where?)`
 
 ```ts
@@ -196,9 +236,13 @@ Values are automatically run through the field's `toDb` transform before being s
 
 ---
 
-## Views & Reconciliation
+## Views & Hydration
 
 Views create a client-side "draft" of a record with a temporary primary key, which gets replaced with the real DB-assigned PK on insert.
+
+Connected views hydrate selected relations via batch-fetch: all FK values are collected from the result set, a single `SELECT ... IN (...)` is issued per relation, then results are stitched back to parent rows. This avoids N+1 queries on both `findById()` and `findMany()`.
+
+### Creating a view
 
 ### Creating a view
 

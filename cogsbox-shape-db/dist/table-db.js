@@ -6,13 +6,13 @@ export class TableDB {
     meta;
     transforms;
     reconcile;
-    hydrateRow;
-    constructor(db, meta, transforms, reconcile, hydrateRow) {
+    hydrateRows;
+    constructor(db, meta, transforms, reconcile, hydrateRows) {
         this.db = db;
         this.meta = meta;
         this.transforms = transforms;
         this.reconcile = reconcile;
-        this.hydrateRow = hydrateRow;
+        this.hydrateRows = hydrateRows;
     }
     get kysely() {
         return this.db;
@@ -41,8 +41,8 @@ export class TableDB {
             query = query.offset(opts.offset);
         }
         const rows = (await query.execute());
-        const hydratedRows = this.hydrateRow
-            ? await Promise.all(rows.map((row) => this.hydrateRow(row)))
+        const hydratedRows = this.hydrateRows
+            ? await this.hydrateRows(rows)
             : rows;
         return hydratedRows.map((r) => this.transforms.parseFromDb(r));
     }
@@ -62,8 +62,10 @@ export class TableDB {
         const row = rows[0] ?? null;
         if (!row)
             return null;
-        const hydratedRow = this.hydrateRow ? await this.hydrateRow(row) : row;
-        return this.transforms.parseFromDb(hydratedRow);
+        const hydratedRows = this.hydrateRows
+            ? await this.hydrateRows([row])
+            : [row];
+        return this.transforms.parseFromDb(hydratedRows[0]);
     }
     byId(id) {
         return {

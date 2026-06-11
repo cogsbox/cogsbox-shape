@@ -392,7 +392,9 @@ await userView.insert(draft).full();
 
 Use views when the client shape includes selected relations or nested optimistic records. Use plain tables for table-local CRUD.
 
-Connected view queries hydrate selected relations:
+### View Hydration (Batch-Fetch)
+
+Connected view queries hydrate selected relations. Instead of N+1 queries per row, the hydrator collects all foreign key values from the result set and fetches each relation with a single `SELECT ... IN (...)` query, then stitches results back to parent rows.
 
 ```ts
 const factoryView = bx.factory.createView({
@@ -400,8 +402,10 @@ const factoryView = bx.factory.createView({
 });
 
 const factory = await factoryView.findById(id);
-// includes boxes[] and each box.variant
+// includes boxes[] and each box.variant — fetched via batch `SELECT ... IN (ids)`
 ```
+
+This applies to both `findById()` and `findMany()`. For `findById`, the batch is a single-element array; for `findMany`, all result rows are batched together.
 
 This belongs in the ORM, not in route/sync overrides. Automatic server routes that receive a view should be able to call `view.findById()` / `view.findMany()` and get the selected relation shape.
 
@@ -597,6 +601,39 @@ const result = await bx.users.delete(1);
 // { deleted: true } or { deleted: false }
 ```
 
+### `deleteMany(where)`
+
+```ts
+const result = await bx.users.deleteMany({ isActive: false });
+// { deleted: 3 }
+```
+
+Deletes all rows matching the filter. Returns the count of deleted rows. `where` is required (no blanket deletes).
+
+### `insertOrIgnore(data).ids()`
+
+```ts
+const ids = await bx.users.insertOrIgnore({
+  name: "Alice",
+  email: "alice@test.com",
+  isActive: true,
+}).ids();
+```
+
+Like `insert()` but generates `ON CONFLICT DO NOTHING` — silently skips rows that would violate unique constraints instead of throwing. Returns `{ id }` as with regular insert.
+
+### `.kysely` (raw Kysely access)
+
+```ts
+const raw = await bx.users.kysely
+  .selectFrom("users")
+  .selectAll()
+  .where("id", ">", 10)
+  .execute();
+```
+
+Exposes the underlying `Kysely<any>` instance for ad-hoc queries that don't fit the ORM. Useful for aggregates, raw JOINs, or dialect-specific SQL.
+
 ### `count(where?)`
 
 ```ts
@@ -684,6 +721,8 @@ Agents should not bypass validation by calling raw `toDb()` for writes. Use `par
 
 Solid/currently covered:
 
+- D1 compatibility — `numAffectedRows` fallback for update/delete operations on Cloudflare D1
+
 - schema-defined DB/client/server shapes
 - client defaults and generated defaults
 - client temporary primary keys
@@ -698,8 +737,10 @@ Solid/currently covered:
 - optimistic ID reconciliation via `.full()` and `reconcileIds()`
 - plain table reconciliation
 - view reconciliation
-- basic `findMany`, `findById`, `delete`, `count`
-- connected view `findById()` / `findMany()` hydrate selected nested relations
+- basic `findMany`, `findById`, `delete`, `deleteMany`, `count`
+- `insertOrIgnore` for `ON CONFLICT DO NOTHING` inserts
+- `.kysely` getter for ad-hoc Kysely queries outside the ORM
+- connected view `findById()` / `findMany()` hydrate selected nested relations (batch-fetch, not N+1)
 - transactions through connected boxes
 - strict type-safe derivations splitting virtual client fields (`forClient`) and computed DB columns (`forDb`)
 - DB-backed derived field (`forDb`) recomputation during partial update
@@ -721,7 +762,6 @@ Not built yet:
 - `upsert`
 - cursor pagination
 - selected columns
-- relation loading in ORM queries
 - nested create/update/delete workflows
 - indexes/unique constraints as mature schema metadata
 - schema diffing and migration history
