@@ -44,7 +44,7 @@ s.sqlite()/s.postgres()/s.mysql()  →  .clientInput()  →  .client()  →  .se
 | `.server(fn)`                     | Server-side validation. Stricter rules before database writes. |
 | `.transform({ toClient, toDb })`  | Converts between database and client representations.          |
 
-Note: `.derive()` is a schema-level method, not chainable on individual fields.
+Note: `.derive()` and `.refine()` are schema-level methods, not chainable on individual fields.
 
 ### 1. SQL — Define Your Database Schema
 
@@ -233,6 +233,68 @@ const users = schema({
 
 During partial ORM updates, DB-backed derivations fetch only missing dependency fields they actually read, then recompute the affected `forDb` fields. Client-only derived fields are ignored by SQL writes.
 
+### 7. Refinement (`.refine()`)
+
+`.refine()` adds cross-field validation rules that the entire row must satisfy. Unlike `.client()`/`.server()` which validate individual fields, `refine` can check relationships between fields.
+
+```typescript
+const events = schema({
+  _tableName: "events",
+  id: s.sqlite({ type: "int", pk: true }),
+  startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+  endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+  content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+    value: null,
+    schema: z.string().nullable(),
+  }),
+  isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+}).refine({
+  server: (row) => {
+    const errors: { path: string[]; message: string }[] = [];
+    if (row.startDate && row.endDate && row.startDate > row.endDate) {
+      errors.push({ path: ["endDate"], message: "End date must be after start date" });
+    }
+    if (row.isPublished && !row.content) {
+      errors.push({ path: ["content"], message: "Published events must have content" });
+    }
+    return errors.length > 0 ? errors : undefined;
+  },
+});
+
+const box = createSchemaBox({ events }, { events: {} });
+
+// Server refinement runs on parseForDb (before DB writes)
+box.events.transforms.parseForDb({
+  id: 1, startDate: "2024-12-31", endDate: "2024-01-01",
+  content: null, isPublished: false,
+});
+// Throws: "End date must be after start date"
+```
+
+The `refine()` config accepts two optional callbacks:
+
+| Callback | Runs on | Purpose |
+|----------|---------|---------|
+| `server` | `parseForDb()` | Cross-field validation before DB writes |
+| `client` | `clientInput` schema | Cross-field validation on client input |
+
+Each callback receives the full row and returns:
+- `undefined` or `null` — validation passes
+- A single `{ path: string[]; message: string }` — one error
+- An array of `{ path: string[]; message: string }` — multiple errors
+
+**Dependency tracking**: Same proxy-based approach as `derive()` — the library tracks which fields the refine function reads. This is used by the ORM to know which fields to include during partial updates. The same caveat applies: conditional branches with falsy defaults can hide dependencies.
+
+**Chaining**: `refine()` can be chained after `derive()`:
+
+```typescript
+schema({ ... })
+  .derive({ forDb: { fullName: (row) => `${row.firstName} ${row.lastName}` } })
+  .refine({ server: (row) => { ... } });
+```
+
+**Note**: `parsePatchForDb` uses the base schema (without refinement) since partial data may not satisfy cross-field rules.
+
 ### Schema Object Structure
 
 The returned schema object has a clear separation of concerns:
@@ -247,6 +309,8 @@ schema.generateDefaults; // Function to generate fresh defaults (executes random
 schema.pk; // Primary key field names
 schema.clientPk; // Client-side primary key field names
 schema.isClientRecord; // Function to check if a record is client-created
+schema.deriveDependencies; // Derive function dependencies ({ [field]: string[] })
+schema.refineDependencies; // Refinement dependencies ({ server: string[], client: string[] })
 ```
 
 ## Using Schemas

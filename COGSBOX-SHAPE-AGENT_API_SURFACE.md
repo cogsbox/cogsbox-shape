@@ -238,6 +238,7 @@ A box entry provides:
 - `clientPk`
 - `isClientRecord`
 - `deriveDependencies`
+- `refineDependencies`
 - `createView(selection)`
 
 Prefer using the transform methods over calling lower-level Zod schemas manually.
@@ -296,6 +297,60 @@ Avoid using derives for:
 - external service calls
 - current time values that should change at write time
 - aggregate data across rows
+
+## Refinement (`.refine()`)
+
+Schema-level cross-field validation. Unlike `.client()`/`.server()` which validate individual fields, `refine()` checks relationships between fields.
+
+```ts
+const events = schema({
+  _tableName: "events",
+  id: s.sqlite({ type: "int", pk: true }),
+  startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+  endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+  content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+    value: null,
+    schema: z.string().nullable(),
+  }),
+  isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+}).refine({
+  server: (row) => {
+    const errors: { path: string[]; message: string }[] = [];
+    if (row.startDate && row.endDate && row.startDate > row.endDate) {
+      errors.push({ path: ["endDate"], message: "End date must be after start date" });
+    }
+    if (row.isPublished && !row.content) {
+      errors.push({ path: ["content"], message: "Published events must have content" });
+    }
+    return errors.length > 0 ? errors : undefined;
+  },
+});
+```
+
+The `refine()` config accepts two optional callbacks, `server` and `client`:
+
+- **`server`** — runs on `parseForDb()` (before DB writes). Applied via `superRefine` on the final validation schema.
+- **`client`** — runs on the `clientInput` schema (client-side validation). Applied via `superRefine` on the final client input schema.
+
+Each callback receives the full row and returns:
+- `undefined` or `null` — validation passes
+- `{ path: string[]; message: string }` — single error
+- `{ path: string[]; message: string }[]` — multiple errors
+
+Dependency tracking uses the same Proxy approach as `derive()`. The tracked dependencies are exposed as `refineDependencies` on the box entry:
+```ts
+box.events.refineDependencies;
+// { server: string[], client: string[] }
+```
+
+**Important**: `parsePatchForDb()` uses the base schema without refinements, because partial patch data may not satisfy cross-field rules (Zod v4 limitation).
+
+Can be chained after `derive()`:
+```ts
+schema({ ... })
+  .derive({ forDb: { fullName: (row) => `${row.firstName} ${row.lastName}` } })
+  .refine({ server: (row) => { ... } });
+```
 
 ## Views
 
@@ -598,8 +653,8 @@ The schema is the validation contract.
 
 Current guarantees:
 
-- `insert()` validates full data.
-- `update()` validates partial data.
+- `insert()` validates full data (including server refinement).
+- `update()` validates partial data (without refinement; only field-level validation).
 - view updates validate through the view/server patch schema.
 - DB transforms run after validation.
 - client-only fields such as `s.clientInput("")` are removed by `parseForDb()` / `parsePatchForDb()` and ignored by ORM insert/update SQL generation.
@@ -637,6 +692,8 @@ Solid/currently covered:
 - transactions through connected boxes
 - strict type-safe derivations splitting virtual client fields (`forClient`) and computed DB columns (`forDb`)
 - DB-backed derived field (`forDb`) recomputation during partial update
+- cross-field refinement (`refine()`) with `server` and `client` callbacks
+- refinement dependency tracking for ORM-aware partial updates
 - private playground app using the ORM in a real React/Hono flow
 
 Partial/limited:
@@ -664,6 +721,7 @@ Not built yet:
 
 Prefer:
 
+- `refine()` for cross-field validation; keep `.client()`/`.server()` for per-field rules
 - `insert()` over legacy `create()`
 - `insert(data).ids()` for minimal DB identity
 - `insert(data).full()` for optimistic UI reconciliation
