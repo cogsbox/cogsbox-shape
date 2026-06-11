@@ -5,7 +5,7 @@ type RequiredKeys<T> = {
     [K in keyof T]-?: Record<string, never> extends Pick<T, K> ? never : K;
 }[keyof T];
 type InsertDbOnlyArgs<T extends Record<string, unknown>> = keyof T extends never ? [] : RequiredKeys<T> extends never ? [dbOnlyData?: Partial<T>] : [dbOnlyData: T];
-export type TableDBApi<TClient extends Record<string, unknown>, TCreate, TDbOnly extends Record<string, unknown> = Record<string, never>> = Pick<TableDB<TClient, TCreate, TDbOnly>, "findMany" | "findById" | "byId" | "insert" | "create" | "update" | "delete" | "count" | "reconcileIds">;
+export type TableDBApi<TClient extends Record<string, unknown>, TCreate, TDbOnly extends Record<string, unknown> = Record<string, never>> = Pick<TableDB<TClient, TCreate, TDbOnly>, "findMany" | "findById" | "byId" | "insert" | "insertOrIgnore" | "create" | "update" | "delete" | "deleteMany" | "count" | "reconcileIds" | "kysely">;
 export declare class TableDB<TClient extends Record<string, unknown>, TCreate, TDbOnly extends Record<string, unknown> = Record<string, never>> {
     private db;
     private meta;
@@ -21,6 +21,7 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate, T
     }, reconcile?: ((clientData: unknown) => {
         withServer: (serverData: unknown) => unknown;
     }) | undefined, hydrateRow?: ((row: Record<string, unknown>) => Promise<Record<string, unknown>>) | undefined);
+    get kysely(): Kysely<any>;
     findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]>;
     findById(id: unknown): Promise<TClient | null>;
     byId(id: unknown): {
@@ -54,6 +55,13 @@ export declare class TableDB<TClient extends Record<string, unknown>, TCreate, T
     private firstPkValue;
     delete(id: unknown): Promise<{
         deleted: boolean;
+    }>;
+    deleteMany(where: WhereInput<Partial<TClient>>): Promise<{
+        deleted: number;
+    }>;
+    insertOrIgnore(data: TCreate, ...args: InsertDbOnlyArgs<TDbOnly>): Promise<{
+        ids: () => Promise<Record<string, unknown>>;
+        full: () => Promise<TClient>;
     }>;
     count(where?: WhereInput<Partial<TClient>>): Promise<number>;
 }

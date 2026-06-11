@@ -25,11 +25,14 @@ export type TableDBApi<
   | "findById"
   | "byId"
   | "insert"
+  | "insertOrIgnore"
   | "create"
   | "update"
   | "delete"
+  | "deleteMany"
   | "count"
   | "reconcileIds"
+  | "kysely"
 >;
 
 export class TableDB<
@@ -56,6 +59,10 @@ export class TableDB<
       row: Record<string, unknown>,
     ) => Promise<Record<string, unknown>>,
   ) {}
+
+  get kysely(): Kysely<any> {
+    return this.db;
+  }
 
   async findMany(opts?: FindManyOpts<TClient>): Promise<TClient[]> {
     const qb = this.db as any;
@@ -159,6 +166,7 @@ export class TableDB<
   private async insertIds(
     data: TCreate,
     dbOnlyData?: DbOnlyArg<TDbOnly>,
+    opts?: { onConflict?: "ignore" },
   ): Promise<Record<string, unknown>> {
     const dbData = this.transforms.parseForDb(data as Record<string, unknown>);
     const parsedDbOnlyData = this.parseDbOnlyData(dbOnlyData, {
@@ -181,10 +189,11 @@ export class TableDB<
     Object.assign(insertData, parsedDbOnlyData);
 
     const qb = this.db as any;
-    const result = await qb
-      .insertInto(this.meta.tableName)
-      .values(insertData)
-      .execute();
+    let query = qb.insertInto(this.meta.tableName).values(insertData);
+    if (opts?.onConflict === "ignore") {
+      query = query.onConflict((oc: any) => oc.doNothing());
+    }
+    const result = await query.execute();
 
     const insertId = result[0]?.insertId;
     if (insertId !== undefined && this.meta.pkFields.length > 0) {
@@ -254,7 +263,7 @@ export class TableDB<
       .where(sql.join(conditions, sql` AND `))
       .execute();
 
-    const numUpdated = result[0]?.numUpdatedRows ?? 0n;
+    const numUpdated = result[0]?.numUpdatedRows ?? result[0]?.numAffectedRows ?? 0n;
     if (Number(numUpdated) === 0) {
       throw new RecordNotFoundError(this.meta.tableName, id);
     }
@@ -479,8 +488,42 @@ export class TableDB<
       .where(sql.join(conditions, sql` AND `))
       .execute();
 
-    const numDeleted = result[0]?.numDeletedRows ?? 0n;
+    const numDeleted = result[0]?.numDeletedRows ?? result[0]?.numAffectedRows ?? 0n;
     return { deleted: Number(numDeleted) > 0 };
+  }
+
+  async deleteMany(where: WhereInput<Partial<TClient>>): Promise<{ deleted: number }> {
+    const qb = this.db as any;
+    let query = qb.deleteFrom(this.meta.tableName);
+
+    const conditions = buildWhereConditions(
+      where as Record<string, unknown>,
+      this.meta,
+    );
+    if (conditions.length > 0) {
+      query = query.where(sql.join(conditions, sql` AND `));
+    }
+
+    const result = await query.execute();
+    const numDeleted = result[0]?.numDeletedRows ?? result[0]?.numAffectedRows ?? 0n;
+    return { deleted: Number(numDeleted) };
+  }
+
+  async insertOrIgnore(
+    data: TCreate,
+    ...args: InsertDbOnlyArgs<TDbOnly>
+  ): Promise<{
+    ids: () => Promise<Record<string, unknown>>;
+    full: () => Promise<TClient>;
+  }> {
+    const dbOnlyData = args[0] as DbOnlyArg<TDbOnly> | undefined;
+    return {
+      ids: () => this.insertIds(data, dbOnlyData, { onConflict: "ignore" }),
+      full: async () => {
+        const ids = await this.insertIds(data, dbOnlyData, { onConflict: "ignore" });
+        return this.reconcileIds(data, ids) as unknown as TClient;
+      },
+    };
   }
 
   async count(where?: WhereInput<Partial<TClient>>): Promise<number> {

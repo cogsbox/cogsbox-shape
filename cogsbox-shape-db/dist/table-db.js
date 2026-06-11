@@ -14,6 +14,9 @@ export class TableDB {
         this.reconcile = reconcile;
         this.hydrateRow = hydrateRow;
     }
+    get kysely() {
+        return this.db;
+    }
     async findMany(opts) {
         const qb = this.db;
         let query = qb.selectFrom(this.meta.tableName).selectAll();
@@ -83,7 +86,7 @@ export class TableDB {
         const dbOnlyData = args[0];
         return this.insertIds(data, dbOnlyData);
     }
-    async insertIds(data, dbOnlyData) {
+    async insertIds(data, dbOnlyData, opts) {
         const dbData = this.transforms.parseForDb(data);
         const parsedDbOnlyData = this.parseDbOnlyData(dbOnlyData, {
             requireRequired: true,
@@ -102,10 +105,11 @@ export class TableDB {
         }
         Object.assign(insertData, parsedDbOnlyData);
         const qb = this.db;
-        const result = await qb
-            .insertInto(this.meta.tableName)
-            .values(insertData)
-            .execute();
+        let query = qb.insertInto(this.meta.tableName).values(insertData);
+        if (opts?.onConflict === "ignore") {
+            query = query.onConflict((oc) => oc.doNothing());
+        }
+        const result = await query.execute();
         const insertId = result[0]?.insertId;
         if (insertId !== undefined && this.meta.pkFields.length > 0) {
             const dbPkField = this.meta.pkFields[0];
@@ -152,7 +156,7 @@ export class TableDB {
             .set(dbData)
             .where(sql.join(conditions, sql ` AND `))
             .execute();
-        const numUpdated = result[0]?.numUpdatedRows ?? 0n;
+        const numUpdated = result[0]?.numUpdatedRows ?? result[0]?.numAffectedRows ?? 0n;
         if (Number(numUpdated) === 0) {
             throw new RecordNotFoundError(this.meta.tableName, id);
         }
@@ -314,8 +318,29 @@ export class TableDB {
             .deleteFrom(this.meta.tableName)
             .where(sql.join(conditions, sql ` AND `))
             .execute();
-        const numDeleted = result[0]?.numDeletedRows ?? 0n;
+        const numDeleted = result[0]?.numDeletedRows ?? result[0]?.numAffectedRows ?? 0n;
         return { deleted: Number(numDeleted) > 0 };
+    }
+    async deleteMany(where) {
+        const qb = this.db;
+        let query = qb.deleteFrom(this.meta.tableName);
+        const conditions = buildWhereConditions(where, this.meta);
+        if (conditions.length > 0) {
+            query = query.where(sql.join(conditions, sql ` AND `));
+        }
+        const result = await query.execute();
+        const numDeleted = result[0]?.numDeletedRows ?? result[0]?.numAffectedRows ?? 0n;
+        return { deleted: Number(numDeleted) };
+    }
+    async insertOrIgnore(data, ...args) {
+        const dbOnlyData = args[0];
+        return {
+            ids: () => this.insertIds(data, dbOnlyData, { onConflict: "ignore" }),
+            full: async () => {
+                const ids = await this.insertIds(data, dbOnlyData, { onConflict: "ignore" });
+                return this.reconcileIds(data, ids);
+            },
+        };
     }
     async count(where) {
         const qb = this.db;
