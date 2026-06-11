@@ -26,5 +26,5 @@
       
     },
    "include": ["src/**/*.ts", "src/**/*.tsx"],
-    "exclude": ["node_modules", "dist","src/vitest","src/example"]
+    "exclude": ["node_modules", "dist","src/example"]
   }

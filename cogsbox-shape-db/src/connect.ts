@@ -12,8 +12,10 @@ type SchemaMetaKey =
   | "_tableName"
   | "__primaryKeySQL"
   | "__derives"
+  | "__refinements"
   | "primaryKeySQL"
-  | "derive";
+  | "derive"
+  | "refine";
 
 type SqlConfigOf<TField> = TField extends { config: { sql: infer TSql } }
   ? TSql
@@ -57,11 +59,7 @@ type IsDerivedDbField<TTable, TKey> = TTable extends {
   ? TKey extends keyof NonNullable<TForDb>
     ? true
     : false
-  : TTable extends { deriveDependencies: infer TDerives }
-    ? TKey extends keyof TDerives
-      ? true
-      : false
-    : false;
+  : false;
 
 type SqlOnlyInput<T> = T extends { definition: infer TDefinition }
   ? Prettify<

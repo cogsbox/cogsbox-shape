@@ -2,8 +2,8 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
-import { generateSQL } from "../generateSQL";
-import { s, schema } from "../schema";
+import { generateSQL } from "../generateSQL.js";
+import { s, schema } from "../schema.js";
 
 async function withOutputFile<T>(fn: (path: string) => Promise<T>) {
   const dir = await mkdtemp(join(tmpdir(), "cogsbox-shape-sql-"));

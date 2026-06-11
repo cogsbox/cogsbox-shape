@@ -6,7 +6,7 @@ type Row<T> = T extends readonly (infer TItem)[] ? TItem : T;
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
-type SchemaMetaKey = "_tableName" | "__primaryKeySQL" | "__derives" | "primaryKeySQL" | "derive";
+type SchemaMetaKey = "_tableName" | "__primaryKeySQL" | "__derives" | "__refinements" | "primaryKeySQL" | "derive" | "refine";
 type SqlConfigOf<TField> = TField extends {
     config: {
         sql: infer TSql;
@@ -54,9 +54,7 @@ type IsDerivedDbField<TTable, TKey> = TTable extends {
             forDb?: infer TForDb;
         };
     };
-} ? TKey extends keyof NonNullable<TForDb> ? true : false : TTable extends {
-    deriveDependencies: infer TDerives;
-} ? TKey extends keyof TDerives ? true : false : false;
+} ? TKey extends keyof NonNullable<TForDb> ? true : false : false;
 type SqlOnlyInput<T> = T extends {
     definition: infer TDefinition;
 } ? Prettify<{

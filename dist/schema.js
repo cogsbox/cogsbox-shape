@@ -357,6 +357,7 @@ export function schema(schema) {
     enrichedSchema[SchemaWrapperBrand] = true;
     enrichedSchema.__primaryKeySQL = undefined;
     enrichedSchema.__derives = undefined;
+    enrichedSchema.__refinements = undefined;
     enrichedSchema.primaryKeySQL = function (definer) {
         const pkFieldsOnly = {};
         for (const key in schema) {
@@ -372,6 +373,10 @@ export function schema(schema) {
     };
     enrichedSchema.derive = function (derivers) {
         enrichedSchema.__derives = derivers;
+        return enrichedSchema;
+    };
+    enrichedSchema.refine = function (refinements) {
+        enrichedSchema.__refinements = refinements;
         return enrichedSchema;
     };
     return enrichedSchema;
@@ -440,6 +445,7 @@ export function createSchema(schema, relations) {
     let pkKeys = [];
     let clientPkKeys = [];
     const derives = schema.__derives;
+    const refinements = schema.__refinements;
     for (const key in fullSchema) {
         const value = fullSchema[key];
         if (key === "_tableName" ||
@@ -678,22 +684,78 @@ export function createSchema(schema, relations) {
     };
     trackDeriveDependencies(derives?.forClient);
     trackDeriveDependencies(derives?.forDb);
+    const refineDependencies = { server: [], client: [] };
+    const trackRefinementDependencies = (fn, key) => {
+        if (!fn)
+            return;
+        const accessed = new Set();
+        const trackingRow = new Proxy(defaultValues, {
+            get(target, prop, receiver) {
+                if (typeof prop === "string") {
+                    accessed.add(prop);
+                }
+                return Reflect.get(target, prop, receiver);
+            },
+        });
+        try {
+            fn(trackingRow);
+        }
+        catch (e) { }
+        refineDependencies[key] = Array.from(accessed);
+    };
+    trackRefinementDependencies(refinements?.server, "server");
+    trackRefinementDependencies(refinements?.client, "client");
+    let refinedValidationSchema = finalValidationSchema;
+    if (refinements?.server) {
+        const serverRefine = refinements.server;
+        refinedValidationSchema = finalValidationSchema.superRefine((data, ctx) => {
+            const result = serverRefine(data);
+            if (!result)
+                return;
+            const errors = Array.isArray(result) ? result : [result];
+            for (const err of errors) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: err.message,
+                    path: err.path,
+                });
+            }
+        });
+    }
+    let refinedClientInputSchema = finalClientInputSchema;
+    if (refinements?.client) {
+        const clientRefine = refinements.client;
+        refinedClientInputSchema = finalClientInputSchema.superRefine((data, ctx) => {
+            const result = clientRefine(data);
+            if (!result)
+                return;
+            const errors = Array.isArray(result) ? result : [result];
+            for (const err of errors) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: err.message,
+                    path: err.path,
+                });
+            }
+        });
+    }
     return {
         pk: pkKeys.length ? pkKeys : null,
         clientPk: clientPkKeys.length ? clientPkKeys : null,
         deriveDependencies,
+        refineDependencies,
         isClientRecord,
         sqlSchema: finalSqlSchema,
-        clientInputSchema: finalClientInputSchema,
+        clientInputSchema: refinedClientInputSchema,
         clientSchema: finalClientSchema,
-        serverSchema: finalValidationSchema,
+        serverSchema: refinedValidationSchema,
         defaultValues: defaultValues,
         stateType: {},
         generateDefaults,
         toClient,
         toDb,
         parseForDb: (appData) => {
-            const validData = finalValidationSchema.parse(appData);
+            const validData = refinedValidationSchema.parse(appData);
             return toDb(validData);
         },
         parsePatchForDb: (patchData) => {
@@ -849,6 +911,7 @@ export function createSchemaBox(schemas, resolutions) {
             pk: zodSchemas.pk,
             clientPk: zodSchemas.clientPk,
             deriveDependencies: zodSchemas.deriveDependencies,
+            refineDependencies: zodSchemas.refineDependencies,
             isClientRecord: zodSchemas.isClientRecord,
             generateDefaults: zodSchemas.generateDefaults,
         };
@@ -934,6 +997,7 @@ export function createSchemaBox(schemas, resolutions) {
             pk: entry.pk,
             clientPk: entry.clientPk,
             deriveDependencies: entry.deriveDependencies,
+            refineDependencies: entry.refineDependencies,
             isClientRecord: entry.isClientRecord,
             nav: createNavProxy(tableName, finalRegistry),
             createView: (selection) => {

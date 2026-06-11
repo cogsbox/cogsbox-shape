@@ -2,7 +2,7 @@ import { expect, describe, it } from "vitest";
 import { expectTypeOf } from "expect-type";
 
 // Import the new primary method for schema creation
-import { s, schema, createSchemaBox } from "../schema";
+import { s, schema, createSchemaBox } from "../schema.js";
 import z from "zod";
 
 /*
@@ -40,9 +40,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         "draft" | "published" | "archived"
       >();
       expect(statusField.config.zodSqlSchema.parse("draft")).toBe("draft");
-      expect(() =>
-        statusField.config.zodSqlSchema.parse("deleted"),
-      ).toThrow();
+      expect(() => statusField.config.zodSqlSchema.parse("deleted")).toThrow();
     });
   });
 
@@ -65,7 +63,9 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     });
 
     it("should correctly override the client schema with .clientInput()", () => {
-      const statusField = s.sqlite({ type: "int" }).clientInput(() => z.boolean());
+      const statusField = s
+        .sqlite({ type: "int" })
+        .clientInput(() => z.boolean());
       type InferredSql = z.infer<typeof statusField.config.zodSqlSchema>;
       type InferredClient = z.infer<typeof statusField.config.zodClientSchema>;
       type InferredClientInput = z.infer<
@@ -229,7 +229,7 @@ describe("Schema Builder Runtime Behavior", () => {
       const result = server.safeParse(invalidClientData);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.issues[0].message).toBe("Name is too short");
+        expect(result.error!.issues[0]!.message).toBe("Name is too short");
       }
     });
   });
@@ -545,7 +545,9 @@ describe("Relation Defaults in Views", () => {
   const comments = schema({
     _tableName: "comments",
     id: s.sqlite({ type: "int", pk: true }),
-    text: s.sqlite({ type: "varchar" }).clientInput({ value: "Default Comment" }),
+    text: s
+      .sqlite({ type: "varchar" })
+      .clientInput({ value: "Default Comment" }),
     userId: s.reference(() => users.id),
     user: s.hasOne(true),
   });
@@ -1068,8 +1070,8 @@ describe("Nested relations with transforms", () => {
 
     const clientResult = parseFromDb(dbRow);
     expect(clientResult.id).toBe(1);
-    expect(clientResult.posts![0].isPublished).toBe(true);
-    expect(clientResult.posts![0].comments![0].isDeleted).toBe(false);
+    expect(clientResult.posts![0]!.isPublished).toBe(true);
+    expect(clientResult.posts![0]!.comments![0]!.isDeleted).toBe(false);
   });
 });
 
@@ -1148,7 +1150,9 @@ describe("SQL enum fields", () => {
       "archived",
     );
     expect(box.posts.schemas.server.shape.status.parse("draft")).toBe("draft");
-    expect(() => box.posts.schemas.server.shape.status.parse("deleted")).toThrow();
+    expect(() =>
+      box.posts.schemas.server.shape.status.parse("deleted"),
+    ).toThrow();
   });
 
   it("should use enum defaults and nullable enum defaults", () => {
@@ -1281,6 +1285,174 @@ describe("derive - computed fields", () => {
   });
 });
 
+describe("refine", () => {
+  it("should run server refinement on parseForDb", () => {
+    const events = schema({
+      _tableName: "events",
+      id: s.sqlite({ type: "int", pk: true }),
+      startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+      endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+      content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+        value: null,
+        schema: z.string().nullable(),
+      }),
+      isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+    }).refine({
+      server: (row) => {
+        const errors: { path: string[]; message: string }[] = [];
+        if (row.startDate && row.endDate && row.startDate > row.endDate) {
+          errors.push({
+            path: ["endDate"],
+            message: "End date must be after start date",
+          });
+        }
+        if (row.isPublished && !row.content) {
+          errors.push({
+            path: ["content"],
+            message: "Published events must have content",
+          });
+        }
+        return errors.length > 0 ? errors : undefined;
+      },
+    });
+
+    const box = createSchemaBox({ events }, { events: {} });
+
+    expect(() =>
+      box.events.transforms.parseForDb({
+        id: 1,
+        startDate: "2024-12-31",
+        endDate: "2024-01-01",
+        content: null,
+        isPublished: false,
+      }),
+    ).toThrow("End date must be after start date");
+
+    expect(() =>
+      box.events.transforms.parseForDb({
+        id: 1,
+        startDate: "2024-01-01",
+        endDate: "2024-12-31",
+        content: null,
+        isPublished: true,
+      }),
+    ).toThrow("Published events must have content");
+
+    const valid = box.events.transforms.parseForDb({
+      id: 1,
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+      content: "Event details",
+      isPublished: true,
+    });
+    expect(valid).toMatchObject({
+      startDate: "2024-01-01",
+      endDate: "2024-12-31",
+      content: "Event details",
+      isPublished: true,
+    });
+  });
+
+  it("should run client refinement on client input", () => {
+    const forms = schema({
+      _tableName: "forms",
+      id: s.sqlite({ type: "int", pk: true }),
+      password: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+      confirmPassword: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+    }).refine({
+      client: (row) => {
+        if (row.password !== row.confirmPassword) {
+          return {
+            path: ["confirmPassword"],
+            message: "Passwords must match",
+          };
+        }
+        return undefined;
+      },
+    });
+
+    const box = createSchemaBox({ forms }, { forms: {} });
+
+    const result = box.forms.schemas.clientInput.safeParse({
+      id: 1,
+      password: "secret",
+      confirmPassword: "different",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]!.message).toBe("Passwords must match");
+    }
+
+    const validResult = box.forms.schemas.clientInput.safeParse({
+      id: 1,
+      password: "secret",
+      confirmPassword: "secret",
+    });
+    expect(validResult.success).toBe(true);
+  });
+
+  it("should track refinement dependencies", () => {
+    const items = schema({
+      _tableName: "items",
+      id: s.sqlite({ type: "int", pk: true }),
+      min: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+      max: s.sqlite({ type: "int" }).clientInput({ value: 100 }),
+    }).refine({
+      server: (row) => {
+        if (row.min > row.max) {
+          return { path: ["max"], message: "Max must be >= min" };
+        }
+        return undefined;
+      },
+    });
+
+    const box = createSchemaBox({ items }, { items: {} });
+    expect(box.items.refineDependencies.server).toEqual(["min", "max"]);
+    expect(box.items.refineDependencies.client).toEqual([]);
+  });
+
+  it("should support chaining derive and refine", () => {
+    const records = schema({
+      _tableName: "records",
+      id: s.sqlite({ type: "int", pk: true }),
+      firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+      lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+      fullName: s.sqlite({ type: "varchar", sqlOnly: true }),
+    })
+      .derive({
+        forDb: {
+          fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
+        },
+      })
+      .refine({
+        server: (row) => {
+          if (!row.firstName && !row.lastName) {
+            return { path: ["firstName"], message: "Name is required" };
+          }
+          return undefined;
+        },
+      });
+
+    const box = createSchemaBox({ records }, { records: {} });
+
+    expect(box.records.deriveDependencies.fullName).toEqual([
+      "firstName",
+      "lastName",
+    ]);
+    expect(box.records.refineDependencies.server).toEqual([
+      "firstName",
+      "lastName",
+    ]);
+
+    const result = box.records.transforms.parseForDb({
+      id: 1,
+      firstName: "John",
+      lastName: "Doe",
+    });
+    expect(result).toMatchObject({ fullName: "John Doe" });
+  });
+});
+
 describe("client-only fields", () => {
   it("should exclude client-only fields from database transforms", () => {
     const tasks = schema({
@@ -1406,7 +1578,7 @@ describe("defaultsDefinition", () => {
     // Check array relation logic
     expect(def.posts).toBeInstanceOf(Array);
     expect(def.posts).toHaveLength(2);
-    expect(def.posts[0].title).toBe("Default Post");
+    expect(def.posts[0]!.title).toBe("Default Post");
 
     // Check __def__ single-element logic
     expect(def.__def__posts).toBeDefined();
@@ -1425,8 +1597,8 @@ describe("defaultsDefinition", () => {
     expect(def!.posts).toHaveLength(2);
 
     // Nested relation array test
-    expect(def.posts[0].user).toBeDefined();
-    expect(def.posts[0].user?.name).toBe("John");
+    expect(def.posts[0]!.user).toBeDefined();
+    expect(def.posts[0]!.user?.name).toBe("John");
 
     // Nested __def__ single-element logic
     expect(def!.__def__posts).toBeDefined();
@@ -1507,7 +1679,7 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
     expect(second.boxes).toHaveLength(2);
 
     first.boxes!.forEach((b: any, i: number) => {
-      expect(b.id).not.toBe(second.boxes![i].id);
+      expect(b.id).not.toBe(second.boxes![i]!.id);
     });
   });
 
@@ -1519,7 +1691,7 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
 
     first.boxes!.forEach((b: any, i: number) => {
       const firstVariant = b.variant;
-      const secondVariant = second.boxes![i].variant;
+      const secondVariant = second.boxes![i]!.variant;
       expect(firstVariant!.id).not.toBe(secondVariant!.id);
     });
   });

@@ -14,6 +14,7 @@
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest  ",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p src/vitest/tsconfig.json",
     "playground": "pnpm --filter cogsbox-shape-playground dev"
   },
   "bin": {
