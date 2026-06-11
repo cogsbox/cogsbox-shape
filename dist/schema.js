@@ -723,10 +723,30 @@ export function createSchema(schema, relations) {
         });
     }
     let refinedClientInputSchema = finalClientInputSchema;
+    let refinedClientSchema = finalClientSchema;
     if (refinements?.client) {
         const clientRefine = refinements.client;
-        refinedClientInputSchema = finalClientInputSchema.superRefine((data, ctx) => {
+        const refineFn = (data, ctx) => {
             const result = clientRefine(data);
+            if (!result)
+                return;
+            const errors = Array.isArray(result) ? result : [result];
+            for (const err of errors) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: err.message,
+                    path: err.path,
+                });
+            }
+        };
+        refinedClientInputSchema = finalClientInputSchema.superRefine(refineFn);
+        refinedClientSchema = finalClientSchema.superRefine(refineFn);
+    }
+    let refinedSqlSchema = finalSqlSchema;
+    if (refinements?.server) {
+        const serverRefine = refinements.server;
+        refinedSqlSchema = finalSqlSchema.superRefine((data, ctx) => {
+            const result = serverRefine(data);
             if (!result)
                 return;
             const errors = Array.isArray(result) ? result : [result];
@@ -745,9 +765,9 @@ export function createSchema(schema, relations) {
         deriveDependencies,
         refineDependencies,
         isClientRecord,
-        sqlSchema: finalSqlSchema,
+        sqlSchema: refinedSqlSchema,
         clientInputSchema: refinedClientInputSchema,
-        clientSchema: finalClientSchema,
+        clientSchema: refinedClientSchema,
         serverSchema: refinedValidationSchema,
         defaultValues: defaultValues,
         stateType: {},
@@ -763,7 +783,7 @@ export function createSchema(schema, relations) {
             return toDb(validPatch);
         },
         parseFromDb: (dbData) => {
-            const parsed = finalSqlSchema.parse(dbData);
+            const parsed = refinedSqlSchema.parse(dbData);
             return toClient(parsed);
         },
     };
