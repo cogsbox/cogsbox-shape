@@ -215,9 +215,13 @@ type RefineEntry = {
     deps: string[] | null;
     check: (row: any) => RefinementError | RefinementError[] | undefined | null;
 };
-type RefineHelper = {
-    (layers: RefineLayer | RefineLayer[], check: (row: any) => RefinementError | RefinementError[] | undefined | null): RefineEntry;
-    (layers: RefineLayer | RefineLayer[], check: (row: any) => RefinementError | RefinementError[] | undefined | null, deps: string | string[]): RefineEntry;
+type RefineHelper<T extends ShapeSchema> = {
+    (layer: "client", check: (row: InferClientRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
+    (layer: "clientInput", check: (row: InferClientInputRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
+    (layer: "server", check: (row: InferValidationRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
+    (layer: "sql", check: (row: InferSqlRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
+    (layer: "all", check: (row: InferClientRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
+    (layer: RefineLayer[], check: (row: InferClientRow<T>) => RefinementError | RefinementError[] | undefined | null, deps?: string | string[]): RefineEntry;
 };
 type PickPrimaryKeys<T extends ShapeSchema> = {
     [K in keyof T as T[K] extends {
@@ -245,6 +249,9 @@ type PickDbFieldKeys<T extends ShapeSchema> = {
     } ? never : K : never;
 }[keyof T];
 type InferClientRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientSchema">>>>>;
+type InferClientInputRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodClientInputSchema">>>>>;
+type InferValidationRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodValidationSchema">>>>>;
+type InferSqlRow<T extends ShapeSchema> = Prettify<z.infer<z.ZodObject<Prettify<DeriveSchemaByKey<T, "zodSqlSchema">>>>>;
 type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
     __primaryKeySQL?: string;
     __derives?: {
@@ -261,7 +268,7 @@ type SchemaBuilder<T extends ShapeSchema> = Prettify<EnrichFields<T>> & {
             [K in PickDbFieldKeys<T>]?: (row: InferClientRow<T>) => any;
         };
     }) => SchemaBuilder<T>;
-    refine: (fn: (r: RefineHelper) => RefineEntry[]) => SchemaBuilder<T>;
+    refine: (fn: (r: RefineHelper<T>) => RefineEntry[]) => SchemaBuilder<T>;
 };
 export declare function schema<T extends string, U extends ShapeSchema<T>>(schema: U): SchemaBuilder<U>;
 export type RelationType = "hasMany" | "hasOne" | "manyToMany";

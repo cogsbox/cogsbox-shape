@@ -1071,7 +1071,7 @@ describe("refine", () => {
             password: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
             confirmPassword: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
         }).refine((r) => [
-            r("clientInput", (row) => {
+            r(["clientInput", "client"], (row) => {
                 if (row.password !== row.confirmPassword) {
                     return {
                         path: ["confirmPassword"],

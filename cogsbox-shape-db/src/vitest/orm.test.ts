@@ -53,8 +53,12 @@ const derivedUserSchema = schema({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  firstName: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
-  lastName: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  firstName: s
+    .sqlite({ type: "varchar", length: 100 })
+    .clientInput({ value: "" }),
+  lastName: s
+    .sqlite({ type: "varchar", length: 100 })
+    .clientInput({ value: "" }),
   // Make fullName a DB-computed column by using sqlOnly
   fullName: s.sqlite({ type: "varchar", length: 220, sqlOnly: true }),
 }).derive({
@@ -94,14 +98,18 @@ const refinedSchema = schema({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  startDate: s.sqlite({ type: "varchar", length: 20 }).clientInput({ value: "" }),
+  startDate: s
+    .sqlite({ type: "varchar", length: 20 })
+    .clientInput({ value: "" }),
   endDate: s.sqlite({ type: "varchar", length: 20 }).clientInput({ value: "" }),
   isPublished: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
-  content: s.sqlite({ type: "varchar", length: 500, nullable: true }).clientInput({
-    value: "",
-  }),
+  content: s
+    .sqlite({ type: "varchar", length: 500, nullable: true })
+    .clientInput({
+      value: "",
+    }),
 }).refine((r) => [
-  r("server", (row: any) => {
+  r(["server"], (row) => {
     const errors: { path: string[]; message: string }[] = [];
     if (row.startDate && row.endDate && row.startDate > row.endDate) {
       errors.push({
@@ -327,7 +335,8 @@ describe("cogsbox-shape-db", () => {
   it("insert(...).ids inserts a record and returns PK from the db", async () => {
     const b = connect(box, db);
     const defaults = box.users.generateDefaults();
-    const pkResult = await b.users.insert({
+    const pkResult = await b.users
+      .insert({
         ...defaults,
         name: "Alice",
         email: "alice@test.com",
@@ -445,7 +454,8 @@ describe("cogsbox-shape-db", () => {
 
   it("insert accepts sqlOnly fields as the second parameter", async () => {
     const b = connect(box, db);
-    const ids = await b.users.insert(
+    const ids = await b.users
+      .insert(
         {
           ...box.users.generateDefaults(),
           name: "SQL Only Insert",
@@ -479,7 +489,8 @@ describe("cogsbox-shape-db", () => {
   it("insert ignores client-only fields instead of writing them as sql columns", async () => {
     const b = connect(box, db);
 
-    const ids = await b.users.insert({
+    const ids = await b.users
+      .insert({
         ...box.users.generateDefaults(),
         name: "Client Only Insert",
         email: "client-only-insert@test.com",
@@ -502,7 +513,8 @@ describe("cogsbox-shape-db", () => {
     const b = connect(box, db);
 
     await expect(
-      b.users.insert(
+      b.users
+        .insert(
           {
             ...box.users.generateDefaults(),
             name: "SQL Only Reject",
@@ -534,7 +546,8 @@ describe("cogsbox-shape-db", () => {
         .ids(),
     ).rejects.toThrow(/Missing required sqlOnly field "tenantId"/);
 
-    const ids = await table.insert(
+    const ids = await table
+      .insert(
         {
           ...defaults,
           name: "Has Tenant",
@@ -699,7 +712,8 @@ describe("cogsbox-shape-db", () => {
   it("findById returns record by auto-increment id", async () => {
     const b = connect(box, db);
     const defaults = box.users.generateDefaults();
-    const created = await b.users.insert({
+    const created = await b.users
+      .insert({
         ...defaults,
         name: "Bob",
         email: "bob@test.com",
@@ -715,7 +729,8 @@ describe("cogsbox-shape-db", () => {
 
   it("byId provides typed identity operations", async () => {
     const b = connect(box, db);
-    const created = await b.users.insert({
+    const created = await b.users
+      .insert({
         ...box.users.generateDefaults(),
         name: "ById User",
         email: "by-id@test.com",
@@ -726,7 +741,8 @@ describe("cogsbox-shape-db", () => {
     const found = await b.users.byId(created.id).find();
     expect(found?.name).toBe("ById User");
 
-    await b.users.byId(created.id)
+    await b.users
+      .byId(created.id)
       .update({
         name: "ById Updated",
       })
@@ -741,31 +757,36 @@ describe("cogsbox-shape-db", () => {
 
   it("view findById hydrates selected nested relations", async () => {
     const b = connect(factoryViewBox, db);
-    const factory = await b.factories.insert({
+    const factory = await b.factories
+      .insert({
         ...factoryViewBox.factories.generateDefaults(),
         name: "Hydrated Factory",
         isActive: true,
       })
       .full();
-    const box1 = await b.boxes.insert({
+    const box1 = await b.boxes
+      .insert({
         ...factoryViewBox.boxes.generateDefaults(),
         factoryId: factory.id,
         label: "Box One",
       })
       .full();
-    const box2 = await b.boxes.insert({
+    const box2 = await b.boxes
+      .insert({
         ...factoryViewBox.boxes.generateDefaults(),
         factoryId: factory.id,
         label: "Box Two",
       })
       .full();
-    await b.boxVariants.insert({
+    await b.boxVariants
+      .insert({
         ...factoryViewBox.boxVariants.generateDefaults(),
         boxId: box1.id,
         color: "red",
       })
       .ids();
-    await b.boxVariants.insert({
+    await b.boxVariants
+      .insert({
         ...factoryViewBox.boxVariants.generateDefaults(),
         boxId: box2.id,
         color: "blue",
@@ -807,19 +828,22 @@ describe("cogsbox-shape-db", () => {
 
   it("view findMany hydrates selected nested relations", async () => {
     const b = connect(factoryViewBox, db);
-    const factory = await b.factories.insert({
+    const factory = await b.factories
+      .insert({
         ...factoryViewBox.factories.generateDefaults(),
         name: "Hydrated FindMany Factory",
         isActive: false,
       })
       .full();
-    const box = await b.boxes.insert({
+    const box = await b.boxes
+      .insert({
         ...factoryViewBox.boxes.generateDefaults(),
         factoryId: factory.id,
         label: "FindMany Box",
       })
       .full();
-    await b.boxVariants.insert({
+    await b.boxVariants
+      .insert({
         ...factoryViewBox.boxVariants.generateDefaults(),
         boxId: box.id,
         color: "green",
@@ -885,7 +909,8 @@ describe("cogsbox-shape-db", () => {
   it("update modifies fields and returns PK from the db", async () => {
     const b = connect(box, db);
     const defaults = box.users.generateDefaults();
-    const pkResult = await b.users.insert({
+    const pkResult = await b.users
+      .insert({
         ...defaults,
         name: "Charlie",
         email: "charlie@test.com",
@@ -893,7 +918,8 @@ describe("cogsbox-shape-db", () => {
       })
       .ids();
 
-    const updatePk = await b.users.update(pkResult.id, {
+    const updatePk = await b.users
+      .update(pkResult.id, {
         name: "Charlie Updated",
         isActive: true,
       })
@@ -909,7 +935,8 @@ describe("cogsbox-shape-db", () => {
 
   it("update validates partial patches with the schema server rules", async () => {
     const b = connect(box, db);
-    const pkResult = await b.users.insert({
+    const pkResult = await b.users
+      .insert({
         ...box.users.generateDefaults(),
         name: "Patch Validation",
         email: "patch-validation@test.com",
@@ -918,13 +945,15 @@ describe("cogsbox-shape-db", () => {
       .ids();
 
     await expect(
-      b.users.update(pkResult.id, {
+      b.users
+        .update(pkResult.id, {
           email: "not-an-email",
         })
         .ids(),
     ).rejects.toThrow();
 
-    const updatePk = await b.users.update(pkResult.id, {
+    const updatePk = await b.users
+      .update(pkResult.id, {
         email: "patch-validation-updated@test.com",
       })
       .ids();
@@ -942,7 +971,8 @@ describe("cogsbox-shape-db", () => {
 
   it("update ignores client-only fields from full client/view state", async () => {
     const b = connect(box, db);
-    const inserted = await b.users.insert({
+    const inserted = await b.users
+      .insert({
         ...box.users.generateDefaults(),
         name: "Client Only Update",
         email: "client-only-update@test.com",
@@ -951,7 +981,8 @@ describe("cogsbox-shape-db", () => {
       })
       .full();
 
-    const updated = await b.users.update(inserted.id, {
+    const updated = await b.users
+      .update(inserted.id, {
         ...inserted,
         name: "Client Only Update Changed",
         statusLabel: "Still local only",
@@ -969,7 +1000,8 @@ describe("cogsbox-shape-db", () => {
 
   it("update accepts sqlOnly fields as the third parameter", async () => {
     const b = connect(box, db);
-    const ids = await b.users.insert(
+    const ids = await b.users
+      .insert(
         {
           ...box.users.generateDefaults(),
           name: "SQL Only Update",
@@ -982,7 +1014,8 @@ describe("cogsbox-shape-db", () => {
       )
       .ids();
 
-    await b.users.update(
+    await b.users
+      .update(
         ids.id,
         {
           name: "SQL Only Update Changed",
@@ -1014,7 +1047,8 @@ describe("cogsbox-shape-db", () => {
   it("view update validates partial patches with the view server schema", async () => {
     const b = connect(box, db);
     const userView = b.users.createView({});
-    const inserted = await userView.insert({
+    const inserted = await userView
+      .insert({
         ...userView.defaults(),
         name: "View Patch Validation",
         email: "view-patch-validation@test.com",
@@ -1023,7 +1057,8 @@ describe("cogsbox-shape-db", () => {
       .full();
 
     await expect(
-      userView.update(inserted.id, {
+      userView
+        .update(inserted.id, {
           email: "not-an-email",
         })
         .ids(),
@@ -1032,16 +1067,21 @@ describe("cogsbox-shape-db", () => {
 
   it("update recomputes db-backed derived fields (forDb) from fetched dependencies", async () => {
     const b = connect(derivedBox, db);
-    const inserted = await b.derivedUsers.insert({
-        ...derivedBox.derivedUsers.generateDefaults(),
-        firstName: "Ada",
-        lastName: "Lovelace",
-      }, {
-        fullName: "Ada Lovelace",
-      })
+    const inserted = await b.derivedUsers
+      .insert(
+        {
+          ...derivedBox.derivedUsers.generateDefaults(),
+          firstName: "Ada",
+          lastName: "Lovelace",
+        },
+        {
+          fullName: "Ada Lovelace",
+        },
+      )
       .full();
 
-    const updatePk = await b.derivedUsers.update(inserted.id, {
+    const updatePk = await b.derivedUsers
+      .update(inserted.id, {
         firstName: "Grace",
       })
       .ids();
@@ -1068,7 +1108,8 @@ describe("cogsbox-shape-db", () => {
   it("update(...).full returns the stored row after update", async () => {
     const b = connect(box, db);
     const userView = b.users.createView({});
-    const inserted = await userView.insert({
+    const inserted = await userView
+      .insert({
         ...userView.defaults(),
         name: "Update Full",
         email: "update-full@test.com",
@@ -1076,7 +1117,8 @@ describe("cogsbox-shape-db", () => {
       })
       .full();
 
-    const updated = await userView.update(inserted.id, {
+    const updated = await userView
+      .update(inserted.id, {
         name: "Update Full Changed",
         isActive: true,
       })
@@ -1093,7 +1135,8 @@ describe("cogsbox-shape-db", () => {
   it("delete removes a record", async () => {
     const b = connect(box, db);
     const defaults = box.users.generateDefaults();
-    const user = await b.users.insert({
+    const user = await b.users
+      .insert({
         ...defaults,
         name: "DeleteMe",
         email: "delete@test.com",
@@ -1123,14 +1166,16 @@ describe("cogsbox-shape-db", () => {
   it("transaction commits all operations atomically", async () => {
     const b = connect(box, db);
     const result = await b.transaction(async (txBox) => {
-      const u1 = await txBox.users.insert({
+      const u1 = await txBox.users
+        .insert({
           ...box.users.generateDefaults(),
           name: "TxUser1",
           email: "tx1@test.com",
           isActive: true,
         })
         .ids();
-      const u2 = await txBox.users.insert({
+      const u2 = await txBox.users
+        .insert({
           ...box.users.generateDefaults(),
           name: "TxUser2",
           email: "tx2@test.com",
@@ -1231,9 +1276,11 @@ describe("cogsbox-shape-db", () => {
     // Update with invalid data - but since it's a partial update,
     // cross-field refine validation doesn't run (only field-level validation does)
     // The ORM will fetch missing dependencies and recompute if needed
-    const result = await b.refinedEvents.update(ids.id, {
-      endDate: "2023-01-01",
-    }).ids();
+    const result = await b.refinedEvents
+      .update(ids.id, {
+        endDate: "2023-01-01",
+      })
+      .ids();
 
     expect(result.id).toBe(ids.id);
   });
@@ -1244,7 +1291,11 @@ describe("cogsbox-shape-db", () => {
     // only properties accessed before any falsy condition are tracked.
     // This is the same caveat as derive - the proxy can't catch properties
     // behind conditional branches that aren't taken with default values.
-    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty("startDate");
-    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty("isPublished");
+    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty(
+      "startDate",
+    );
+    expect(refinedBox.refinedEvents.refineInfo.fieldToGroup).toHaveProperty(
+      "isPublished",
+    );
   });
 });

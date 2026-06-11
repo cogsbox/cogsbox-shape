@@ -10,7 +10,7 @@ describe("refine runtime behavior", () => {
             max: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
             label: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
         }).refine((r) => [
-            r("clientInput", (row) => {
+            r(["clientInput", "client"], (row) => {
                 if (row.min !== null && row.max !== null && row.min >= row.max) {
                     return { path: ["max"], message: "Max must be > min" };
                 }
