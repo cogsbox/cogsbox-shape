@@ -1,0 +1,40 @@
+{
+  "name": "cogsbox-shape-state",
+  "private": true,
+  "version": "0.1.0",
+  "description": "cogsbox-state plugin helpers for cogsbox-shape schemas",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "repository": "github:cogsbox/cogsbox-shape",
+  "license": "MIT",
+  "dependencies": {
+    "cogsbox-state": "^0.5.481"
+  },
+  "peerDependencies": {
+    "cogsbox-shape": "*",
+    "react": ">=17.0.0 || ^18.0.0 || ^19.0.0",
+    "zod": "^3.22.4 || ^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "cogsbox-shape": "link:..",
+    "react": "^19.2.0",
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.0",
+    "zod": "^3.25.0 || ^4.0.0"
+  }
+}

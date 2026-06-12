@@ -35,8 +35,7 @@
     "better-sqlite3": "^11.7.0",
     "cogsbox-shape": "link:..",
     "typescript": "^5.9.3",
-    "vitest": "^3.2.4",
-    "zod": "^3.25.76"
+    "vitest": "^3.2.4"
   },
   "repository": "github:cogsbox/cogsbox-shape",
   "license": "MIT",

@@ -134,6 +134,25 @@ export interface IBuilderMethods<
   TClient extends z.ZodTypeAny,
   TValidation extends z.ZodTypeAny,
 > {
+  clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
+    schema:
+      | TSchema
+      | ((
+          base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
+        ) => TSchema);
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Prettify<
+    Builder<
+      "clientInput",
+      T,
+      TSql,
+      TValue extends () => infer R ? R : TValue,
+      TSchema,
+      CollapsedUnion<TSql, TSchema>
+    >
+  >;
+
   clientInput<const TValue>(options: {
     value: TValue | ((tools: { uuid: () => string }) => TValue);
     schema?: never;
@@ -205,25 +224,6 @@ export interface IBuilderMethods<
     schema: (tools: any) => z.ZodTypeAny;
   }): Prettify<
     Builder<"clientInput", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>
-  >;
-
-  clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
-    value: TValue | ((tools: { uuid: () => string }) => TValue);
-    schema:
-      | TSchema
-      | ((
-          base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
-        ) => TSchema);
-    clientPk?: boolean | ((val: any) => boolean);
-  }): Prettify<
-    Builder<
-      "clientInput",
-      T,
-      TSql,
-      TValue extends () => infer R ? R : TValue,
-      TSchema,
-      CollapsedUnion<TSql, TSchema>
-    >
   >;
 
   clientInput<TClientNext extends z.ZodTypeAny>(

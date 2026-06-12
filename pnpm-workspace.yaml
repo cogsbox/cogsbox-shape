@@ -1,4 +1,5 @@
 packages:
   - "."
   - "cogsbox-shape-db"
+  - "cogsbox-shape-state"
   - "apps/*"

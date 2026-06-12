@@ -76,6 +76,7 @@ const sqlOnlyRequiredSchema = schema({
   _tableName: "sql_only_required_users",
   id: s.sqlite({ type: "int", pk: true }).clientInput({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
+    schema: z.string(),
     clientPk: true,
   }),
   name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),

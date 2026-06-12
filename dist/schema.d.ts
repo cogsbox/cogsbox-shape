@@ -64,6 +64,13 @@ type SQLToZodType<T extends SQLTypeInput, TDefault extends boolean> = T["pk"] ex
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;
 type CollapsedUnion<A extends z.ZodTypeAny, B extends z.ZodTypeAny> = A extends B ? (B extends A ? A : z.ZodUnion<[A, B]>) : z.ZodUnion<[A, B]>;
 export interface IBuilderMethods<T extends DbConfig, TSql extends z.ZodTypeAny, TInitialValue, TClient extends z.ZodTypeAny, TValidation extends z.ZodTypeAny> {
+    clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+        value: TValue | ((tools: {
+            uuid: () => string;
+        }) => TValue);
+        schema: TSchema | ((base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>) => TSchema);
+        clientPk?: boolean | ((val: any) => boolean);
+    }): Prettify<Builder<"clientInput", T, TSql, TValue extends () => infer R ? R : TValue, TSchema, CollapsedUnion<TSql, TSchema>>>;
     clientInput<const TValue>(options: {
         value: TValue | ((tools: {
             uuid: () => string;
@@ -92,13 +99,6 @@ export interface IBuilderMethods<T extends DbConfig, TSql extends z.ZodTypeAny, 
         value?: never;
         schema: (tools: any) => z.ZodTypeAny;
     }): Prettify<Builder<"clientInput", T, TSql, unknown, z.ZodTypeAny, z.ZodTypeAny>>;
-    clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
-        value: TValue | ((tools: {
-            uuid: () => string;
-        }) => TValue);
-        schema: TSchema | ((base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>) => TSchema);
-        clientPk?: boolean | ((val: any) => boolean);
-    }): Prettify<Builder<"clientInput", T, TSql, TValue extends () => infer R ? R : TValue, TSchema, CollapsedUnion<TSql, TSchema>>>;
     clientInput<TClientNext extends z.ZodTypeAny>(schema: ((tools: {
         sql: TSql;
     }) => TClientNext) | TClientNext): Prettify<Builder<"clientInput", T, TSql, z.infer<TClientNext>, TClientNext, CollapsedUnion<TSql, TClientNext>>>;

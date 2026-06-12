@@ -10,7 +10,7 @@
   ],
   "repository": "github:cogsbox/cogsbox-shape",
   "scripts": {
-    "build": "tsc && pnpm --dir cogsbox-shape-db run build",
+    "build": "tsc && pnpm --dir cogsbox-shape-db run build && pnpm --dir cogsbox-shape-state run build",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "vitest  ",
@@ -36,6 +36,11 @@
       "import": "./cogsbox-shape-db/dist/sqlite/index.js",
       "default": "./cogsbox-shape-db/dist/sqlite/index.js"
     },
+    "./state": {
+      "types": "./cogsbox-shape-state/dist/index.d.ts",
+      "import": "./cogsbox-shape-state/dist/index.js",
+      "default": "./cogsbox-shape-state/dist/index.js"
+    },
     "./package.json": "./package.json"
   },
   "keywords": [
@@ -54,6 +59,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "cogsbox-state": "^0.5.481",
     "commander": "^13.1.0",
     "kysely": "^0.29.2",
     "tsx": "^4.19.3",
@@ -64,6 +70,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
+    "@types/react": "^19.2.14",
     "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
