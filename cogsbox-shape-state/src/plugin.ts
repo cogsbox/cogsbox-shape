@@ -1,12 +1,20 @@
 import { createPluginContext } from "cogsbox-state";
-
-const { createPlugin } = createPluginContext();
+import { z } from "zod";
 
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
+export type ShapeRefineInfo = {
+  fieldToGroup: Record<string, number[]>;
+  groups: { deps: string[] | null }[];
+};
+
 export type ShapeSchemaBoxEntry = {
   /** Field-key → value map from DeriveStateType (not z.infer on a flattened client object). */
   stateType: Record<string, unknown>;
   generateDefaults: () => unknown;
+  schemas: {
+    client: z.ZodTypeAny;
+  };
+  refineInfo?: ShapeRefineInfo;
 };
 
 export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;
@@ -16,6 +24,104 @@ export type InferShapeBoxState<TBox extends ShapeSchemaBox> = {
   [K in keyof TBox]: TBox[K]["stateType"];
 };
 
+type FormUpdateParams = {
+  stateKey: string;
+  path: string[];
+  event: { activityType: string };
+  getState: () => unknown;
+  addZodErrors: (
+    errors: Array<{ path: string[]; message: string; code?: string }>,
+  ) => void;
+};
+
+function getValueAtPath(state: unknown, path: string[]): unknown {
+  return path.reduce<unknown>((current, key) => {
+    if (current !== null && typeof current === "object") {
+      return (current as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, state);
+}
+
+function getClientFieldSchema(
+  clientSchema: z.ZodTypeAny,
+  field: string,
+): z.ZodTypeAny | undefined {
+  const shape = (clientSchema as { shape?: Record<string, z.ZodTypeAny> })
+    .shape;
+  return shape?.[field];
+}
+
+function getRelatedFields(
+  entry: ShapeSchemaBoxEntry,
+  field: string,
+): Set<string> {
+  const related = new Set<string>([field]);
+  const groupIndexes = entry.refineInfo?.fieldToGroup[field] ?? [];
+
+  for (const index of groupIndexes) {
+    const deps = entry.refineInfo?.groups[index]?.deps;
+    if (!deps) continue;
+    for (const dep of deps) related.add(dep);
+  }
+
+  return related;
+}
+
+function mapZodIssues(
+  issues: ReadonlyArray<{
+    path: ReadonlyArray<PropertyKey>;
+    message: string;
+    code?: string;
+  }>,
+  pathPrefix: string[] = [],
+) {
+  return issues.map((issue) => ({
+    path: [...pathPrefix, ...issue.path.map(String)],
+    message: issue.message,
+    code: issue.code,
+  }));
+}
+
+export function validateShapeFormUpdate(
+  box: ShapeSchemaBox,
+  params: FormUpdateParams,
+): void {
+  const entry = box[params.stateKey];
+  const clientSchema = entry?.schemas.client;
+  if (!entry || !clientSchema) return;
+
+  const state = params.getState();
+  const field = params.path.at(-1);
+  if (!field) return;
+
+  if (params.event.activityType === "blur") {
+    const result = clientSchema.safeParse(state);
+    if (result.success) return;
+
+    const relatedFields = getRelatedFields(entry, field);
+    const issues = result.error.issues.filter((issue) =>
+      relatedFields.has(String(issue.path[0])),
+    );
+
+    if (issues.length > 0) {
+      params.addZodErrors(mapZodIssues(issues));
+    }
+    return;
+  }
+
+  if (params.event.activityType === "input") {
+    const fieldSchema = getClientFieldSchema(clientSchema, field);
+    if (!fieldSchema) return;
+
+    const value = getValueAtPath(state, params.path);
+    const result = fieldSchema.safeParse(value);
+    if (result.success) return;
+
+    params.addZodErrors(mapZodIssues(result.error.issues, params.path));
+  }
+}
+
 function buildInitialState<TBox extends ShapeSchemaBox>(
   box: TBox,
 ): InferShapeBoxState<TBox> {
@@ -23,15 +129,31 @@ function buildInitialState<TBox extends ShapeSchemaBox>(
   for (const key of Object.keys(box) as Array<keyof TBox & string>) {
     const entry = box[key];
     if (!entry) continue;
-    state[key] = entry.generateDefaults() as InferShapeBoxState<TBox>[typeof key];
+    state[key] =
+      entry.generateDefaults() as InferShapeBoxState<TBox>[typeof key];
   }
   return state;
 }
+const { createPlugin } = createPluginContext({
+  options: z.object({
+    logs: z.boolean().optional(),
+  }),
+});
 
 export function createShapePlugin<const TBox extends ShapeSchemaBox>(
   box: TBox,
 ) {
-  return createPlugin("shape").initialState(
-    (): InferShapeBoxState<TBox> => buildInitialState(box),
-  );
+  return createPlugin("shape")
+    .initialState((): InferShapeBoxState<TBox> => buildInitialState(box))
+    .onFormUpdate((params) => {
+      if (params.options?.logs) {
+        console.log(
+          "[shape]",
+          params.stateKey,
+          params.path,
+          params.event.activityType,
+        );
+      }
+      validateShapeFormUpdate(box, params);
+    });
 }

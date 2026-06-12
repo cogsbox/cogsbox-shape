@@ -1,1 +1,1 @@
-export { createShapePlugin, } from "./plugin.js";
+export { createShapePlugin, validateShapeFormUpdate, } from "./plugin.js";

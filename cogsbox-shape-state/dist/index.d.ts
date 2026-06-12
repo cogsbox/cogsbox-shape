@@ -1,1 +1,1 @@
-export { createShapePlugin, type InferShapeBoxState, type ShapeSchemaBox, type ShapeSchemaBoxEntry, } from "./plugin.js";
+export { createShapePlugin, validateShapeFormUpdate, type InferShapeBoxState, type ShapeRefineInfo, type ShapeSchemaBox, type ShapeSchemaBoxEntry, } from "./plugin.js";
