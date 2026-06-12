@@ -143,14 +143,14 @@ importers:
   cogsbox-shape-state:
     dependencies:
       cogsbox-state:
-        specifier: ^0.5.481
-        version: 0.5.481(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
+        specifier: ^0.5.482
+        version: 0.5.482(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
       cogsbox-shape:
-        specifier: link:..
+        specifier: workspace:*
         version: link:..
       react:
         specifier: ^19.2.0
@@ -1027,6 +1027,11 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  baseline-browser-mapping@2.10.36:
+    resolution: {integrity: sha512-lVq/Df7LXlO79MVaaUHztSwWiG9oXoWHlgvNS51v8Dpd4+G4/VIy6qYePTw31nAVls33nUtnfezYeLkYAak9dg==}
+    engines: {node: '>=6.0.0'}
+    hasBin: true
+
   better-sqlite3@11.10.0:
     resolution: {integrity: sha512-EwhOpyXiOEL/lKzHz9AW1msWFNzGc/z+LzeB3/jnFJpxu+th2yqvzsSWas1v9jgs9+xiXJcD5A8CJxAG2TaghQ==}
 
@@ -1065,6 +1070,9 @@ packages:
   caniuse-lite@1.0.30001793:
     resolution: {integrity: sha512-iwSsYWaCOoh26cV8NwNRViHlrfUvYsHDfRVcbtmw0Kg6PJIZZXwMkj1442FYLBGkeUf1juAsU3DTfxW579mrPA==}
 
+  caniuse-lite@1.0.30001799:
+    resolution: {integrity: sha512-hG1bReV+OUU+MOqK4t/ZWI0tZOyz3rqS9XuhOUz1cIcbwBKjOyJEJuw9ER5JuNyqxNk8u/JUVbGibBOL1yrjFw==}
+
   chai@5.3.3:
     resolution: {integrity: sha512-4zNhdJD/iOjSH0A05ea+Ke6MU5mmpQcbQsSOkgdaUMJ9zTlDTD/GYlwohmIE2u0gaxHYiVHEn1Fw9mZ/ktJWgw==}
     engines: {node: '>=18'}
@@ -1089,6 +1097,13 @@ packages:
 
   cogsbox-state@0.5.481:
     resolution: {integrity: sha512-gH4Y/OpW2X3LwLTLegomaEqxSWAOA0KfbWQl4YiRkbt1VS2mJf9X/YjiumznwR+7VGs1Bq6argxoObJgdEpRmQ==}
+    peerDependencies:
+      '@trpc/next': ^10.0.0 || ^11.0.0
+      '@types/react': ^18.0.0 || ^19.0.0
+      zod: ^3.25.0 || ^4.0.0
+
+  cogsbox-state@0.5.482:
+    resolution: {integrity: sha512-bkfzY2BrkS9BMiM2lQMsKdCHgpTwfcfdyPbp/32Q4NzYzhjH3njMxOzya9MR+FIxloLDDUmC2yxWHCDbuzPYng==}
     peerDependencies:
       '@trpc/next': ^10.0.0 || ^11.0.0
       '@types/react': ^18.0.0 || ^19.0.0
@@ -1494,6 +1509,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@3.3.12:
+    resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
+    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
+    hasBin: true
+
   napi-build-utils@2.0.0:
     resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
 
@@ -1705,6 +1725,11 @@ packages:
 
   semver@7.7.4:
     resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.8.4:
+    resolution: {integrity: sha512-rUCObTnP32Q08R2uuIrt7r9PlEonuTmtuXYcW6s5kjdlj3xbnwe+21yXptAUYcMAABLkYYTtnmzb3w3EDZfueA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -2766,6 +2791,8 @@ snapshots:
 
   baseline-browser-mapping@2.10.30: {}
 
+  baseline-browser-mapping@2.10.36: {}
+
   better-sqlite3@11.10.0:
     dependencies:
       bindings: 1.5.0
@@ -2817,6 +2844,8 @@ snapshots:
 
   caniuse-lite@1.0.30001793: {}
 
+  caniuse-lite@1.0.30001799: {}
+
   chai@5.3.3:
     dependencies:
       assertion-error: 2.0.1
@@ -2844,6 +2873,25 @@ snapshots:
       wrap-ansi: 7.0.0
 
   cogsbox-state@0.5.481(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
+    dependencies:
+      '@testing-library/jest-dom': 6.9.1
+      '@trpc/next': 11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
+      '@types/react': 19.2.14
+      fast-json-patch: 3.1.1
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+      react-intersection-observer: 9.16.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      rollup-preserve-directives: 1.1.3(rollup@4.60.1)
+      superjson: 2.2.6
+      uuid: 11.1.1
+      zod: 4.3.6
+      zustand: 5.0.14(@types/react@19.2.14)(react@19.2.7)
+    transitivePeerDependencies:
+      - immer
+      - rollup
+      - use-sync-external-store
+
+  cogsbox-state@0.5.482(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
     dependencies:
       '@testing-library/jest-dom': 6.9.1
       '@trpc/next': 11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
@@ -3265,6 +3313,8 @@ snapshots:
 
   nanoid@3.3.11: {}
 
+  nanoid@3.3.12: {}
+
   napi-build-utils@2.0.0:
     optional: true
 
@@ -3274,8 +3324,8 @@ snapshots:
     dependencies:
       '@next/env': 16.2.9
       '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.10.30
-      caniuse-lite: 1.0.30001793
+      baseline-browser-mapping: 2.10.36
+      caniuse-lite: 1.0.30001799
       postcss: 8.4.31
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
@@ -3346,7 +3396,7 @@ snapshots:
 
   postcss@8.4.31:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.12
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -3493,11 +3543,14 @@ snapshots:
 
   semver@7.7.4: {}
 
+  semver@7.8.4:
+    optional: true
+
   sharp@0.34.5:
     dependencies:
       '@img/colour': 1.1.0
       detect-libc: 2.1.2
-      semver: 7.7.4
+      semver: 7.8.4
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.34.5
       '@img/sharp-darwin-x64': 0.34.5

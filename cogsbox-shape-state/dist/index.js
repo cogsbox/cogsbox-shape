@@ -1,1 +1,1 @@
-export { createShapeInitialState, useCogsState, } from "./plugin.js";
+export { createShapePlugin } from "./plugin.js";

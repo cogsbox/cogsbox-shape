@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "cogsbox-shape-db/dist"
+    "cogsbox-shape-db/dist",
+    "cogsbox-shape-state/dist"
   ],
   "repository": "github:cogsbox/cogsbox-shape",
   "scripts": {
