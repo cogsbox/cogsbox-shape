@@ -1,50 +1,17 @@
-import { createCogsState, createPluginContext } from "cogsbox-state";
-import { createSchemaBox, s, schema } from "cogsbox-shape";
-
-export type ShapeStateSource<TState extends Record<string, unknown>> = {
-  generateDefaults: () => TState;
-};
-
-function createShapeInitialState<const TState extends Record<string, unknown>>(
-  shape: ShapeStateSource<TState>,
-): TState {
-  return shape.generateDefaults();
-}
+import { createPluginContext } from "cogsbox-state";
 
 const { createPlugin } = createPluginContext();
 
-export function createShapePlugin<const TState extends Record<string, unknown>>(
-  shape: ShapeStateSource<TState>,
-) {
-  return createPlugin("shape").initialState(() =>
-    createShapeInitialState(shape),
-  );
+export function createShapePlugin<
+  const TBox extends Record<string, { generateDefaults: () => unknown }>,
+>(box: TBox) {
+  return createPlugin("shape").initialState(() => {
+    const state = {} as {
+      [K in keyof TBox]: ReturnType<TBox[K]["generateDefaults"]>;
+    };
+    for (const key of Object.keys(box) as (keyof TBox & string)[]) {
+      state[key] = box[key]!.generateDefaults() as (typeof state)[typeof key];
+    }
+    return state;
+  });
 }
-
-const shapeStateSchema = schema({
-  _tableName: "shape_state",
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({
-    value: "",
-  }),
-});
-
-export const shapeBox = createSchemaBox(
-  { shapeState: shapeStateSchema },
-  { shapeState: {} },
-);
-
-export const myShape = shapeBox.shapeState;
-export const shapePlugin = createShapePlugin(myShape);
-
-// type ShapeCogsState = ReturnType<
-//   typeof createCogsState<{}, readonly [typeof shapePlugin]>
-// >;
-
-// const shapeState = createCogsState(
-//   {},
-//   {
-//     plugins: [shapePlugin],
-//   },
-// );
-
-// export const { useCogsState } = shapeState;

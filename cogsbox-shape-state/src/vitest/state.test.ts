@@ -1,37 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createShapeInitialState,
-  createShapePlugin,
-  useCogsState,
-} from "../index.js";
+import { createShapePlugin } from "../index.js";
 
 describe("shapePlugin", () => {
-  it("uses shape defaults as plugin initial state", () => {
-    const shape = {
-      generateDefaults: () => ({
-        id: "temp-id",
-        name: "Untitled",
-        enabled: true,
-      }),
+  it("builds initial state from every schema box entry", () => {
+    const box = {
+      shapeState: {
+        generateDefaults: () => ({
+          name: "",
+        }),
+      },
+      users: {
+        generateDefaults: () => ({
+          id: "temp-id",
+          name: "Untitled",
+        }),
+      },
     };
 
-    expect(createShapeInitialState(shape)).toEqual({
-      id: "temp-id",
-      name: "Untitled",
-      enabled: true,
+    const plugin = createShapePlugin(box);
+
+    expect(plugin.initialState?.()).toEqual({
+      shapeState: { name: "" },
+      users: { id: "temp-id", name: "Untitled" },
     });
   });
 
   it("creates a plugin that can be registered with cogsbox-state", () => {
     const plugin = createShapePlugin({
-      generateDefaults: () => ({ name: "Untitled" }),
+      shapeState: {
+        generateDefaults: () => ({ name: "Untitled" }),
+      },
     });
 
     expect(plugin.name).toBe("shape");
-  });
-
-  it("exports cogs state from the shape plugin", () => {
-    expect(useCogsState).toBeDefined();
   });
 });
