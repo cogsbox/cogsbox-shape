@@ -179,9 +179,28 @@ export type Reference<TGetter extends () => any> = {
     getter: TGetter;
 };
 interface ShapeAPI {
-    clientInput: <const TValue>(value: TValue | ((tools: {
+    clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+        value: TValue | ((tools: {
+            uuid: () => string;
+        }) => TValue);
+        schema: TSchema | ((base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>) => TSchema);
+        clientPk?: boolean | ((val: any) => boolean);
+    }): Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, TSchema, TSchema>;
+    clientInput<const TValue>(options: {
+        value: TValue | ((tools: {
+            uuid: () => string;
+        }) => TValue);
+        schema?: never;
+        clientPk?: boolean | ((val: any) => boolean);
+    }): Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
+    clientInput<const TSchema extends z.ZodTypeAny>(options: {
+        value?: never;
+        schema: TSchema;
+        clientPk?: boolean | ((val: any) => boolean);
+    }): Builder<"clientInput", null, z.ZodUndefined, z.infer<TSchema>, TSchema, TSchema>;
+    clientInput<const TValue>(value: TValue | ((tools: {
         uuid: () => string;
-    }) => TValue)) => Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
+    }) => TValue)): Builder<"clientInput", null, z.ZodUndefined, TValue extends () => infer R ? R : TValue, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>, ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>>;
     sqlite: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "sqlite">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
     postgres: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "postgres">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;
     mysql: <const T extends SQLTypeInput>(sqlConfig: T) => Builder<"sql", WithDialect<T, "mysql">, SQLToZodType<T, false>, z.infer<SQLToZodType<T, false>>, SQLToZodType<T, false>, SQLToZodType<T, false>>;

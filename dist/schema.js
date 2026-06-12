@@ -49,8 +49,29 @@ function createSqlBuilder(dialect, sqlConfig) {
         validationZod: sqlZodType,
     });
 }
+function isClientInputOptions(value) {
+    return (value !== undefined &&
+        typeof value === "object" &&
+        value !== null &&
+        !isFunction(value) &&
+        !("_def" in value) &&
+        !("parse" in value) &&
+        ("value" in value || "schema" in value || "clientPk" in value));
+}
 export const s = {
-    clientInput: (value) => {
+    clientInput: (...args) => {
+        const first = args[0];
+        if (isClientInputOptions(first)) {
+            return createBuilder({
+                stage: "sql",
+                sqlConfig: null,
+                sqlZod: z.undefined(),
+                initialValue: undefined,
+                clientZod: z.undefined(),
+                validationZod: z.undefined(),
+            }).clientInput(first);
+        }
+        const value = first;
         const sample = isFunction(value) ? value({ uuid }) : value;
         let inferredZodType;
         if (typeof sample === "string") {

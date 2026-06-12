@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { createShapePlugin } from "../index.js";
 
@@ -6,11 +7,17 @@ describe("shapePlugin", () => {
   it("builds initial state from every schema box entry", () => {
     const box = {
       shapeState: {
+        schemas: {
+          client: z.object({ name: z.string() }),
+        },
         generateDefaults: () => ({
           name: "",
         }),
       },
       users: {
+        schemas: {
+          client: z.object({ id: z.string(), name: z.string() }),
+        },
         generateDefaults: () => ({
           id: "temp-id",
           name: "Untitled",
@@ -29,6 +36,9 @@ describe("shapePlugin", () => {
   it("creates a plugin that can be registered with cogsbox-state", () => {
     const plugin = createShapePlugin({
       shapeState: {
+        schemas: {
+          client: z.object({ name: z.string() }),
+        },
         generateDefaults: () => ({ name: "Untitled" }),
       },
     });

@@ -365,9 +365,52 @@ export type Reference<TGetter extends () => any> = {
 };
 
 interface ShapeAPI {
-  clientInput: <const TValue>(
+  clientInput<const TValue, const TSchema extends z.ZodTypeAny>(options: {
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
+    schema:
+      | TSchema
+      | ((
+          base: ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
+        ) => TSchema);
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Builder<
+    "clientInput",
+    null,
+    z.ZodUndefined,
+    TValue extends () => infer R ? R : TValue,
+    TSchema,
+    TSchema
+  >;
+
+  clientInput<const TValue>(options: {
+    value: TValue | ((tools: { uuid: () => string }) => TValue);
+    schema?: never;
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Builder<
+    "clientInput",
+    null,
+    z.ZodUndefined,
+    TValue extends () => infer R ? R : TValue,
+    ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>,
+    ZodTypeFromPrimitive<TValue extends () => infer R ? R : TValue>
+  >;
+
+  clientInput<const TSchema extends z.ZodTypeAny>(options: {
+    value?: never;
+    schema: TSchema;
+    clientPk?: boolean | ((val: any) => boolean);
+  }): Builder<
+    "clientInput",
+    null,
+    z.ZodUndefined,
+    z.infer<TSchema>,
+    TSchema,
+    TSchema
+  >;
+
+  clientInput<const TValue>(
     value: TValue | ((tools: { uuid: () => string }) => TValue),
-  ) => Builder<
+  ): Builder<
     "clientInput",
     null,
     z.ZodUndefined,
@@ -472,10 +515,42 @@ function createSqlBuilder<
   >;
 }
 
+function isClientInputOptions(
+  value: unknown,
+): value is {
+  value?: unknown;
+  schema?: unknown;
+  clientPk?: unknown;
+} {
+  return (
+    value !== undefined &&
+    typeof value === "object" &&
+    value !== null &&
+    !isFunction(value) &&
+    !("_def" in value) &&
+    !("parse" in value) &&
+    ("value" in value || "schema" in value || "clientPk" in value)
+  );
+}
+
 export const s: ShapeAPI = {
-  clientInput: <const TValue>(
-    value: TValue | ((tools: { uuid: () => string }) => TValue),
-  ) => {
+  clientInput: (...args: any[]) => {
+    const first = args[0];
+
+    if (isClientInputOptions(first)) {
+      return createBuilder({
+        stage: "sql",
+        sqlConfig: null,
+        sqlZod: z.undefined(),
+        initialValue: undefined,
+        clientZod: z.undefined(),
+        validationZod: z.undefined(),
+      }).clientInput(first as any) as any;
+    }
+
+    const value = first as
+      | unknown
+      | ((tools: { uuid: () => string }) => unknown);
     const sample = isFunction(value) ? value({ uuid }) : value;
 
     let inferredZodType: z.ZodTypeAny;
