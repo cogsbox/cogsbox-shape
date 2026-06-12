@@ -24,6 +24,16 @@ export type InferShapeBoxState<TBox extends ShapeSchemaBox> = {
   [K in keyof TBox]: TBox[K]["stateType"];
 };
 
+type TransformStateParams = {
+  stateKey: string;
+  setOptions: (options: {
+    validation?: {
+      zodSchemaV4?: z.ZodTypeAny;
+      onBlur?: "error" | "warning";
+    };
+  }) => void;
+};
+
 type FormUpdateParams = {
   stateKey: string;
   path: string[];
@@ -34,31 +44,28 @@ type FormUpdateParams = {
   ) => void;
 };
 
-function getValueAtPath(state: unknown, path: string[]): unknown {
-  return path.reduce<unknown>((current, key) => {
-    if (current !== null && typeof current === "object") {
-      return (current as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, state);
-}
-
-function getClientFieldSchema(
-  clientSchema: z.ZodTypeAny,
-  field: string,
-): z.ZodTypeAny | undefined {
-  const shape = (clientSchema as { shape?: Record<string, z.ZodTypeAny> })
-    .shape;
-  return shape?.[field];
+function mapZodIssues(
+  issues: ReadonlyArray<{
+    path: ReadonlyArray<PropertyKey>;
+    message: string;
+    code?: string;
+  }>,
+) {
+  return issues.map((issue) => ({
+    path: issue.path.map(String),
+    message: issue.message,
+    code: issue.code,
+  }));
 }
 
 function getRelatedFields(
   entry: ShapeSchemaBoxEntry,
   field: string,
-): Set<string> {
-  const related = new Set<string>([field]);
-  const groupIndexes = entry.refineInfo?.fieldToGroup[field] ?? [];
+): Set<string> | null {
+  const groupIndexes = entry.refineInfo?.fieldToGroup[field];
+  if (!groupIndexes?.length) return null;
 
+  const related = new Set<string>([field]);
   for (const index of groupIndexes) {
     const deps = entry.refineInfo?.groups[index]?.deps;
     if (!deps) continue;
@@ -68,57 +75,47 @@ function getRelatedFields(
   return related;
 }
 
-function mapZodIssues(
-  issues: ReadonlyArray<{
-    path: ReadonlyArray<PropertyKey>;
-    message: string;
-    code?: string;
-  }>,
-  pathPrefix: string[] = [],
-) {
-  return issues.map((issue) => ({
-    path: [...pathPrefix, ...issue.path.map(String)],
-    message: issue.message,
-    code: issue.code,
-  }));
+export function wireShapeValidationOptions(
+  box: ShapeSchemaBox,
+  params: TransformStateParams,
+): void {
+  const entry = box[params.stateKey];
+  if (!entry) return;
+
+  params.setOptions({
+    validation: {
+      zodSchemaV4: entry.schemas.client,
+      onBlur: "error",
+    },
+  });
 }
 
-export function validateShapeFormUpdate(
+/** Cross-field refine errors only — field rules are handled by state via setOptions. */
+export function validateShapeRefines(
   box: ShapeSchemaBox,
   params: FormUpdateParams,
 ): void {
+  if (params.event.activityType !== "blur") return;
+
   const entry = box[params.stateKey];
   const clientSchema = entry?.schemas.client;
   if (!entry || !clientSchema) return;
 
-  const state = params.getState();
   const field = params.path.at(-1);
   if (!field) return;
 
-  if (params.event.activityType === "blur") {
-    const result = clientSchema.safeParse(state);
-    if (result.success) return;
+  const relatedFields = getRelatedFields(entry, field);
+  if (!relatedFields) return;
 
-    const relatedFields = getRelatedFields(entry, field);
-    const issues = result.error.issues.filter((issue) =>
-      relatedFields.has(String(issue.path[0])),
-    );
+  const result = clientSchema.safeParse(params.getState());
+  if (result.success) return;
 
-    if (issues.length > 0) {
-      params.addZodErrors(mapZodIssues(issues));
-    }
-    return;
-  }
+  const issues = result.error.issues.filter((issue) =>
+    relatedFields.has(String(issue.path[0])),
+  );
 
-  if (params.event.activityType === "input") {
-    const fieldSchema = getClientFieldSchema(clientSchema, field);
-    if (!fieldSchema) return;
-
-    const value = getValueAtPath(state, params.path);
-    const result = fieldSchema.safeParse(value);
-    if (result.success) return;
-
-    params.addZodErrors(mapZodIssues(result.error.issues, params.path));
+  if (issues.length > 0) {
+    params.addZodErrors(mapZodIssues(issues));
   }
 }
 
@@ -134,6 +131,7 @@ function buildInitialState<TBox extends ShapeSchemaBox>(
   }
   return state;
 }
+
 const { createPlugin } = createPluginContext({
   options: z.object({
     logs: z.boolean().optional(),
@@ -145,6 +143,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
 ) {
   return createPlugin("shape")
     .initialState((): InferShapeBoxState<TBox> => buildInitialState(box))
+    .transformState((params) => wireShapeValidationOptions(box, params))
     .onFormUpdate((params) => {
       if (params.options?.logs) {
         console.log(
@@ -154,6 +153,6 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
           params.event.activityType,
         );
       }
-      validateShapeFormUpdate(box, params);
+      validateShapeRefines(box, params);
     });
 }

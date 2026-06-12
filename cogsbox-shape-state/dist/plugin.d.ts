@@ -20,6 +20,15 @@ export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;
 export type InferShapeBoxState<TBox extends ShapeSchemaBox> = {
     [K in keyof TBox]: TBox[K]["stateType"];
 };
+type TransformStateParams = {
+    stateKey: string;
+    setOptions: (options: {
+        validation?: {
+            zodSchemaV4?: z.ZodTypeAny;
+            onBlur?: "error" | "warning";
+        };
+    }) => void;
+};
 type FormUpdateParams = {
     stateKey: string;
     path: string[];
@@ -33,8 +42,10 @@ type FormUpdateParams = {
         code?: string;
     }>) => void;
 };
-export declare function validateShapeFormUpdate(box: ShapeSchemaBox, params: FormUpdateParams): void;
+export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
+/** Cross-field refine errors only — field rules are handled by state via setOptions. */
+export declare function validateShapeRefines(box: ShapeSchemaBox, params: FormUpdateParams): void;
 export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
-}, unknown, unknown, never, {}, false, false, true, false, false, true, InferShapeBoxState<TBox>>;
+}, unknown, unknown, never, {}, true, false, true, false, false, true, InferShapeBoxState<TBox>>;
 export {};

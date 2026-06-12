@@ -1,19 +1,85 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { validateShapeFormUpdate } from "../plugin.js";
+import {
+  validateShapeRefines,
+  wireShapeValidationOptions,
+} from "../plugin.js";
 
-describe("validateShapeFormUpdate", () => {
-  const client = z.object({
-    name: z.string().min(3, "Too short"),
-    max: z.number(),
+describe("wireShapeValidationOptions", () => {
+  it("sets client schema on state options per box key", () => {
+    const client = z.object({
+      name: z.string(),
+      count: z.coerce.number(),
+    });
+
+    const box = {
+      form: {
+        stateType: {},
+        schemas: { client },
+        generateDefaults: () => ({ name: "", count: 0 }),
+      },
+    };
+
+    let captured: unknown;
+    wireShapeValidationOptions(box, {
+      stateKey: "form",
+      setOptions: (options) => {
+        captured = options;
+      },
+    });
+
+    expect(captured).toEqual({
+      validation: {
+        zodSchemaV4: client,
+        onBlur: "error",
+      },
+    });
   });
+
+  it("no-ops when state key is missing from the box", () => {
+    let called = false;
+    wireShapeValidationOptions(
+      {
+        form: {
+          stateType: {},
+          schemas: { client: z.object({}) },
+          generateDefaults: () => ({}),
+        },
+      },
+      {
+        stateKey: "missing",
+        setOptions: () => {
+          called = true;
+        },
+      },
+    );
+
+    expect(called).toBe(false);
+  });
+});
+
+describe("validateShapeRefines", () => {
+  const client = z
+    .object({
+      min: z.number(),
+      max: z.number(),
+    })
+    .superRefine((row, ctx) => {
+      if (row.min >= row.max) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Max must be > min",
+          path: ["max"],
+        });
+      }
+    });
 
   const box = {
     form: {
       stateType: {},
       schemas: { client },
-      generateDefaults: () => ({ name: "", max: 0 }),
+      generateDefaults: () => ({ min: 0, max: 0 }),
       refineInfo: {
         fieldToGroup: {
           min: [0],
@@ -24,34 +90,73 @@ describe("validateShapeFormUpdate", () => {
     },
   };
 
-  it("reports client validation errors on blur", () => {
+  it("reports cross-field refine errors on blur", () => {
     const errors: Array<{ path: string[]; message: string }> = [];
 
-    validateShapeFormUpdate(box, {
+    validateShapeRefines(box, {
       stateKey: "form",
-      path: ["name"],
+      path: ["min"],
       event: { activityType: "blur" },
-      getState: () => ({ name: "ab", max: 10 }),
+      getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
     });
 
     expect(errors).toEqual([
-      { path: ["name"], message: "Too short", code: "too_small" },
+      { path: ["max"], message: "Max must be > min", code: "custom" },
     ]);
   });
 
-  it("validates a single field on input", () => {
+  it("ignores blur when the field has no refine groups", () => {
     const errors: Array<{ path: string[]; message: string }> = [];
 
-    validateShapeFormUpdate(box, {
+    validateShapeRefines(box, {
       stateKey: "form",
-      path: ["name"],
-      event: { activityType: "input" },
-      getState: () => ({ name: "ab", max: 10 }),
+      path: ["other"],
+      event: { activityType: "blur" },
+      getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
     });
 
-    expect(errors[0]?.path).toEqual(["name"]);
-    expect(errors[0]?.message).toBe("Too short");
+    expect(errors).toEqual([]);
+  });
+
+  it("ignores input events", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+
+    validateShapeRefines(box, {
+      stateKey: "form",
+      path: ["min"],
+      event: { activityType: "input" },
+      getState: () => ({ min: 10, max: 1 }),
+      addZodErrors: (next) => errors.push(...next),
+    });
+
+    expect(errors).toEqual([]);
+  });
+
+  it("does not report simple field errors without refine groups", () => {
+    const fieldOnlyClient = z.object({
+      name: z.string().min(3, "Too short"),
+    });
+
+    const fieldOnlyBox = {
+      form: {
+        stateType: {},
+        schemas: { client: fieldOnlyClient },
+        generateDefaults: () => ({ name: "" }),
+      },
+    };
+
+    const errors: Array<{ path: string[]; message: string }> = [];
+
+    validateShapeRefines(fieldOnlyBox, {
+      stateKey: "form",
+      path: ["name"],
+      event: { activityType: "blur" },
+      getState: () => ({ name: "ab" }),
+      addZodErrors: (next) => errors.push(...next),
+    });
+
+    expect(errors).toEqual([]);
   });
 });

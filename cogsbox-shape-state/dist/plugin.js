@@ -1,21 +1,17 @@
 import { createPluginContext } from "cogsbox-state";
 import { z } from "zod";
-function getValueAtPath(state, path) {
-    return path.reduce((current, key) => {
-        if (current !== null && typeof current === "object") {
-            return current[key];
-        }
-        return undefined;
-    }, state);
-}
-function getClientFieldSchema(clientSchema, field) {
-    const shape = clientSchema
-        .shape;
-    return shape?.[field];
+function mapZodIssues(issues) {
+    return issues.map((issue) => ({
+        path: issue.path.map(String),
+        message: issue.message,
+        code: issue.code,
+    }));
 }
 function getRelatedFields(entry, field) {
+    const groupIndexes = entry.refineInfo?.fieldToGroup[field];
+    if (!groupIndexes?.length)
+        return null;
     const related = new Set([field]);
-    const groupIndexes = entry.refineInfo?.fieldToGroup[field] ?? [];
     for (const index of groupIndexes) {
         const deps = entry.refineInfo?.groups[index]?.deps;
         if (!deps)
@@ -25,42 +21,37 @@ function getRelatedFields(entry, field) {
     }
     return related;
 }
-function mapZodIssues(issues, pathPrefix = []) {
-    return issues.map((issue) => ({
-        path: [...pathPrefix, ...issue.path.map(String)],
-        message: issue.message,
-        code: issue.code,
-    }));
+export function wireShapeValidationOptions(box, params) {
+    const entry = box[params.stateKey];
+    if (!entry)
+        return;
+    params.setOptions({
+        validation: {
+            zodSchemaV4: entry.schemas.client,
+            onBlur: "error",
+        },
+    });
 }
-export function validateShapeFormUpdate(box, params) {
+/** Cross-field refine errors only — field rules are handled by state via setOptions. */
+export function validateShapeRefines(box, params) {
+    if (params.event.activityType !== "blur")
+        return;
     const entry = box[params.stateKey];
     const clientSchema = entry?.schemas.client;
     if (!entry || !clientSchema)
         return;
-    const state = params.getState();
     const field = params.path.at(-1);
     if (!field)
         return;
-    if (params.event.activityType === "blur") {
-        const result = clientSchema.safeParse(state);
-        if (result.success)
-            return;
-        const relatedFields = getRelatedFields(entry, field);
-        const issues = result.error.issues.filter((issue) => relatedFields.has(String(issue.path[0])));
-        if (issues.length > 0) {
-            params.addZodErrors(mapZodIssues(issues));
-        }
+    const relatedFields = getRelatedFields(entry, field);
+    if (!relatedFields)
         return;
-    }
-    if (params.event.activityType === "input") {
-        const fieldSchema = getClientFieldSchema(clientSchema, field);
-        if (!fieldSchema)
-            return;
-        const value = getValueAtPath(state, params.path);
-        const result = fieldSchema.safeParse(value);
-        if (result.success)
-            return;
-        params.addZodErrors(mapZodIssues(result.error.issues, params.path));
+    const result = clientSchema.safeParse(params.getState());
+    if (result.success)
+        return;
+    const issues = result.error.issues.filter((issue) => relatedFields.has(String(issue.path[0])));
+    if (issues.length > 0) {
+        params.addZodErrors(mapZodIssues(issues));
     }
 }
 function buildInitialState(box) {
@@ -82,10 +73,11 @@ const { createPlugin } = createPluginContext({
 export function createShapePlugin(box) {
     return createPlugin("shape")
         .initialState(() => buildInitialState(box))
+        .transformState((params) => wireShapeValidationOptions(box, params))
         .onFormUpdate((params) => {
         if (params.options?.logs) {
             console.log("[shape]", params.stateKey, params.path, params.event.activityType);
         }
-        validateShapeFormUpdate(box, params);
+        validateShapeRefines(box, params);
     });
 }
