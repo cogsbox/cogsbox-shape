@@ -101,4 +101,43 @@ describe("refine runtime behavior", () => {
     const good = box.rules.schemas.clientInput.safeParse({ id: 1, min: 10, max: 1 });
     expect(good.success).toBe(true);
   });
+
+  it("view keeps leaf refines and prefixes issue paths", () => {
+    const rules = schema({
+      _tableName: "rules",
+      id: s.sqlite({ type: "int", pk: true }),
+      min: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+      max: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+    }).refine((r) => [
+      r("client", (row) =>
+        row.min >= row.max
+          ? { path: ["max"], message: "Max must be > min" }
+          : undefined,
+      ["min", "max"]),
+    ]);
+
+    const journal = schema({
+      _tableName: "journal",
+      id: s.sqlite({ type: "int", pk: true }),
+      rules: s.hasOne(true),
+    });
+
+    const box = createSchemaBox({ rules, journal }, {
+      journal: { rules: { fromKey: "id", toKey: rules.id } },
+    });
+
+    const view = box.journal.createView({ rules: true });
+    const bad = view.schemas.client.safeParse({
+      id: 1,
+      rules: { id: 1, min: 10, max: 1 },
+    });
+
+    expect(bad.success).toBe(false);
+    if (!bad.success) {
+      expect(bad.error.issues[0]).toMatchObject({
+        path: ["rules", "max"],
+        message: "Max must be > min",
+      });
+    }
+  });
 });

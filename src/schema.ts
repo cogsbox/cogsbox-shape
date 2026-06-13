@@ -1908,7 +1908,7 @@ function createViewObject(
     const primitiveShape = baseSchema.shape;
 
     if (subSelection === true) {
-      return z.object(primitiveShape);
+      return baseSchema as z.ZodObject<any>;
     }
 
     const selectedRelationShapes: Record<string, z.ZodTypeAny> = {};

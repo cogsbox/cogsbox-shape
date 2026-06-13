@@ -90,6 +90,43 @@ describe("validateShapeRefines", () => {
     },
   };
 
+  it("clears related paths when refine passes", () => {
+    const cleared: string[][] = [];
+
+    validateShapeRefines(box, {
+      stateKey: "form",
+      path: ["min"],
+      event: { activityType: "blur" },
+      getState: () => ({ min: 1, max: 10 }),
+      addZodErrors: () => {
+        throw new Error("should not add errors when refine passes");
+      },
+      clearZodErrors: (paths) => cleared.push(...paths),
+    });
+
+    expect(cleared).toEqual([
+      ["min"],
+      ["max"],
+    ]);
+  });
+
+  it("clears stale refine errors on related fields when issue is gone", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+    const cleared: string[][] = [];
+
+    validateShapeRefines(box, {
+      stateKey: "form",
+      path: ["min"],
+      event: { activityType: "blur" },
+      getState: () => ({ min: 1, max: 10 }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: (paths) => cleared.push(...paths),
+    });
+
+    expect(errors).toEqual([]);
+    expect(cleared.length).toBeGreaterThan(0);
+  });
+
   it("reports cross-field refine errors on blur", () => {
     const errors: Array<{ path: string[]; message: string }> = [];
 
@@ -99,6 +136,7 @@ describe("validateShapeRefines", () => {
       event: { activityType: "blur" },
       getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
     });
 
     expect(errors).toEqual([
@@ -115,6 +153,7 @@ describe("validateShapeRefines", () => {
       event: { activityType: "blur" },
       getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
     });
 
     expect(errors).toEqual([]);
@@ -129,6 +168,7 @@ describe("validateShapeRefines", () => {
       event: { activityType: "input" },
       getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
     });
 
     expect(errors).toEqual([]);
@@ -155,6 +195,7 @@ describe("validateShapeRefines", () => {
       event: { activityType: "blur" },
       getState: () => ({ name: "ab" }),
       addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
     });
 
     expect(errors).toEqual([]);

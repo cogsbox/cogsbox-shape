@@ -832,7 +832,7 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
                 : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
         if (subSelection === true) {
-            return z.object(primitiveShape);
+            return baseSchema;
         }
         const selectedRelationShapes = {};
         if (typeof subSelection === "object") {

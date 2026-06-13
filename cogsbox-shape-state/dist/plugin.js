@@ -1,5 +1,12 @@
 import { createPluginContext } from "cogsbox-state";
 import { z } from "zod";
+function pathKey(path) {
+    return path.join("\0");
+}
+function resolveRelatedPaths(blurPath, relatedFields) {
+    const parent = blurPath.slice(0, -1);
+    return [...relatedFields].map((field) => [...parent, field]);
+}
 function mapZodIssues(issues) {
     return issues.map((issue) => ({
         path: issue.path.map(String),
@@ -20,6 +27,10 @@ function getRelatedFields(entry, field) {
             related.add(dep);
     }
     return related;
+}
+function issueMatchesRelatedFields(issue, relatedFields) {
+    const leaf = String(issue.path.at(-1) ?? "");
+    return relatedFields.has(leaf);
 }
 export function wireShapeValidationOptions(box, params) {
     const entry = box[params.stateKey];
@@ -46,12 +57,21 @@ export function validateShapeRefines(box, params) {
     const relatedFields = getRelatedFields(entry, field);
     if (!relatedFields)
         return;
+    const relatedPaths = resolveRelatedPaths(params.path, relatedFields);
     const result = clientSchema.safeParse(params.getState());
-    if (result.success)
+    if (result.success) {
+        params.clearZodErrors(relatedPaths);
         return;
-    const issues = result.error.issues.filter((issue) => relatedFields.has(String(issue.path[0])));
-    if (issues.length > 0) {
-        params.addZodErrors(mapZodIssues(issues));
+    }
+    const issues = result.error.issues.filter((issue) => issueMatchesRelatedFields(issue, relatedFields));
+    const mapped = mapZodIssues(issues);
+    const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
+    const stalePaths = relatedPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
+    if (stalePaths.length > 0) {
+        params.clearZodErrors(stalePaths);
+    }
+    if (mapped.length > 0) {
+        params.addZodErrors(mapped);
     }
 }
 function buildInitialState(box) {

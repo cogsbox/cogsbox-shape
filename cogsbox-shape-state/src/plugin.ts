@@ -42,7 +42,20 @@ type FormUpdateParams = {
   addZodErrors: (
     errors: Array<{ path: string[]; message: string; code?: string }>,
   ) => void;
+  clearZodErrors: (paths: string[][]) => void;
 };
+
+function pathKey(path: string[]) {
+  return path.join("\0");
+}
+
+function resolveRelatedPaths(
+  blurPath: string[],
+  relatedFields: Set<string>,
+): string[][] {
+  const parent = blurPath.slice(0, -1);
+  return [...relatedFields].map((field) => [...parent, field]);
+}
 
 function mapZodIssues(
   issues: ReadonlyArray<{
@@ -73,6 +86,14 @@ function getRelatedFields(
   }
 
   return related;
+}
+
+function issueMatchesRelatedFields(
+  issue: { path: ReadonlyArray<PropertyKey> },
+  relatedFields: Set<string>,
+): boolean {
+  const leaf = String(issue.path.at(-1) ?? "");
+  return relatedFields.has(leaf);
 }
 
 export function wireShapeValidationOptions(
@@ -107,15 +128,28 @@ export function validateShapeRefines(
   const relatedFields = getRelatedFields(entry, field);
   if (!relatedFields) return;
 
+  const relatedPaths = resolveRelatedPaths(params.path, relatedFields);
   const result = clientSchema.safeParse(params.getState());
-  if (result.success) return;
+
+  if (result.success) {
+    params.clearZodErrors(relatedPaths);
+    return;
+  }
 
   const issues = result.error.issues.filter((issue) =>
-    relatedFields.has(String(issue.path[0])),
+    issueMatchesRelatedFields(issue, relatedFields),
   );
+  const mapped = mapZodIssues(issues);
+  const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
 
-  if (issues.length > 0) {
-    params.addZodErrors(mapZodIssues(issues));
+  const stalePaths = relatedPaths.filter(
+    (targetPath) => !activeKeys.has(pathKey(targetPath)),
+  );
+  if (stalePaths.length > 0) {
+    params.clearZodErrors(stalePaths);
+  }
+  if (mapped.length > 0) {
+    params.addZodErrors(mapped);
   }
 }
 

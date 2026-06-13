@@ -143,8 +143,8 @@ importers:
   cogsbox-shape-state:
     dependencies:
       cogsbox-state:
-        specifier: ^0.5.482
-        version: 0.5.482(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
+        specifier: ^0.5.485
+        version: 0.5.485(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
     devDependencies:
       '@types/react':
         specifier: ^19.2.14
@@ -253,8 +253,8 @@ packages:
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
 
-  '@emnapi/runtime@1.11.0':
-    resolution: {integrity: sha512-55coeOFKHv1ywEcUXJtWU5f+Jr/W5tZDvZig8DLKSwUN1JpROQ4rk/SNOQiFWmaR/VKF4zuFyW1B8JduOSv6Pg==}
+  '@emnapi/runtime@1.11.1':
+    resolution: {integrity: sha512-vgj7R3y3Wgx24IQaGPA/R6YFXLHVMOZ0uVEyIQPaWs+rd1AzfEMXlAC22FYwO1XkKR6NPsq7mUandH8oIRdZFw==}
 
   '@esbuild/aix-ppc64@0.27.7':
     resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
@@ -1027,8 +1027,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  baseline-browser-mapping@2.10.36:
-    resolution: {integrity: sha512-lVq/Df7LXlO79MVaaUHztSwWiG9oXoWHlgvNS51v8Dpd4+G4/VIy6qYePTw31nAVls33nUtnfezYeLkYAak9dg==}
+  baseline-browser-mapping@2.10.37:
+    resolution: {integrity: sha512-girxaJ7WZssDOFhzCGZTDKoTa1gk6A1TbflaYTpykLJ4UU9Fz9kx1aREM8JCuoVHbL8X8T/mJg7w2oYSq72Oig==}
     engines: {node: '>=6.0.0'}
     hasBin: true
 
@@ -1102,8 +1102,8 @@ packages:
       '@types/react': ^18.0.0 || ^19.0.0
       zod: ^3.25.0 || ^4.0.0
 
-  cogsbox-state@0.5.482:
-    resolution: {integrity: sha512-bkfzY2BrkS9BMiM2lQMsKdCHgpTwfcfdyPbp/32Q4NzYzhjH3njMxOzya9MR+FIxloLDDUmC2yxWHCDbuzPYng==}
+  cogsbox-state@0.5.485:
+    resolution: {integrity: sha512-3q1Ee7F2kazSaCBGJ5uk+DhEBAWxCEQrVdZdHwlqlRvGfvkQnuwVy1cGoDF5BY9Mj2clVNfn9o4L8gSKOx8fUA==}
     peerDependencies:
       '@trpc/next': ^10.0.0 || ^11.0.0
       '@types/react': ^18.0.0 || ^19.0.0
@@ -2162,7 +2162,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@emnapi/runtime@1.11.0':
+  '@emnapi/runtime@1.11.1':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -2369,7 +2369,7 @@ snapshots:
 
   '@img/sharp-wasm32@0.34.5':
     dependencies:
-      '@emnapi/runtime': 1.11.0
+      '@emnapi/runtime': 1.11.1
     optional: true
 
   '@img/sharp-win32-arm64@0.34.5':
@@ -2791,7 +2791,7 @@ snapshots:
 
   baseline-browser-mapping@2.10.30: {}
 
-  baseline-browser-mapping@2.10.36: {}
+  baseline-browser-mapping@2.10.37: {}
 
   better-sqlite3@11.10.0:
     dependencies:
@@ -2891,7 +2891,7 @@ snapshots:
       - rollup
       - use-sync-external-store
 
-  cogsbox-state@0.5.482(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
+  cogsbox-state@0.5.485(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
     dependencies:
       '@testing-library/jest-dom': 6.9.1
       '@trpc/next': 11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
@@ -3324,7 +3324,7 @@ snapshots:
     dependencies:
       '@next/env': 16.2.9
       '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.10.36
+      baseline-browser-mapping: 2.10.37
       caniuse-lite: 1.0.30001799
       postcss: 8.4.31
       react: 19.2.7
