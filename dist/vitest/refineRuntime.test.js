@@ -6,11 +6,15 @@ describe("refine runtime behavior", () => {
         const rules = schema({
             _tableName: "rules",
             id: s.sqlite({ type: "int", pk: true }),
-            min: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
-            max: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
-            label: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+            min: s
+                .sqlite({ type: "int", nullable: true })
+                .client({ value: null, schema: z.number().nullable() }),
+            max: s
+                .sqlite({ type: "int", nullable: true })
+                .client({ value: null, schema: z.number().nullable() }),
+            label: s.sqlite({ type: "varchar" }).client({ value: "" }),
         }).refine((r) => [
-            r(["clientInput", "client"], (row) => {
+            r(["client", "clientCheck"], (row) => {
                 if (row.min !== null && row.max !== null && row.min >= row.max) {
                     return { path: ["max"], message: "Max must be > min" };
                 }
@@ -28,19 +32,34 @@ describe("refine runtime behavior", () => {
         ]);
         return createSchemaBox({ rules }, { rules: {} });
     }
-    it("schemas.clientInput catches client refine", () => {
+    it("schemas.client catches client refine", () => {
         const box = makeRefinedBox();
-        const good = box.rules.schemas.clientInput.safeParse({ id: 1, min: 1, max: 10, label: "x" });
+        const good = box.rules.schemas.client.safeParse({
+            id: 1,
+            min: 1,
+            max: 10,
+            label: "x",
+        });
         expect(good.success).toBe(true);
-        const bad = box.rules.schemas.clientInput.safeParse({ id: 1, min: 10, max: 1, label: "x" });
+        const bad = box.rules.schemas.client.safeParse({
+            id: 1,
+            min: 10,
+            max: 1,
+            label: "x",
+        });
         expect(bad.success).toBe(false);
         if (!bad.success) {
             expect(bad.error.issues[0].message).toBe("Max must be > min");
         }
     });
-    it("schemas.client catches client refine", () => {
+    it("schemas.clientChecked catches client refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.client.safeParse({ id: 1, min: 10, max: 1, label: "x" });
+        const bad = box.rules.schemas.clientChecked.safeParse({
+            id: 1,
+            min: 10,
+            max: 1,
+            label: "x",
+        });
         expect(bad.success).toBe(false);
         if (!bad.success) {
             expect(bad.error.issues[0].message).toBe("Max must be > min");
@@ -48,7 +67,12 @@ describe("refine runtime behavior", () => {
     });
     it("schemas.server catches server refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.server.safeParse({ id: 1, min: 1, max: 10, label: "" });
+        const bad = box.rules.schemas.server.safeParse({
+            id: 1,
+            min: 1,
+            max: 10,
+            label: "",
+        });
         expect(bad.success).toBe(false);
         if (!bad.success) {
             expect(bad.error.issues[0].message).toBe("Label required");
@@ -56,7 +80,12 @@ describe("refine runtime behavior", () => {
     });
     it("schemas.sql catches server refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.sql.safeParse({ id: 1, min: 1, max: 10, label: "" });
+        const bad = box.rules.schemas.sql.safeParse({
+            id: 1,
+            min: 1,
+            max: 10,
+            label: "",
+        });
         expect(bad.success).toBe(false);
         if (!bad.success) {
             expect(bad.error.issues[0].message).toBe("Label required");
@@ -78,21 +107,31 @@ describe("refine runtime behavior", () => {
         const rules = schema({
             _tableName: "rules",
             id: s.sqlite({ type: "int", pk: true }),
-            min: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
-            max: s.sqlite({ type: "int", nullable: true }).clientInput({ value: null, schema: z.number().nullable() }),
+            min: s
+                .sqlite({ type: "int", nullable: true })
+                .client({ value: null, schema: z.number().nullable() }),
+            max: s
+                .sqlite({ type: "int", nullable: true })
+                .client({ value: null, schema: z.number().nullable() }),
         });
         const box = createSchemaBox({ rules }, { rules: {} });
-        const good = box.rules.schemas.clientInput.safeParse({ id: 1, min: 10, max: 1 });
+        const good = box.rules.schemas.client.safeParse({
+            id: 1,
+            min: 10,
+            max: 1,
+        });
         expect(good.success).toBe(true);
     });
     it("view keeps leaf refines and prefixes issue paths", () => {
         const rules = schema({
             _tableName: "rules",
             id: s.sqlite({ type: "int", pk: true }),
-            min: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
-            max: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+            min: s
+                .sqlite({ type: "int", field: "minField" })
+                .client({ value: 0 }),
+            max: s.sqlite({ type: "int" }).client({ value: 0 }),
         }).refine((r) => [
-            r("client", (row) => row.min >= row.max
+            r("clientCheck", (row) => row.min >= row.max
                 ? { path: ["max"], message: "Max must be > min" }
                 : undefined, ["min", "max"]),
         ]);
@@ -105,7 +144,7 @@ describe("refine runtime behavior", () => {
             journal: { rules: { fromKey: "id", toKey: rules.id } },
         });
         const view = box.journal.createView({ rules: true });
-        const bad = view.schemas.client.safeParse({
+        const bad = view.schemas.clientChecked.safeParse({
             id: 1,
             rules: { id: 1, min: 10, max: 1 },
         });

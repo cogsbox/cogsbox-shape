@@ -16,7 +16,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         });
         it("should correctly type a nullable integer field", () => {
             const ageField = s.sqlite({ type: "int", nullable: true });
-            expectTypeOf(ageField.config.zodClientSchema).toEqualTypeOf();
+            expectTypeOf(ageField.config.zodClientCheckedSchema).toEqualTypeOf();
         });
         it("should correctly type a primary key field", () => {
             const idField = s.sqlite({ type: "int", pk: true });
@@ -34,7 +34,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
     });
     describe("Chainable Methods", () => {
         it("should create a union type when .client provides a different type", () => {
-            const idField = s.sqlite({ type: "int", pk: true }).clientInput({
+            const idField = s.sqlite({ type: "int", pk: true }).client({
                 value: () => "temp-uuid-123",
                 schema: z.literal("temp-uuid-123"),
             });
@@ -43,13 +43,13 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         it("should NOT create a union type when .client provides the same type", () => {
             const countField = s
                 .sqlite({ type: "int" })
-                .clientInput({ value: () => 0, schema: z.number() });
+                .client({ value: () => 0, schema: z.number() });
             expectTypeOf().toEqualTypeOf();
         });
-        it("should correctly override the client schema with .clientInput()", () => {
+        it("should correctly override the client schema with .client()", () => {
             const statusField = s
                 .sqlite({ type: "int" })
-                .clientInput(() => z.boolean());
+                .client(() => z.boolean());
             expectTypeOf().toEqualTypeOf();
             expectTypeOf().toEqualTypeOf();
             expectTypeOf().toEqualTypeOf();
@@ -57,16 +57,16 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         it("should add validation to client schema with .client()", () => {
             const nameField = s
                 .sqlite({ type: "varchar" })
-                .clientInput({ value: "John" })
-                .client((tools) => tools.clientInput.min(3));
+                .client({ value: "John" })
+                .clientCheck((tools) => tools.client.min(3));
             expectTypeOf().toEqualTypeOf();
         });
-        it("should chain .clientInput().client().server() correctly", () => {
+        it("should chain .client().clientCheck().server() correctly", () => {
             const nameField = s
                 .sqlite({ type: "varchar" })
-                .clientInput({ value: "" })
-                .client((tools) => tools.clientInput.min(3))
-                .server((tools) => tools.clientInput.min(5));
+                .client({ value: "" })
+                .clientCheck((tools) => tools.client.min(3))
+                .server((tools) => tools.client.min(5));
             expectTypeOf().toEqualTypeOf();
             expectTypeOf().toEqualTypeOf();
         });
@@ -75,7 +75,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         // 1. Define schemas with placeholders
         const users = schema({
             _tableName: "users",
-            id: s.sqlite({ type: "int", pk: true }).clientInput({
+            id: s.sqlite({ type: "int", pk: true }).client({
                 value: () => "new-user",
                 schema: z.literal("new-user"),
             }),
@@ -84,7 +84,7 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
         const posts = schema({
             _tableName: "posts",
             id: s.sqlite({ type: "int", pk: true }),
-            isPublished: s.sqlite({ type: "int" }).clientInput(() => z.boolean()),
+            isPublished: s.sqlite({ type: "int" }).client(() => z.boolean()),
             authorId: s.reference(() => users.id),
         });
         // 2. Create the registry and resolve relations
@@ -110,7 +110,7 @@ describe("Schema Builder Runtime Behavior", () => {
         // Define the schema using the new builder syntax
         const defaultsSchema = schema({
             _tableName: "defaults",
-            fromInitialState: s.sqlite({ type: "varchar" }).clientInput({
+            fromInitialState: s.sqlite({ type: "varchar" }).client({
                 value: () => "from-initial-state",
                 schema: z.string(),
             }),
@@ -123,7 +123,7 @@ describe("Schema Builder Runtime Behavior", () => {
             defaults: {},
         });
         const defaults = box.defaults.defaults;
-        it("should get default from .clientInput()", () => {
+        it("should get default from .client()", () => {
             expect(defaults.fromInitialState).toBe("from-initial-state");
         });
         it("should get default from SQL config", () => {
@@ -142,7 +142,7 @@ describe("Schema Builder Runtime Behavior", () => {
             id: s.sqlite({ type: "int", pk: true }),
             status: s
                 .sqlite({ type: "int" }) // DB: 0=Inactive, 1=Active
-                .clientInput(() => z.enum(["inactive", "active"])) // Client: "inactive" | "active"
+                .client(() => z.enum(["inactive", "active"])) // Client: "inactive" | "active"
                 .transform({
                 toClient: (dbValue) => (dbValue === 1 ? "active" : "inactive"),
                 toDb: (clientValue) => (clientValue === "active" ? 1 : 0),
@@ -155,13 +155,13 @@ describe("Schema Builder Runtime Behavior", () => {
         const box = createSchemaBox({ complex: complexSchemaDef }, {
             complex: {},
         });
-        const { client, sql, server } = box.complex.schemas;
+        const { client: clientChecked, sql, server } = box.complex.schemas;
         const { toClient, toDb } = box.complex.transforms;
         it("should correctly transform a DB object to a Client object", () => {
             const dbData = { id: 1, status: 1, name: "Test" };
             const clientResult = toClient(dbData);
             expect(clientResult.status).toBe("active");
-            expect(() => client.parse(clientResult)).not.toThrow();
+            expect(() => clientChecked.parse(clientResult)).not.toThrow();
         });
         it("should correctly transform a Client object to a DB object", () => {
             const clientData = { id: 1, status: "inactive", name: "Test" };
@@ -183,78 +183,78 @@ describe("Tools params are actual Zod schemas at runtime", () => {
     it("should provide actual Zod schemas as tools in .client()", () => {
         let capturedTools;
         s.sqlite({ type: "varchar" })
-            .clientInput({ value: "test" })
-            .client((tools) => {
+            .client({ value: "test" })
+            .clientCheck((tools) => {
             capturedTools = {
                 sql: tools.sql,
-                clientInput: tools.clientInput,
                 client: tools.client,
+                clientCheck: tools.clientCheck,
             };
-            return tools.clientInput;
+            return tools.clientCheck;
         });
         expect(capturedTools).toBeDefined();
         expect(capturedTools.sql).toBeInstanceOf(z.ZodType);
         expect(typeof capturedTools.sql.parse).toBe("function");
         expect(typeof capturedTools.sql.safeParse).toBe("function");
-        expect(capturedTools.clientInput).toBeInstanceOf(z.ZodType);
-        expect(typeof capturedTools.clientInput.parse).toBe("function");
         expect(capturedTools.client).toBeInstanceOf(z.ZodType);
         expect(typeof capturedTools.client.parse).toBe("function");
+        expect(capturedTools.clientCheck).toBeInstanceOf(z.ZodType);
+        expect(typeof capturedTools.clientCheck.parse).toBe("function");
     });
     it("should provide actual Zod schemas as tools in .server()", () => {
         let capturedTools;
         s.sqlite({ type: "varchar" })
-            .clientInput({ value: "test" })
-            .client((tools) => tools.clientInput)
+            .client({ value: "test" })
+            .clientCheck((tools) => tools.client)
             .server((tools) => {
             capturedTools = {
                 sql: tools.sql,
-                clientInput: tools.clientInput,
                 client: tools.client,
+                clientCheck: tools.clientCheck,
             };
-            return tools.clientInput;
+            return tools.clientCheck;
         });
         expect(capturedTools).toBeDefined();
         expect(capturedTools.sql).toBeInstanceOf(z.ZodType);
-        expect(capturedTools.clientInput).toBeInstanceOf(z.ZodType);
         expect(capturedTools.client).toBeInstanceOf(z.ZodType);
+        expect(capturedTools.clientCheck).toBeInstanceOf(z.ZodType);
     });
     it("should allow calling Zod methods on tools params in .client()", () => {
-        let clientInputSchema;
+        let clientSchema;
         s.sqlite({ type: "varchar" })
-            .clientInput({ value: "" })
-            .client((tools) => {
-            clientInputSchema = tools.clientInput;
-            const validated = tools.clientInput.min(3);
+            .client({ value: "" })
+            .clientCheck((tools) => {
+            clientSchema = tools.client;
+            const validated = tools.client.min(3);
             expect(validated.safeParse("ab").success).toBe(false);
             expect(validated.safeParse("abc").success).toBe(true);
             return validated;
         });
-        expect(clientInputSchema).toBeInstanceOf(z.ZodString);
+        expect(clientSchema).toBeInstanceOf(z.ZodString);
     });
     it("should allow calling Zod methods on tools params in .server()", () => {
-        let serverClientInput;
+        let serverClientSchema;
         s.sqlite({ type: "varchar" })
-            .clientInput({ value: "" })
-            .client((tools) => tools.clientInput.min(3))
+            .client({ value: "" })
+            .clientCheck((tools) => tools.client.min(3))
             .server((tools) => {
-            serverClientInput = tools.clientInput;
-            const validated = tools.clientInput.min(5);
+            serverClientSchema = tools.client;
+            const validated = tools.client.min(5);
             expect(validated.safeParse("abcd").success).toBe(false);
             expect(validated.safeParse("abcde").success).toBe(true);
             return validated;
         });
-        expect(serverClientInput).toBeInstanceOf(z.ZodString);
+        expect(serverClientSchema).toBeInstanceOf(z.ZodString);
     });
     it("should provide correct Zod types for numeric fields in tools", () => {
         let capturedSql;
         let capturedInput;
         s.sqlite({ type: "int" })
-            .clientInput({ value: 0 })
-            .client((tools) => {
+            .client({ value: 0 })
+            .clientCheck((tools) => {
             capturedSql = tools.sql;
-            capturedInput = tools.clientInput;
-            return tools.clientInput;
+            capturedInput = tools.client;
+            return tools.client;
         });
         expect(capturedSql).toBeInstanceOf(z.ZodNumber);
         expect(capturedSql.parse(42)).toBe(42);
@@ -264,10 +264,10 @@ describe("Tools params are actual Zod schemas at runtime", () => {
     it("should provide correct Zod types for boolean fields in tools", () => {
         let capturedInput;
         s.sqlite({ type: "int" })
-            .clientInput(() => z.boolean())
-            .client((tools) => {
-            capturedInput = tools.clientInput;
-            return tools.clientInput;
+            .client(() => z.boolean())
+            .clientCheck((tools) => {
+            capturedInput = tools.client;
+            return tools.client;
         });
         expect(capturedInput).toBeInstanceOf(z.ZodBoolean);
         expect(capturedInput.parse(true)).toBe(true);
@@ -276,14 +276,102 @@ describe("Tools params are actual Zod schemas at runtime", () => {
     it("should allow nullable() and other modifiers on tools params", () => {
         let capturedInput;
         s.sqlite({ type: "varchar", nullable: true })
-            .clientInput({ value: null, schema: z.string().nullable() })
-            .client((tools) => {
-            capturedInput = tools.clientInput;
-            expect(tools.clientInput.safeParse(null).success).toBe(true);
-            expect(tools.clientInput.safeParse("hello").success).toBe(true);
-            return tools.clientInput;
+            .client({ value: null, schema: z.string().nullable() })
+            .clientCheck((tools) => {
+            capturedInput = tools.client;
+            expect(tools.client.safeParse(null).success).toBe(true);
+            expect(tools.client.safeParse("hello").success).toBe(true);
+            return tools.client;
         });
         expect(capturedInput).toBeInstanceOf(z.ZodNullable);
+    });
+});
+describe("client vs clientChecked schema divergence after .clientCheck()", () => {
+    it("should retain unmodified client schema after .clientCheck() adds .min()", () => {
+        const nameField = s.sqlite({ type: "varchar" })
+            .client({ value: "John" })
+            .clientCheck((tools) => tools.client.min(3));
+        const clientSchema = nameField.config.zodClientSchema;
+        const clientCheckedSchema = nameField.config.zodClientCheckedSchema;
+        expect(clientSchema.safeParse("ab").success).toBe(true);
+        expect(clientCheckedSchema.safeParse("ab").success).toBe(false);
+        expect(clientCheckedSchema.safeParse("abc").success).toBe(true);
+    });
+    it("should diverge at box schema level after .clientCheck()", () => {
+        const users = schema({
+            _tableName: "users",
+            id: s.sqlite({ type: "int", pk: true }),
+            name: s.sqlite({ type: "varchar" })
+                .client({ value: "" })
+                .clientCheck((tools) => tools.client.min(3)),
+        });
+        const box = createSchemaBox({ users }, { users: {} });
+        expect(box.users.schemas.client.shape.name.safeParse("ab").success).toBe(true);
+        expect(box.users.schemas.clientChecked.shape.name.safeParse("ab").success).toBe(false);
+        expect(box.users.schemas.clientChecked.shape.name.safeParse("abc").success).toBe(true);
+    });
+    it("should apply .email() only to clientChecked schema, not client", () => {
+        const nameField = s.sqlite({ type: "varchar" })
+            .client({ value: "" })
+            .clientCheck((tools) => tools.client.email());
+        expect(nameField.config.zodClientSchema.safeParse("not-an-email").success).toBe(true);
+        expect(nameField.config.zodClientCheckedSchema.safeParse("not-an-email").success).toBe(false);
+        expect(nameField.config.zodClientCheckedSchema.safeParse("a@b.com").success).toBe(true);
+    });
+    it("should apply .max() only to clientChecked schema, not client", () => {
+        const countField = s.sqlite({ type: "int" })
+            .client({ value: () => 0, schema: z.number() })
+            .clientCheck((tools) => tools.client.max(100));
+        expect(countField.config.zodClientSchema.safeParse(200).success).toBe(true);
+        expect(countField.config.zodClientCheckedSchema.safeParse(200).success).toBe(false);
+        expect(countField.config.zodClientCheckedSchema.safeParse(50).success).toBe(true);
+    });
+    it("should produce different schemas across all three layers: client, clientChecked, server", () => {
+        const nameField = s.sqlite({ type: "varchar" })
+            .client({ value: "" })
+            .clientCheck((tools) => tools.client.min(3))
+            .server((tools) => tools.client.min(5));
+        expect(nameField.config.zodClientSchema.safeParse("a").success).toBe(true);
+        expect(nameField.config.zodClientCheckedSchema.safeParse("a").success).toBe(false);
+        expect(nameField.config.zodClientCheckedSchema.safeParse("abc").success).toBe(true);
+        expect(nameField.config.zodValidationSchema.safeParse("abc").success).toBe(false);
+        expect(nameField.config.zodValidationSchema.safeParse("abcde").success).toBe(true);
+    });
+    it("should preserve clientInputZod on the internal builder config after .clientCheck()", () => {
+        let capturedConfig;
+        const field = s.sqlite({ type: "varchar" })
+            .client({ value: "x" })
+            .clientCheck((tools) => {
+            capturedConfig = { clientInputZod: tools.clientInputZod };
+            return tools.client.min(3);
+        });
+        expect(field.config.zodClientSchema).toBeDefined();
+        expect(field.config.zodClientCheckedSchema).toBeDefined();
+        expect(field.config.zodClientSchema).not.toBe(field.config.zodClientCheckedSchema);
+    });
+    it("should diverge when refine targets only 'clientCheck' layer, not 'client'", () => {
+        const forms = schema({
+            _tableName: "forms",
+            id: s.sqlite({ type: "int", pk: true }),
+            password: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            confirmPassword: s.sqlite({ type: "varchar" }).client({ value: "" }),
+        }).refine((r) => [
+            r("clientCheck", (row) => {
+                if (row.password !== row.confirmPassword) {
+                    return { path: ["confirmPassword"], message: "Passwords must match" };
+                }
+                return undefined;
+            }),
+        ]);
+        const box = createSchemaBox({ forms }, { forms: {} });
+        const clientResult = box.forms.schemas.client.safeParse({
+            id: 1, password: "abc", confirmPassword: "def",
+        });
+        expect(clientResult.success).toBe(true);
+        const clientCheckedResult = box.forms.schemas.clientChecked.safeParse({
+            id: 1, password: "abc", confirmPassword: "def",
+        });
+        expect(clientCheckedResult.success).toBe(false);
     });
 });
 describe("New Session Features - Base Schema Without Relations", () => {
@@ -291,7 +379,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         _tableName: "users",
         id: s
             .sqlite({ type: "int", pk: true })
-            .clientInput({ value: () => "user-123", schema: z.string() }),
+            .client({ value: () => "user-123", schema: z.string() }),
         petId: s.reference(() => pets.id),
         pets: s.hasMany(),
     });
@@ -313,7 +401,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
         it("should exclude relations from base client schema", () => {
             expectTypeOf().toEqualTypeOf();
             // Runtime check - the schema shape should not include 'pets'
-            const clientShape = box.users.schemas.client.shape;
+            const clientShape = box.users.schemas.clientChecked.shape;
             expect(clientShape).not.toHaveProperty("pets");
             expect(clientShape).toHaveProperty("id");
             expect(clientShape).toHaveProperty("petId");
@@ -333,7 +421,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
             });
             expectTypeOf().toEqualTypeOf();
             // Runtime check
-            const viewShape = userView.schemas.client.shape;
+            const viewShape = userView.schemas.clientChecked.shape;
             expect(viewShape).toHaveProperty("pets");
             expect(viewShape.pets).toBeInstanceOf(z.ZodArray);
         });
@@ -343,7 +431,7 @@ describe("New Session Features - Base Schema Without Relations", () => {
             });
             expectTypeOf().toEqualTypeOf();
             // Runtime check - owner should not have pets
-            const shape = userViewNested.schemas.client.shape;
+            const shape = userViewNested.schemas.clientChecked.shape;
             if (shape.pets instanceof z.ZodArray) {
                 const petSchema = shape.pets.element;
                 if (petSchema instanceof z.ZodObject) {
@@ -389,8 +477,8 @@ describe("Relation Defaults in Views", () => {
         _tableName: "users",
         id: s
             .sqlite({ type: "int", pk: true })
-            .clientInput({ value: () => "user-123", schema: z.string() }),
-        name: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+            .client({ value: () => "user-123", schema: z.string() }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
         posts: s.hasMany({ count: 2 }), // Should generate 2 posts
         comments: s.hasMany([]), // Should be empty array
         profile: s.hasOne(true), // Changed from {} to true
@@ -400,7 +488,7 @@ describe("Relation Defaults in Views", () => {
     const posts = schema({
         _tableName: "posts",
         id: s.sqlite({ type: "int", pk: true }),
-        title: s.sqlite({ type: "varchar" }).clientInput({ value: "Default Post" }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Default Post" }),
         authorId: s.reference(() => users.id),
         user: s.hasOne(true),
     });
@@ -409,14 +497,14 @@ describe("Relation Defaults in Views", () => {
         id: s.sqlite({ type: "int", pk: true }),
         text: s
             .sqlite({ type: "varchar" })
-            .clientInput({ value: "Default Comment" }),
+            .client({ value: "Default Comment" }),
         userId: s.reference(() => users.id),
         user: s.hasOne(true),
     });
     const profiles = schema({
         _tableName: "profiles",
         id: s.sqlite({ type: "int", pk: true }),
-        bio: s.sqlite({ type: "varchar" }).clientInput({ value: "Default Bio" }),
+        bio: s.sqlite({ type: "varchar" }).client({ value: "Default Bio" }),
         userId: s.reference(() => users.id),
         user: s.hasOne(true),
     });
@@ -487,7 +575,7 @@ describe("Relation Defaults in Views", () => {
 describe("Transform affects defaults", () => {
     const userSchema = schema({
         _tableName: "users",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => `temp_${Math.random().toString(36).substr(2, 9)}`,
             schema: z.string(),
         }),
@@ -496,12 +584,12 @@ describe("Transform affects defaults", () => {
             .server(() => z.email("Invalid email address")),
         isActive: s
             .sqlite({ type: "int" })
-            .clientInput(() => z.boolean())
+            .client(() => z.boolean())
             .transform({
             toClient: (val) => val === 1,
             toDb: (val) => (val ? 1 : 0),
         }),
-        role: s.sqlite({ type: "varchar" }).clientInput({
+        role: s.sqlite({ type: "varchar" }).client({
             value: "user",
             schema: z.enum(["user", "admin"]),
         }),
@@ -524,7 +612,7 @@ describe("Transform affects defaults", () => {
 });
 describe("UUID generation in initialState", () => {
     it("should call value function with uuid tool", () => {
-        const field = s.sqlite({ type: "int", pk: true }).clientInput({
+        const field = s.sqlite({ type: "int", pk: true }).client({
             value: ({ uuid }) => uuid(),
             schema: z.string(),
             clientPk: true,
@@ -540,15 +628,15 @@ describe("UUID generation in initialState", () => {
 describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRecord", () => {
     const users = schema({
         _tableName: "users",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: ({ uuid }) => uuid(),
             schema: z.string(),
             clientPk: true,
         }),
-        name: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
         isActive: s
             .sqlite({ type: "int" })
-            .clientInput(() => z.boolean())
+            .client(() => z.boolean())
             .transform({
             toClient: (val) => val === 1,
             toDb: (val) => (val ? 1 : 0),
@@ -559,7 +647,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
     const posts = schema({
         _tableName: "posts",
         id: s.sqlite({ type: "int", pk: true }),
-        title: s.sqlite({ type: "varchar" }).clientInput({ value: "Untitled" }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Untitled" }),
         authorId: s.reference(() => users.id),
     });
     const box = createSchemaBox({ users, posts }, {
@@ -576,7 +664,7 @@ describe("Missing properties - parseForDb, parseFromDb, pk, clientPk, isClientRe
             const sqlKeys = Object.keys(box.users.schemas.sql.shape);
             expect(sqlKeys).toContain("email_address");
             expect(sqlKeys).not.toContain("email");
-            const clientKeys = Object.keys(box.users.schemas.client.shape);
+            const clientKeys = Object.keys(box.users.schemas.clientChecked.shape);
             expect(clientKeys).toContain("email");
             expect(clientKeys).not.toContain("email_address");
         });
@@ -650,13 +738,13 @@ describe("Smart clientPk and isClientRecord logic", () => {
     const smartSchema = schema({
         _tableName: "smart_table",
         // 1. Auto-detect function execution
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: ({ uuid }) => uuid(),
             schema: z.string(),
             clientPk: true, // Should auto-detect by dummy-executing the uuid factory
         }),
         // 2. Custom function + mapped db key
-        mappedId: s.sqlite({ type: "int", field: "db_mapped_id" }).clientInput({
+        mappedId: s.sqlite({ type: "int", field: "db_mapped_id" }).client({
             value: "temp_999",
             schema: z.string(),
             clientPk: (val) => typeof val === "string" && val.startsWith("temp_"),
@@ -693,17 +781,17 @@ describe("Nested relations with transforms", () => {
         _tableName: "users",
         id: s
             .sqlite({ type: "int", pk: true })
-            .clientInput({ value: () => "user-123", schema: z.string() }),
-        name: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+            .client({ value: () => "user-123", schema: z.string() }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
         posts: s.hasMany({ count: 1 }),
     });
     const posts = schema({
         _tableName: "posts",
         id: s.sqlite({ type: "int", pk: true }),
-        title: s.sqlite({ type: "varchar" }).clientInput({ value: "Default Post" }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Default Post" }),
         isPublished: s
             .sqlite({ type: "int" })
-            .clientInput(() => z.boolean())
+            .client(() => z.boolean())
             .transform({
             toClient: (val) => val === 1,
             toDb: (val) => (val ? 1 : 0),
@@ -714,10 +802,10 @@ describe("Nested relations with transforms", () => {
     const comments = schema({
         _tableName: "comments",
         id: s.sqlite({ type: "int", pk: true }),
-        text: s.sqlite({ type: "varchar" }).clientInput({ value: "Comment" }),
+        text: s.sqlite({ type: "varchar" }).client({ value: "Comment" }),
         isDeleted: s
             .sqlite({ type: "int" })
-            .clientInput(() => z.boolean())
+            .client(() => z.boolean())
             .transform({
             toClient: (val) => val === 1,
             toDb: (val) => (val ? 1 : 0),
@@ -843,17 +931,17 @@ describe("Nested relations with transforms", () => {
 describe("sqlOnly fields", () => {
     const users = schema({
         _tableName: "users",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => "user-123",
             schema: z.string(),
         }),
-        name: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
         internalToken: s.sqlite({ type: "varchar", sqlOnly: true }),
     });
     const box = createSchemaBox({ users }, { users: {} });
     it("should exclude sqlOnly fields from client schema", () => {
         expectTypeOf().not.toHaveProperty("internalToken");
-        const clientKeys = Object.keys(box.users.schemas.client.shape);
+        const clientKeys = Object.keys(box.users.schemas.clientChecked.shape);
         expect(clientKeys).not.toContain("internalToken");
     });
     it("should include sqlOnly fields in sql schema", () => {
@@ -873,7 +961,7 @@ describe("sqlOnly fields", () => {
     });
     it("should NOT include sqlOnly fields in toDb output", () => {
         const { toDb } = box.users.transforms;
-        const clientData = { id: 1, name: "John" };
+        const clientData = { id: "1", name: "John" };
         const result = toDb(clientData);
         expect(result).not.toHaveProperty("internalToken");
     });
@@ -896,7 +984,7 @@ describe("SQL enum fields", () => {
     const box = createSchemaBox({ posts }, { posts: {} });
     it("should validate enum values in sql, client, and server schemas", () => {
         expect(box.posts.schemas.sql.shape.status.parse("published")).toBe("published");
-        expect(box.posts.schemas.client.shape.status.parse("archived")).toBe("archived");
+        expect(box.posts.schemas.clientChecked.shape.status.parse("archived")).toBe("archived");
         expect(box.posts.schemas.server.shape.status.parse("draft")).toBe("draft");
         expect(() => box.posts.schemas.server.shape.status.parse("deleted")).toThrow();
     });
@@ -916,9 +1004,9 @@ describe("derive - computed fields", () => {
     const users = schema({
         _tableName: "users",
         id: s.sqlite({ type: "int", pk: true }),
-        fullName: s.clientInput(""),
-        firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
-        lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "Doe" }),
+        fullName: s.client(""),
+        firstName: s.sqlite({ type: "varchar" }).client({ value: "John" }),
+        lastName: s.sqlite({ type: "varchar" }).client({ value: "Doe" }),
     }).derive({
         forClient: {
             fullName: (row) => `${row.firstName} ${row.lastName}`,
@@ -946,10 +1034,10 @@ describe("derive - computed fields", () => {
         const products = schema({
             _tableName: "products",
             id: s.sqlite({ type: "int", pk: true }),
-            price: s.sqlite({ type: "int" }).clientInput({ value: 100 }),
-            quantity: s.sqlite({ type: "int" }).clientInput({ value: 5 }),
-            total: s.clientInput(0),
-            formattedPrice: s.clientInput(""),
+            price: s.sqlite({ type: "int" }).client({ value: 100 }),
+            quantity: s.sqlite({ type: "int" }).client({ value: 5 }),
+            total: s.client(0),
+            formattedPrice: s.client(""),
         }).derive({
             forClient: {
                 total: (row) => row.price * row.quantity,
@@ -965,8 +1053,8 @@ describe("derive - computed fields", () => {
         const contacts = schema({
             _tableName: "contacts",
             id: s.sqlite({ type: "int", pk: true }),
-            firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
-            lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "Doe" }),
+            firstName: s.sqlite({ type: "varchar" }).client({ value: "John" }),
+            lastName: s.sqlite({ type: "varchar" }).client({ value: "Doe" }),
             searchName: s.sqlite({ type: "varchar", sqlOnly: true }),
         }).derive({
             forDb: {
@@ -988,9 +1076,9 @@ describe("derive - computed fields", () => {
         const contacts = schema({
             _tableName: "contacts",
             id: s.sqlite({ type: "int", pk: true }),
-            firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
-            lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "Doe" }),
-            fullName: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+            firstName: s.sqlite({ type: "varchar" }).client({ value: "John" }),
+            lastName: s.sqlite({ type: "varchar" }).client({ value: "Doe" }),
+            fullName: s.sqlite({ type: "varchar" }).client({ value: "" }),
         }).derive({
             forDb: {
                 fullName: (row) => `${row.firstName} ${row.lastName}`.trim(),
@@ -1010,13 +1098,13 @@ describe("refine", () => {
         const events = schema({
             _tableName: "events",
             id: s.sqlite({ type: "int", pk: true }),
-            startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-            endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-            content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+            startDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            endDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            content: s.sqlite({ type: "varchar", nullable: true }).client({
                 value: null,
                 schema: z.string().nullable(),
             }),
-            isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+            isPublished: s.sqlite({ type: "boolean" }).client({ value: false }),
         }).refine((r) => [
             r("server", (row) => {
                 const errors = [];
@@ -1068,10 +1156,10 @@ describe("refine", () => {
         const forms = schema({
             _tableName: "forms",
             id: s.sqlite({ type: "int", pk: true }),
-            password: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-            confirmPassword: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+            password: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            confirmPassword: s.sqlite({ type: "varchar" }).client({ value: "" }),
         }).refine((r) => [
-            r(["clientInput", "client"], (row) => {
+            r(["client", "clientCheck"], (row) => {
                 if (row.password !== row.confirmPassword) {
                     return {
                         path: ["confirmPassword"],
@@ -1082,7 +1170,7 @@ describe("refine", () => {
             }),
         ]);
         const box = createSchemaBox({ forms }, { forms: {} });
-        const result = box.forms.schemas.clientInput.safeParse({
+        const result = box.forms.schemas.client.safeParse({
             id: 1,
             password: "secret",
             confirmPassword: "different",
@@ -1091,7 +1179,7 @@ describe("refine", () => {
         if (!result.success) {
             expect(result.error.issues[0].message).toBe("Passwords must match");
         }
-        const validResult = box.forms.schemas.clientInput.safeParse({
+        const validResult = box.forms.schemas.client.safeParse({
             id: 1,
             password: "secret",
             confirmPassword: "secret",
@@ -1102,8 +1190,8 @@ describe("refine", () => {
         const items = schema({
             _tableName: "items",
             id: s.sqlite({ type: "int", pk: true }),
-            min: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
-            max: s.sqlite({ type: "int" }).clientInput({ value: 100 }),
+            min: s.sqlite({ type: "int" }).client({ value: 0 }),
+            max: s.sqlite({ type: "int" }).client({ value: 100 }),
         }).refine((r) => [
             r("server", (row) => {
                 if (row.min > row.max) {
@@ -1122,8 +1210,8 @@ describe("refine", () => {
         const records = schema({
             _tableName: "records",
             id: s.sqlite({ type: "int", pk: true }),
-            firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-            lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
+            firstName: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            lastName: s.sqlite({ type: "varchar" }).client({ value: "" }),
             fullName: s.sqlite({ type: "varchar", sqlOnly: true }),
         })
             .derive({
@@ -1159,8 +1247,8 @@ describe("client-only fields", () => {
         const tasks = schema({
             _tableName: "tasks",
             id: s.sqlite({ type: "int", pk: true }),
-            title: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-            statusLabel: s.clientInput(""),
+            title: s.sqlite({ type: "varchar" }).client({ value: "" }),
+            statusLabel: s.client(""),
         });
         const taskBox = createSchemaBox({ tasks }, { tasks: {} });
         expect(taskBox.tasks.transforms.parseForDb({
@@ -1176,7 +1264,7 @@ describe("client-only fields", () => {
 describe("sqlOnly with derive in relations", () => {
     const users = schema({
         _tableName: "users",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => "user-123",
             schema: z.string(),
         }),
@@ -1186,9 +1274,9 @@ describe("sqlOnly with derive in relations", () => {
     const posts = schema({
         _tableName: "posts",
         id: s.sqlite({ type: "int", pk: true }),
-        title: s.sqlite({ type: "varchar" }).clientInput({ value: "Post" }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Post" }),
         authorId: s.reference(() => users.id),
-        preview: s.clientInput(""),
+        preview: s.client(""),
     }).derive({
         forClient: {
             preview: (row) => row.title.substring(0, 5),
@@ -1199,7 +1287,7 @@ describe("sqlOnly with derive in relations", () => {
     });
     it("should exclude sqlOnly fields from view but include derived", () => {
         const view = box.users.createView({ posts: true });
-        const viewClientKeys = Object.keys(view.schemas.client.shape);
+        const viewClientKeys = Object.keys(view.schemas.clientChecked.shape);
         expect(viewClientKeys).not.toContain("internalScore");
         expect(viewClientKeys).toContain("id");
         expect(viewClientKeys).toContain("posts");
@@ -1227,15 +1315,15 @@ describe("defaultsDefinition", () => {
         _tableName: "users",
         id: s
             .sqlite({ type: "int", pk: true })
-            .clientInput({ value: "user-123", schema: z.string() }),
-        name: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
+            .client({ value: "user-123", schema: z.string() }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
         posts: s.hasMany({ count: 2 }),
         profile: s.hasOne(true),
     });
     const posts = schema({
         _tableName: "posts",
         id: s.sqlite({ type: "int", pk: true }),
-        title: s.sqlite({ type: "varchar" }).clientInput({ value: "Default Post" }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Default Post" }),
         authorId: s.reference(() => users.id),
         user: s.hasOne(true),
     });
@@ -1279,19 +1367,19 @@ describe("defaultsDefinition", () => {
 describe("dynamic value functions re-run on each view.defaults() call", () => {
     const factory = schema({
         _tableName: "factories",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => `temp_${Math.random().toString(36).substr(2, 8)}`,
             schema: z.string(),
             clientPk: true,
         }),
         name: s
             .sqlite({ type: "varchar", length: 100 })
-            .clientInput({ value: "MyFactory" }),
+            .client({ value: "MyFactory" }),
         boxes: s.hasMany({ count: 2 }),
     });
     const box = schema({
         _tableName: "boxes",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => `box_${Math.random().toString(36).substr(2, 8)}`,
             schema: z.string(),
             clientPk: true,
@@ -1301,7 +1389,7 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
     });
     const boxVariant = schema({
         _tableName: "box_variants",
-        id: s.sqlite({ type: "int", pk: true }).clientInput({
+        id: s.sqlite({ type: "int", pk: true }).client({
             value: () => `var_${Math.random().toString(36).substr(2, 8)}`,
             schema: z.string(),
             clientPk: true,
@@ -1309,7 +1397,7 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
         boxId: s.reference(() => box.id),
         label: s
             .sqlite({ type: "varchar", length: 50 })
-            .clientInput({ value: "Standard" }),
+            .client({ value: "Standard" }),
     });
     const box_ = createSchemaBox({ factory, box, boxVariant }, {
         factory: {

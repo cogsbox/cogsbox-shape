@@ -13,11 +13,11 @@ const taskItemSchema = z.object({
 });
 const taskManagerSchema = schema({
     _tableName: "client",
-    tasks: s.clientInput({
+    tasks: s.client({
         value: [],
         schema: z.array(taskItemSchema),
     }),
-    filter: s.clientInput({
+    filter: s.client({
         value: "all",
         schema: z.string(),
     }),

@@ -2,17 +2,17 @@ import { createSchemaBox, s, schema } from "cogsbox-shape";
 
 export const userSchema = schema({
   _tableName: "playground_users",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  firstName: s.sqlite({ type: "varchar", length: 100 }).clientInput({
+  firstName: s.sqlite({ type: "varchar", length: 100 }).client({
     value: "",
   }),
-  lastName: s.sqlite({ type: "varchar", length: 100 }).clientInput({
+  lastName: s.sqlite({ type: "varchar", length: 100 }).client({
     value: "",
   }),
-  fullName: s.sqlite({ type: "varchar", length: 220 }).clientInput({
+  fullName: s.sqlite({ type: "varchar", length: 220 }).client({
     value: "",
   }),
   email: s.sqlite({ type: "varchar", length: 255 }).server(({ sql }) =>
@@ -20,7 +20,7 @@ export const userSchema = schema({
   ),
   isActive: s
     .sqlite({ type: "int" })
-    .clientInput({ value: true })
+    .client({ value: true })
     .transform({
       toClient: (value: number) => value === 1,
       toDb: (value: boolean) => (value ? 1 : 0),

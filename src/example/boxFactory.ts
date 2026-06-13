@@ -3,7 +3,7 @@ import { createSchemaBox, s, schema } from "../schema";
 
 const factory = schema({
   _tableName: "factories",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `temp_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
     clientPk: true,
@@ -11,11 +11,11 @@ const factory = schema({
   name: s.sqlite({ type: "varchar", length: 100 }),
   isActive: s
     .sqlite({ type: "boolean", default: true })
-    .clientInput(z.boolean())
+    .client(z.boolean())
     .transform({ toClient: (v) => Boolean(v), toDb: (v) => (v ? 1 : 0) }),
   createdAt: s.sqlite({ type: "timestamp", default: "CURRENT_TIMESTAMP" }),
   boxes: s.hasMany([]),
-  statusLabel: s.clientInput(""),
+  statusLabel: s.client(""),
 }).derive({
   forClient: {
     statusLabel: (row) =>
@@ -25,7 +25,7 @@ const factory = schema({
 
 const box = schema({
   _tableName: "boxes",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `temp_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
     clientPk: true,
@@ -36,7 +36,7 @@ const box = schema({
 
 const boxVariant = schema({
   _tableName: "box_variants",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `temp_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
     clientPk: true,
@@ -44,13 +44,13 @@ const boxVariant = schema({
   boxId: s.reference(() => box.id),
   boxName: s
     .sqlite({ type: "varchar", length: 50 })
-    .clientInput({ value: "Standard" })
+    .client({ value: "Standard" })
 
-    .server(({ clientInput }) => clientInput.min(3, "Name too short"))
+    .server(({ client }) => client.min(3, "Name too short"))
     .transform({ toClient: (v) => v, toDb: (v) => v }),
-  color: s.sqlite({ type: "varchar", length: 20 }).clientInput({ value: "brown" }),
-  size: s.sqlite({ type: "varchar", length: 10 }).clientInput({ value: "medium" }),
-  weight: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+  color: s.sqlite({ type: "varchar", length: 20 }).client({ value: "brown" }),
+  size: s.sqlite({ type: "varchar", length: 10 }).client({ value: "medium" }),
+  weight: s.sqlite({ type: "int" }).client({ value: 0 }),
 });
 
 export const boxFactory = createSchemaBox(
@@ -65,6 +65,6 @@ export const boxFactory = createSchemaBox(
 
 // You can now access the full lifecycle:
 boxFactory.boxVariant.schemas.sql;
-boxFactory.boxVariant.schemas.clientInput; //the client initialstate
-boxFactory.boxVariant.schemas.client; // The usable app state
+boxFactory.boxVariant.schemas.client; //the client initialstate
+boxFactory.boxVariant.schemas.clientChecked; // The usable app state
 boxFactory.boxVariant.schemas.server; // The validation state

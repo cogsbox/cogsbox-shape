@@ -49,7 +49,7 @@ function createSqlBuilder(dialect, sqlConfig) {
         validationZod: sqlZodType,
     });
 }
-function isClientInputOptions(value) {
+function isClientOptions(value) {
     return (value !== undefined &&
         typeof value === "object" &&
         value !== null &&
@@ -59,9 +59,9 @@ function isClientInputOptions(value) {
         ("value" in value || "schema" in value || "clientPk" in value));
 }
 export const s = {
-    clientInput: (...args) => {
+    client: (...args) => {
         const first = args[0];
-        if (isClientInputOptions(first)) {
+        if (isClientOptions(first)) {
             return createBuilder({
                 stage: "sql",
                 sqlConfig: null,
@@ -69,7 +69,7 @@ export const s = {
                 initialValue: undefined,
                 clientZod: z.undefined(),
                 validationZod: z.undefined(),
-            }).clientInput(first);
+            }).client(first);
         }
         const value = first;
         const sample = isFunction(value) ? value({ uuid }) : value;
@@ -93,7 +93,7 @@ export const s = {
             inferredZodType = z.any();
         }
         return createBuilder({
-            stage: "clientInput",
+            stage: "client",
             sqlConfig: null,
             sqlZod: z.undefined(),
             initialValue: value,
@@ -135,8 +135,8 @@ function createBuilder(config) {
             zodSqlSchema: config.sqlZod,
             initialValue: config.initialValue ||
                 inferDefaultFromZod(config.clientZod, config.sqlConfig),
-            zodClientInputSchema: config.clientInputZod || config.clientZod,
-            zodClientSchema: config.clientZod,
+            zodClientSchema: config.clientInputZod || config.clientZod,
+            zodClientCheckedSchema: config.clientZod,
             zodValidationSchema: config.validationZod,
             clientTransform: config.clientTransform,
             validationTransform: config.validationTransform,
@@ -150,15 +150,15 @@ function createBuilder(config) {
                 },
             });
         },
-        clientInput: (...args) => {
-            if (completedStages.has("clientInput")) {
-                throw new Error("clientInput() can only be called once in the chain");
+        client: (...args) => {
+            if (completedStages.has("client")) {
+                throw new Error("client() can only be called once in the chain");
             }
             if (completedStages.has("server")) {
-                throw new Error("clientInput() must be called before server()");
+                throw new Error("client() must be called before server()");
             }
             const newCompletedStages = new Set(completedStages);
-            newCompletedStages.add("clientInput");
+            newCompletedStages.add("client");
             let optionsOrSchema = args[0];
             if (config.stage === "relation") {
                 const assert = typeof optionsOrSchema === "function" ||
@@ -167,7 +167,7 @@ function createBuilder(config) {
                     : optionsOrSchema?.schema;
                 return createBuilder({
                     ...config,
-                    stage: "clientInput",
+                    stage: "client",
                     completedStages: newCompletedStages,
                     clientZod: assert,
                     clientInputZod: assert,
@@ -286,7 +286,7 @@ function createBuilder(config) {
             }
             return createBuilder({
                 ...config,
-                stage: "clientInput",
+                stage: "client",
                 sqlConfig: newConfig,
                 initialValue: actualValue,
                 clientZod: clientAndServerSchema,
@@ -295,15 +295,15 @@ function createBuilder(config) {
                 completedStages: newCompletedStages,
             });
         },
-        client: (assert) => {
+        clientCheck: (assert) => {
             if (completedStages.has("server")) {
                 throw new Error("client() must be called before server()");
             }
             const clientSchema = isFunction(assert)
                 ? assert({
                     sql: config.sqlZod,
-                    clientInput: config.clientInputZod || config.clientZod,
-                    client: config.clientZod,
+                    client: config.clientInputZod || config.clientZod,
+                    clientCheck: config.clientZod,
                 })
                 : assert;
             const newCompletedStages = new Set(completedStages);
@@ -327,8 +327,8 @@ function createBuilder(config) {
             const serverSchema = isFunction(assert)
                 ? assert({
                     sql: config.sqlZod,
-                    clientInput: config.clientInputZod || config.clientZod,
-                    client: config.clientZod,
+                    client: config.clientInputZod || config.clientZod,
+                    clientCheck: config.clientZod,
                 })
                 : assert;
             const newCompletedStages = new Set(completedStages);
@@ -342,8 +342,8 @@ function createBuilder(config) {
         },
         transform: (transforms) => {
             if (!completedStages.has("server") &&
-                !completedStages.has("clientInput")) {
-                throw new Error("transform() requires at least clientInput() or server() to be called first");
+                !completedStages.has("client")) {
+                throw new Error("transform() requires at least client() or server() to be called first");
             }
             return {
                 config: {
@@ -461,8 +461,8 @@ function isReference(value) {
 }
 export function createSchema(schema, relations) {
     const sqlFields = {};
-    const clientInputFields = {};
     const clientFields = {};
+    const clientCheckedFields = {};
     const serverFields = {};
     const defaultValues = {};
     const defaultGenerators = {};
@@ -497,8 +497,8 @@ export function createSchema(schema, relations) {
                 else {
                     clientToDbKeys[key] = dbFieldName;
                     dbToClientKeys[dbFieldName] = key;
-                    clientInputFields[key] = config.zodClientInputSchema;
                     clientFields[key] = config.zodClientSchema;
+                    clientCheckedFields[key] = config.zodClientCheckedSchema;
                     serverFields[key] = config.zodValidationSchema;
                     const initialValueOrFn = config.initialValue;
                     defaultGenerators[key] = initialValueOrFn;
@@ -539,8 +539,8 @@ export function createSchema(schema, relations) {
                 else {
                     clientToDbKeys[key] = dbFieldName;
                     dbToClientKeys[dbFieldName] = key;
-                    clientInputFields[key] = config.zodClientInputSchema;
                     clientFields[key] = config.zodClientSchema;
+                    clientCheckedFields[key] = config.zodClientCheckedSchema;
                     serverFields[key] = config.zodValidationSchema;
                     if (config.transforms) {
                         fieldTransforms[key] = config.transforms;
@@ -559,8 +559,8 @@ export function createSchema(schema, relations) {
                 }
             }
             else {
-                clientInputFields[key] = config.zodClientInputSchema;
                 clientFields[key] = config.zodClientSchema;
+                clientCheckedFields[key] = config.zodClientCheckedSchema;
                 serverFields[key] = config.zodValidationSchema;
                 if (config.transforms) {
                     fieldTransforms[key] = config.transforms;
@@ -686,8 +686,8 @@ export function createSchema(schema, relations) {
         return dbObject;
     };
     const finalSqlSchema = z.object(sqlFields);
-    const finalClientInputSchema = z.object(clientInputFields);
     const finalClientSchema = z.object(clientFields);
+    const finalClientCheckedSchema = z.object(clientCheckedFields);
     const finalValidationSchema = z.object(serverFields);
     const deriveDependencies = {};
     const trackDeriveDependencies = (deriveGroup) => {
@@ -714,8 +714,8 @@ export function createSchema(schema, relations) {
     trackDeriveDependencies(derives?.forClient);
     trackDeriveDependencies(derives?.forDb);
     let refinedSqlSchema = finalSqlSchema;
-    let refinedClientInputSchema = finalClientInputSchema;
     let refinedClientSchema = finalClientSchema;
+    let refinedClientCheckedSchema = finalClientCheckedSchema;
     let refinedValidationSchema = finalValidationSchema;
     const fieldToGroup = {};
     if (refineGroups) {
@@ -723,7 +723,7 @@ export function createSchema(schema, relations) {
             const entry = refineGroups[i];
             let { layers, deps, check } = entry;
             const applyTo = layers.includes("all")
-                ? ["sql", "clientInput", "client", "server"]
+                ? ["sql", "client", "clientCheck", "server"]
                 : layers;
             // Track deps from proxy if not provided explicitly
             if (!deps) {
@@ -765,11 +765,11 @@ export function createSchema(schema, relations) {
                     case "sql":
                         refinedSqlSchema = refinedSqlSchema.superRefine(refineFn);
                         break;
-                    case "clientInput":
-                        refinedClientInputSchema = refinedClientInputSchema.superRefine(refineFn);
-                        break;
                     case "client":
                         refinedClientSchema = refinedClientSchema.superRefine(refineFn);
+                        break;
+                    case "clientCheck":
+                        refinedClientCheckedSchema = refinedClientCheckedSchema.superRefine(refineFn);
                         break;
                     case "server":
                         refinedValidationSchema = refinedValidationSchema.superRefine(refineFn);
@@ -785,8 +785,8 @@ export function createSchema(schema, relations) {
         refineInfo: { groups: refineGroups ?? [], fieldToGroup },
         isClientRecord,
         sqlSchema: refinedSqlSchema,
-        clientInputSchema: refinedClientInputSchema,
         clientSchema: refinedClientSchema,
+        clientCheckedSchema: refinedClientCheckedSchema,
         serverSchema: refinedValidationSchema,
         defaultValues: defaultValues,
         stateType: {},
@@ -825,11 +825,13 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
                 allTablesSupportsReconciliation = false;
             }
         }
-        const baseSchema = schemaType === "server"
-            ? registryEntry.zodSchemas.serverSchema
-            : schemaType === "sql"
-                ? registryEntry.zodSchemas.sqlSchema
-                : registryEntry.zodSchemas.clientSchema;
+        const baseSchema = schemaType === "clientChecked"
+            ? registryEntry.zodSchemas.clientCheckedSchema
+            : schemaType === "server"
+                ? registryEntry.zodSchemas.serverSchema
+                : schemaType === "sql"
+                    ? registryEntry.zodSchemas.sqlSchema
+                    : registryEntry.zodSchemas.clientSchema;
         const primitiveShape = baseSchema.shape;
         if (subSelection === true) {
             return baseSchema;
@@ -862,6 +864,7 @@ function createViewObject(initialRegistryKey, selection, registry, tableNameToRe
     return {
         sql: buildView(initialRegistryKey, selection, "sql"),
         client: buildView(initialRegistryKey, selection, "client"),
+        clientChecked: buildView(initialRegistryKey, selection, "clientChecked"),
         server: buildView(initialRegistryKey, selection, "server"),
         supportsReconciliation: allTablesSupportsReconciliation,
     };
@@ -1018,8 +1021,8 @@ export function createSchemaBox(schemas, resolutions) {
             schemaKey: tableName,
             schemas: {
                 sql: entry.zodSchemas.sqlSchema,
-                clientInput: entry.zodSchemas.clientInputSchema,
                 client: entry.zodSchemas.clientSchema,
+                clientChecked: entry.zodSchemas.clientCheckedSchema,
                 server: entry.zodSchemas.serverSchema,
             },
             transforms: {
@@ -1163,6 +1166,7 @@ export function createSchemaBox(schemas, resolutions) {
                     schemas: {
                         sql: view.sql,
                         client: view.client,
+                        clientChecked: view.clientChecked,
                         server: view.server,
                     },
                     transforms: {

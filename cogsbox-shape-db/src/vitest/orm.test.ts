@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { s, schema, createSchemaBox } from "cogsbox-shape";
+import z from "zod";
 import { connect } from "../connect.js";
 import { createSqliteDb } from "../sqlite/sqlite-driver.js";
 import { Kysely, sql } from "kysely";
 
 const userSchema = schema({
   _tableName: "users",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  name: s.sqlite({ type: "varchar", length: 100 }).client({ value: "" }),
   email: s
     .sqlite({ type: "varchar", length: 255 })
     .server(({ sql }) => sql.email()),
@@ -21,10 +22,10 @@ const userSchema = schema({
     field: "tenant_id",
     sqlOnly: true,
   }),
-  statusLabel: s.clientInput(""),
+  statusLabel: s.client(""),
   isActive: s
     .sqlite({ type: "int" })
-    .clientInput({ value: false })
+    .client({ value: false })
     .transform({
       toClient: (val: number) => val === 1,
       toDb: (val: boolean) => (val ? 1 : 0),
@@ -35,11 +36,11 @@ const box = createSchemaBox({ users: userSchema }, { users: {} });
 
 const aliasedUserSchema = schema({
   _tableName: "aliased_users",
-  publicId: s.sqlite({ type: "int", pk: true, field: "user_id" }).clientInput({
+  publicId: s.sqlite({ type: "int", pk: true, field: "user_id" }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  name: s.sqlite({ type: "varchar", length: 100 }).client({ value: "" }),
 });
 
 const aliasedBox = createSchemaBox(
@@ -49,16 +50,16 @@ const aliasedBox = createSchemaBox(
 
 const derivedUserSchema = schema({
   _tableName: "derived_users",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
   firstName: s
     .sqlite({ type: "varchar", length: 100 })
-    .clientInput({ value: "" }),
+    .client({ value: "" }),
   lastName: s
     .sqlite({ type: "varchar", length: 100 })
-    .clientInput({ value: "" }),
+    .client({ value: "" }),
   // Make fullName a DB-computed column by using sqlOnly
   fullName: s.sqlite({ type: "varchar", length: 220, sqlOnly: true }),
 }).derive({
@@ -74,12 +75,12 @@ const derivedBox = createSchemaBox(
 
 const sqlOnlyRequiredSchema = schema({
   _tableName: "sql_only_required_users",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
     clientPk: true,
   }),
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  name: s.sqlite({ type: "varchar", length: 100 }).client({ value: "" }),
   tenantId: s.sqlite({
     type: "varchar",
     length: 100,
@@ -95,18 +96,18 @@ const sqlOnlyRequiredBox = createSchemaBox(
 
 const refinedSchema = schema({
   _tableName: "refined_events",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
   startDate: s
     .sqlite({ type: "varchar", length: 20 })
-    .clientInput({ value: "" }),
-  endDate: s.sqlite({ type: "varchar", length: 20 }).clientInput({ value: "" }),
-  isPublished: s.sqlite({ type: "int" }).clientInput({ value: 0 }),
+    .client({ value: "" }),
+  endDate: s.sqlite({ type: "varchar", length: 20 }).client({ value: "" }),
+  isPublished: s.sqlite({ type: "int" }).client({ value: 0 }),
   content: s
     .sqlite({ type: "varchar", length: 500, nullable: true })
-    .clientInput({
+    .client({
       value: "",
     }),
 }).refine((r) => [
@@ -135,21 +136,21 @@ const refinedBox = createSchemaBox(
 
 const factorySchema = schema({
   _tableName: "view_factories",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  name: s.sqlite({ type: "varchar", length: 100 }).client({ value: "" }),
   isActive: s
     .sqlite({ type: "int" })
-    .clientInput({ value: false })
+    .client({ value: false })
     .transform({
       toClient: (val: number) => val === 1,
       toDb: (val: boolean) => (val ? 1 : 0),
     }),
   boxes: s.hasMany([]),
   // Virtual client-only field
-  statusLabel: s.clientInput(""),
+  statusLabel: s.client(""),
 }).derive({
   forClient: {
     statusLabel: (row) =>
@@ -159,12 +160,12 @@ const factorySchema = schema({
 
 const factoryBoxSchema = schema({
   _tableName: "view_boxes",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
   factoryId: s.reference(() => factorySchema.id),
-  label: s.sqlite({ type: "varchar", length: 100 }).clientInput({
+  label: s.sqlite({ type: "varchar", length: 100 }).client({
     value: "",
   }),
   variant: s.hasOne(true),
@@ -172,12 +173,12 @@ const factoryBoxSchema = schema({
 
 const factoryBoxVariantSchema = schema({
   _tableName: "view_box_variants",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     clientPk: true,
   }),
   boxId: s.reference(() => factoryBoxSchema.id),
-  color: s.sqlite({ type: "varchar", length: 40 }).clientInput({
+  color: s.sqlite({ type: "varchar", length: 40 }).client({
     value: "",
   }),
 });

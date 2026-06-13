@@ -4,11 +4,11 @@ import { createShapePlugin, type InferShapeBoxState } from "../plugin.js";
 
 const demoSchema = schema({
   _tableName: "client",
-  activeFilters: s.clientInput({
+  activeFilters: s.client({
     value: [] as string[],
     schema: z.array(z.string()),
   }),
-  retracementPct: s.clientInput({
+  retracementPct: s.client({
     value: 50,
     schema: z.number(),
   }),

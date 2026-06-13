@@ -8,7 +8,7 @@ const users = schema({
   _tableName: "users",
   id: s
     .sqlite({ type: "int", pk: true })
-    .clientInput({ value: ({ uuid }) => uuid() }),
+    .client({ value: ({ uuid }) => uuid() }),
   petId: s.reference(() => pets.id),
   pets: s.hasMany([]),
 });
@@ -44,7 +44,7 @@ const box2 = createSchemaBox(schemas, {
 const usersEndSchema = box2.users;
 const petsEndSchema = box2.pets;
 const test = petsEndSchema.defaults;
-const test2 = petsEndSchema.schemas.client;
+const test2 = petsEndSchema.schemas.clientChecked;
 
 const testShape: typeof petsEndSchema.RelationSelection = {
   owner: { pets: true }, //is now broken
@@ -57,7 +57,7 @@ const testPets = petsEndSchema.schemas;
 const clientSChema = usersEndSchema.createView({ pets: true });
 
 const defaults = clientSChema.defaults;
-type ClientUser = z.infer<typeof clientSChema.schemas.client>;
+type ClientUser = z.infer<typeof clientSChema.schemas.clientChecked>;
 /*type ClientUser = {
     id: string | number;
     petId: number;
@@ -67,12 +67,12 @@ type ClientUser = z.infer<typeof clientSChema.schemas.client>;
     }[];
 }*/
 
-const clientSChema2 = usersEndSchema.schemas.client;
+const clientSChema2 = usersEndSchema.schemas.clientChecked;
 type ClientUser3 = z.infer<typeof clientSChema2>;
 
 const clientSChemView = usersEndSchema.createView({
   pets: { owner: { pets: true } },
-}).schemas.client;
+}).schemas.clientChecked;
 
 type ClientUserview = z.infer<typeof clientSChemView>;
 // Test the pets relation in working example
