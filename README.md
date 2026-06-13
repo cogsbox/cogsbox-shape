@@ -469,6 +469,22 @@ const user = await userView.findById(1);
 // user.posts is loaded and validated as part of the view shape
 ```
 
+Cloudflare D1 uses the same SQLite schema dialect with a D1 connection helper:
+
+```typescript
+import { connect } from "cogsbox-shape/db";
+import { createD1Db } from "cogsbox-shape/db/cloudflare-d1";
+
+export default {
+  async fetch(_request, env) {
+    const db = createD1Db(env.DB);
+    const bx = connect(box, db);
+
+    return Response.json(await bx.users.findMany());
+  },
+};
+```
+
 Use `insert(data).ids()` when you only need the database identity, or `insert(data).full()` when you want optimistic client IDs reconciled back into the submitted client object. `create()` is kept as an alias for older code; prefer `insert()` in new code.
 
 ### 5. Nested Defaults and Form Definitions (`defaultsDefinition`)

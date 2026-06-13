@@ -23,6 +23,22 @@ const db = await createSqliteDb("myapp.db");
 const bx = connect(box, db);
 ```
 
+For Cloudflare Workers with D1, use the same `s.sqlite(...)` schema fields and connect the D1 binding through the Cloudflare adapter:
+
+```ts
+import { connect } from "cogsbox-shape/db";
+import { createD1Db } from "cogsbox-shape/db/cloudflare-d1";
+
+export default {
+  async fetch(_request, env) {
+    const db = createD1Db(env.DB);
+    const bx = connect(box, db);
+
+    return Response.json(await bx.users.findMany());
+  },
+};
+```
+
 ---
 
 ## `connect(box, db)`

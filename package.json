@@ -37,6 +37,11 @@
       "import": "./cogsbox-shape-db/dist/sqlite/index.js",
       "default": "./cogsbox-shape-db/dist/sqlite/index.js"
     },
+    "./db/cloudflare-d1": {
+      "types": "./cogsbox-shape-db/dist/cloudflare-d1/index.d.ts",
+      "import": "./cogsbox-shape-db/dist/cloudflare-d1/index.js",
+      "default": "./cogsbox-shape-db/dist/cloudflare-d1/index.js"
+    },
     "./state": {
       "types": "./cogsbox-shape-state/dist/index.d.ts",
       "import": "./cogsbox-shape-state/dist/index.js",

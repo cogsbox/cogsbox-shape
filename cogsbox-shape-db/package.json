@@ -14,6 +14,10 @@
     "./sqlite": {
       "types": "./dist/sqlite/index.d.ts",
       "import": "./dist/sqlite/index.js"
+    },
+    "./cloudflare-d1": {
+      "types": "./dist/cloudflare-d1/index.d.ts",
+      "import": "./dist/cloudflare-d1/index.js"
     }
   },
   "files": [
