@@ -640,7 +640,7 @@ function createBuilder<
       sql: config.sqlConfig,
       zodSqlSchema: config.sqlZod,
       initialValue:
-        config.initialValue ||
+        config.initialValue ??
         inferDefaultFromZod(
           config.clientZod as z.ZodTypeAny,
           config.sqlConfig!,
@@ -738,20 +738,6 @@ function createBuilder<
 
       if (value !== undefined) {
         actualValue = value;
-      } else if (
-        schemaOrModifier &&
-        typeof schemaOrModifier === "object" &&
-        "_def" in schemaOrModifier
-      ) {
-        if (
-          config.sqlZod instanceof z.ZodUndefined ||
-          actualValue === undefined
-        ) {
-          actualValue = inferDefaultFromZod(
-            schemaOrModifier,
-            config.sqlConfig!,
-          );
-        }
       }
 
       let baseSchema: z.ZodTypeAny;
@@ -782,6 +768,13 @@ function createBuilder<
           }
         } else {
           finalSchema = baseSchema;
+        }
+      }
+
+      if (value === undefined) {
+        const inferredClientDefault = inferDefaultFromZod(finalSchema);
+        if (inferredClientDefault !== undefined) {
+          actualValue = inferredClientDefault;
         }
       }
 
@@ -1152,6 +1145,53 @@ function inferDefaultFromZod(
     }
 
     const sqlTypeConfig = sqlConfig as SQLType;
+    if (sqlTypeConfig.nullable) {
+      return null;
+    }
+  }
+
+  if (zodType instanceof z.ZodDefault) {
+    const def = zodType._def as { defaultValue?: (() => unknown) | unknown };
+    const val = def.defaultValue;
+    if (val !== undefined) {
+      return typeof val === "function" ? (val as () => unknown)() : val;
+    }
+  }
+
+  if (zodType instanceof z.ZodNullable) {
+    return null;
+  }
+
+  if (zodType instanceof z.ZodOptional) {
+    return undefined;
+  }
+
+  if (zodType instanceof z.ZodString) {
+    return "";
+  }
+
+  if (zodType instanceof z.ZodNumber) {
+    return 0;
+  }
+
+  if (zodType instanceof z.ZodBoolean) {
+    return false;
+  }
+
+  if (zodType instanceof z.ZodDate) {
+    return new Date();
+  }
+
+  if (zodType instanceof z.ZodEnum) {
+    return zodType.options[0];
+  }
+
+  if (zodType instanceof z.ZodLiteral) {
+    return zodType.value;
+  }
+
+  if (sqlConfig && typeof sqlConfig === "object" && "type" in sqlConfig) {
+    const sqlTypeConfig = sqlConfig as SQLType;
     if (sqlTypeConfig.type && !sqlTypeConfig.nullable) {
       switch (sqlTypeConfig.type) {
         case "varchar":
@@ -1174,18 +1214,6 @@ function inferDefaultFromZod(
     if (sqlTypeConfig.nullable) {
       return null;
     }
-  }
-
-  if ("_def" in zodType && "defaultValue" in zodType._def) {
-    const def = zodType._def as { defaultValue?: (() => unknown) | unknown };
-    const val = def.defaultValue;
-    if (val !== undefined) {
-      return typeof val === "function" ? (val as () => unknown)() : val;
-    }
-  }
-
-  if (zodType instanceof z.ZodString) {
-    return "";
   }
 
   return undefined;
@@ -1338,16 +1366,9 @@ export function createSchema<
 
           const initialValueOrFn = config.initialValue;
           defaultGenerators[key] = initialValueOrFn;
-
-          let rawDefault = isFunction(initialValueOrFn)
+          defaultValues[key] = isFunction(initialValueOrFn)
             ? initialValueOrFn({ uuid })
             : initialValueOrFn;
-
-          if (config.transforms?.toClient && rawDefault !== undefined) {
-            defaultValues[key] = config.transforms.toClient(rawDefault);
-          } else {
-            defaultValues[key] = rawDefault;
-          }
 
           if (config.transforms) {
             fieldTransforms[key] = config.transforms;
@@ -1391,16 +1412,9 @@ export function createSchema<
 
           const initialValueOrFn = config.initialValue;
           defaultGenerators[key] = initialValueOrFn;
-
-          let rawDefault = isFunction(initialValueOrFn)
+          defaultValues[key] = isFunction(initialValueOrFn)
             ? initialValueOrFn({ uuid })
             : initialValueOrFn;
-
-          if (config.transforms?.toClient && rawDefault !== undefined) {
-            defaultValues[key] = config.transforms.toClient(rawDefault);
-          } else {
-            defaultValues[key] = rawDefault;
-          }
         }
       } else {
         clientFields[key] = config.zodClientSchema;
@@ -1413,16 +1427,9 @@ export function createSchema<
 
         const initialValueOrFn = config.initialValue;
         defaultGenerators[key] = initialValueOrFn;
-
-        let rawDefault = isFunction(initialValueOrFn)
+        defaultValues[key] = isFunction(initialValueOrFn)
           ? initialValueOrFn({ uuid })
           : initialValueOrFn;
-
-        if (config.transforms?.toClient && rawDefault !== undefined) {
-          defaultValues[key] = config.transforms.toClient(rawDefault);
-        } else {
-          defaultValues[key] = rawDefault;
-        }
       }
     }
   }
@@ -1479,14 +1486,10 @@ export function createSchema<
   const generateDefaults = () => {
     const freshDefaults: any = {};
     for (const key in defaultGenerators) {
-      // ... same logic for mapping standard defaults ...
       const generatorOrValue = defaultGenerators[key];
-      let rawValue = isFunction(generatorOrValue)
+      freshDefaults[key] = isFunction(generatorOrValue)
         ? generatorOrValue({ uuid })
         : generatorOrValue;
-      freshDefaults[key] = fieldTransforms[key]?.toClient
-        ? fieldTransforms[key].toClient(rawValue)
-        : rawValue;
     }
 
     // Only apply client derivations

@@ -167,22 +167,22 @@ status: s.mysql({
 
 `generateSQL()` rejects mixed SQL dialects inside the same table.
 
-Use `s.clientInput()` for client-only/default fields.
+Use `s.client()` for client-only/default fields.
 
 ```ts
-localId: s.clientInput(({ uuid }) => `new_${uuid()}`);
+localId: s.client(({ uuid }) => `new_${uuid()}`);
 ```
 
 For optimistic records, a DB primary key can also have a client-side temporary value.
 
 ```ts
-id: s.sqlite({ type: "int", pk: true }).clientInput({
+id: s.sqlite({ type: "int", pk: true }).client({
   value: ({ uuid }) => `new_${uuid()}`,
   clientPk: true,
 });
 ```
 
-Use `.client()`, `.server()`, and `.transform()` to customize client validation, server validation, and DB/client conversion.
+Use `.clientCheck()`, `.server()`, and `.transform()` to customize client validation, server validation, and DB/client conversion.
 
 ```ts
 email: s.sqlite({ type: "varchar", length: 255 }).server((t) => t.sql.email());
@@ -190,7 +190,7 @@ email: s.sqlite({ type: "varchar", length: 255 }).server((t) => t.sql.email());
 
 ```ts
 published: s.sqlite({ type: "boolean" })
-  .client((t) => t.sql.boolean())
+  .clientCheck((t) => t.sql.boolean())
   .transform({
     toClient: (value) => Boolean(value),
     toDb: (value) => (value ? 1 : 0),
@@ -203,7 +203,7 @@ Define an individual table with `schema(tableName, fields)`.
 
 ```ts
 const users = schema("users", {
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: ({ uuid }) => `new_${uuid()}`,
     clientPk: true,
   }),
@@ -224,8 +224,8 @@ export const box = createSchemaBox({
 A box entry provides:
 
 - `schemas.sql`
-- `schemas.clientInput`
 - `schemas.client`
+- `schemas.clientChecked`
 - `schemas.server`
 - `transforms.toClient`
 - `transforms.toDb`
@@ -255,7 +255,7 @@ const users = schema({
   lastName: s.sqlite({ type: "varchar", length: 120 }),
 
   // Virtual field (no DB column): allowed in forClient
-  statusLabel: s.clientInput(""),
+  statusLabel: s.client(""),
 
   // Computed DB column hidden from the client: allowed in forDb
   searchVector: s.sqlite({ type: "varchar", length: 255, sqlOnly: true }),
@@ -271,7 +271,7 @@ const users = schema({
 
 TypeScript strictly enforces this split:
 
-- `forClient` can only target fields defined without SQL (`s.clientInput(...)`). These fields are ignored during SQL inserts/updates but dynamically computed when formatting data for the client.
+- `forClient` can only target fields defined without SQL (`s.client(...)`). These fields are ignored during SQL inserts/updates but dynamically computed when formatting data for the client.
 - `forDb` can target any DB-backed scalar field. Use `sqlOnly: true` when the computed column should be written to SQL but hidden from client output.
 
 The library tracks which row fields a derive function reads by running it against a Proxy. The ORM uses those dependencies during partial updates.
@@ -300,19 +300,19 @@ Avoid using derives for:
 
 ## Refinement (`.refine()`)
 
-Schema-level cross-field validation. Unlike `.client()`/`.server()` which validate individual fields, `refine()` checks relationships between fields.
+Schema-level cross-field validation. Unlike `.clientCheck()`/`.server()` which validate individual fields, `refine()` checks relationships between fields.
 
 ```ts
 const events = schema({
   _tableName: "events",
   id: s.sqlite({ type: "int", pk: true }),
-  startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-  endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-  content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+  startDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+  endDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+  content: s.sqlite({ type: "varchar", nullable: true }).client({
     value: null,
     schema: z.string().nullable(),
   }),
-  isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+  isPublished: s.sqlite({ type: "boolean" }).client({ value: false }),
 }).refine((r) => [
   r("server", (row) => {
     const errors: { path: string[]; message: string }[] = [];
@@ -337,8 +337,8 @@ r(layer, check, deps) // explicit deps
 | Layer | Applies to |
 |-------|-----------|
 | `"server"` | validation schema (parseForDb) |
+| `"clientCheck"` | clientCheck schema |
 | `"client"` | client schema |
-| `"clientInput"` | client input schema |
 | `"sql"` | sql schema (parseFromDb) |
 | `"all"` | all four schemas |
 | `string[]` | specified layers |
@@ -705,7 +705,7 @@ Current guarantees:
 - `update()` validates partial data (without refinement; only field-level validation).
 - view updates validate through the view/server patch schema.
 - DB transforms run after validation.
-- client-only fields such as `s.clientInput("")` are removed by `parseForDb()` / `parsePatchForDb()` and ignored by ORM insert/update SQL generation.
+- client-only fields such as `s.client("")` are removed by `parseForDb()` / `parsePatchForDb()` and ignored by ORM insert/update SQL generation.
 - only schema-mapped DB-backed fields are written to SQL.
 - DB-backed derived fields (`forDb`) are recomputed during relevant partial updates, while client derivations (`forClient`) safely append to fetched data without triggering SQL errors.
 
@@ -744,7 +744,7 @@ Solid/currently covered:
 - transactions through connected boxes
 - strict type-safe derivations splitting virtual client fields (`forClient`) and computed DB columns (`forDb`)
 - DB-backed derived field (`forDb`) recomputation during partial update
-- cross-field refinement (`refine()`) with multi-layer support (`server`, `client`, `clientInput`, `sql`, `all`, or custom combinations)
+- cross-field refinement (`refine()`) with multi-layer support (`server`, `clientCheck`, `client`, `sql`, `all`, or custom combinations)
 - refinement dependency tracking (auto via Proxy or explicit) for ORM-aware partial updates
 - private playground app using the ORM in a real React/Hono flow
 
@@ -772,7 +772,7 @@ Not built yet:
 
 Prefer:
 
-- `refine()` for cross-field validation; keep `.client()`/`.server()` for per-field rules
+- `refine()` for cross-field validation; keep `.clientCheck()`/`.server()` for per-field rules
 - `insert()` over legacy `create()`
 - `insert(data).ids()` for minimal DB identity
 - `insert(data).full()` for optimistic UI reconciliation

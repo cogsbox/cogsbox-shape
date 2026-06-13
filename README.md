@@ -33,14 +33,14 @@ Traditional approaches require defining these layers separately, leading to type
 Define a field by chaining methods. Each step is optional — use only what you need.
 
 ```
-s.sqlite()/s.postgres()/s.mysql()  →  .clientInput()  →  .client()  →  .server()  →  .transform()
+s.sqlite()/s.postgres()/s.mysql()  →  .client()  →  .clientCheck()  →  .server()  →  .transform()
 ```
 
 | Method                            | Purpose                                                        |
 | --------------------------------- | -------------------------------------------------------------- |
 | `s.sqlite/postgres/mysql({ type, sqlOnly })` | Database column type. `sqlOnly` excludes from client layer. |
-| `.clientInput({ value, schema })` | Client-side input schema and default value for new records.    |
-| `.client(fn)`                     | Client-side validation on the final client union type.         |
+| `.client({ value, schema })`      | Client-side input schema and default value for new records.    |
+| `.clientCheck(fn)`                | Client-side validation on the final client union type.         |
 | `.server(fn)`                     | Server-side validation. Stricter rules before database writes. |
 | `.transform({ toClient, toDb })`  | Converts between database and client representations.          |
 
@@ -88,47 +88,49 @@ s.mysql({ type: "enum", values: ["draft", "published"] });
 // SQL: ENUM('draft', 'published')
 ```
 
-### 2. Client Input — Defaults and Client-Side Validation
+### 2. Client — Defaults and Client-Side Validation
 
-`.clientInput()` sets the default value and client-side validation type for new records.
+`.client()` sets the default value and client-side validation type for new records.
 
 ```typescript
 const userSchema = schema({
   _tableName: "users",
   // DB stores auto-increment integers, but new records need a temp string ID
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => crypto.randomUUID(),
     schema: z.string(),
   }),
-  // clientInput type: string (just the user's schema)
+  // client type: string (just the user's schema)
   // Default value: a generated UUID string
 
   // Simple default without type override
-  name: s.sqlite({ type: "varchar" }).clientInput({ value: "Anonymous" }),
-  // clientInput type: string (inherits from SQL)
+  name: s.sqlite({ type: "varchar" }).client({ value: "Anonymous" }),
+  // client type: string (inherits from SQL)
   // Default value: "Anonymous"
 
-  // Type-only override (no default value change)
-  count: s.sqlite({ type: "int" }).clientInput(() => z.number().min(0)),
-  // clientInput type: number (with min validation)
-  // Default value: inferred from type (0 for number)
+  // Type-only override; default is inferred from the client schema
+  count: s.sqlite({ type: "int" }).client(() => z.number().min(0)),
+  // client type: number (with min validation)
+  // Default value: inferred from the client schema (0 for number)
 });
 ```
 
-**Note:** The final `client` schema is a union of `sql | clientInput` types, representing the complete app state after transforms.
+**Note:** The final `client` schema is a union of `sql | client` types, representing the complete app state after transforms.
 
-### 3. Client — Client-Side Validation
+`generateDefaults()` uses the client schema to pick a default when no explicit `value` is provided. `toClient()` stays for DB-shaped data.
 
-`.client()` adds validation rules to the final `client` schema (the union of sql | clientInput). Use it for client-side validation that operates on the complete client type.
+### 3. Client Check — Client-Side Validation
+
+`.clientCheck()` adds validation rules to the final `client` schema (the union of sql | client). Use it for client-side validation that operates on the complete client type.
 
 ```typescript
 name: s.sqlite({ type: "varchar" })
-  .clientInput({ value: "" })
-  .client((tools) => tools.clientInput.min(3, "Too short"))
-  .server((tools) => tools.clientInput.min(5, "Must be at least 5 chars")),
+  .client({ value: "" })
+  .clientCheck((tools) => tools.client.min(3, "Too short"))
+  .server((tools) => tools.client.min(5, "Must be at least 5 chars")),
 ```
 
-The `.client()` callback receives `tools` with `sql`, `clientInput`, and `client` schemas.
+The `.clientCheck()` callback receives `tools` with `sql`, `client`, and `clientCheck` schemas.
 
 ### 4. Server — Server-Side Validation
 
@@ -152,8 +154,8 @@ The callback receives the previous schema in the chain so you can refine it:
 ```typescript
 name: s
   .sqlite({ type: "varchar" })
-  .clientInput(() => z.string().trim())
-  .server(({ clientInput }) => clientInput.min(2, "Too short")),
+  .client(() => z.string().trim())
+  .server(({ client }) => client.min(2, "Too short")),
 ```
 
 ### 5. Transform — Convert Between Layers
@@ -163,7 +165,7 @@ name: s
 ```typescript
 status: s
   .sqlite({ type: "int" })                              // DB: 0 or 1
-  .clientInput(() => z.enum(["active", "inactive"])) // Client input: string enum
+  .client(() => z.enum(["active", "inactive"])) // Client input: string enum
   .transform({
     toClient: (dbValue) => dbValue === 1 ? "active" : "inactive",
     toDb: (clientValue) => clientValue === "active" ? 1 : 0,
@@ -193,13 +195,13 @@ const userSchema = schema({
 
 #### Client-Only Fields
 
-By skipping `s.sqlite()` entirely and just using `s.clientInput()`, you can define fields that exist purely on the client (like a temporary UI state or computed field) and will not be sent to the database.
+By skipping `s.sqlite()` entirely and just using `s.client()`, you can define fields that exist purely on the client (like a temporary UI state or computed field) and will not be sent to the database.
 
 ```typescript
 const products = schema({
   _tableName: "products",
   price: s.sqlite({ type: "int" }),
-  formattedPrice: s.clientInput(""), // Client-only field!
+  formattedPrice: s.client(""), // Client-only field!
 });
 ```
 
@@ -213,11 +215,11 @@ const products = schema({
 ```typescript
 const users = schema({
   _tableName: "users",
-  firstName: s.sqlite({ type: "varchar" }).clientInput({ value: "John" }),
-  lastName: s.sqlite({ type: "varchar" }).clientInput({ value: "Doe" }),
+  firstName: s.sqlite({ type: "varchar" }).client({ value: "John" }),
+  lastName: s.sqlite({ type: "varchar" }).client({ value: "Doe" }),
 
   // Virtual field. It exists in app/view state, not SQL.
-  fullName: s.clientInput(""),
+  fullName: s.client(""),
 
   // Hidden DB column. It is written to SQL, but not sent to the client.
   searchIndex: s.sqlite({ type: "varchar", sqlOnly: true }),
@@ -235,19 +237,19 @@ During partial ORM updates, DB-backed derivations fetch only missing dependency 
 
 ### 7. Refinement (`.refine()`)
 
-`.refine()` adds cross-field validation rules that the entire row must satisfy. Unlike `.client()`/`.server()` which validate individual fields, `refine` can check relationships between fields.
+`.refine()` adds cross-field validation rules that the entire row must satisfy. Unlike `.clientCheck()`/`.server()` which validate individual fields, `refine` can check relationships between fields.
 
 ```typescript
 const events = schema({
   _tableName: "events",
   id: s.sqlite({ type: "int", pk: true }),
-  startDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-  endDate: s.sqlite({ type: "varchar" }).clientInput({ value: "" }),
-  content: s.sqlite({ type: "varchar", nullable: true }).clientInput({
+  startDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+  endDate: s.sqlite({ type: "varchar" }).client({ value: "" }),
+  content: s.sqlite({ type: "varchar", nullable: true }).client({
     value: null,
     schema: z.string().nullable(),
   }),
-  isPublished: s.sqlite({ type: "boolean" }).clientInput({ value: false }),
+  isPublished: s.sqlite({ type: "boolean" }).client({ value: false }),
 }).refine((r) => [
   r("server", (row) => {
     const errors: { path: string[]; message: string }[] = [];
@@ -276,8 +278,8 @@ The `refine()` method takes a callback that receives an `r` helper function. Eac
 | Layer | Applies to | Purpose |
 |-------|-----------|---------|
 | `"server"` | `parseForDb()`, `server` schema | Cross-field validation before DB writes |
-| `"client"` | `client` schema | Cross-field validation on client output |
-| `"clientInput"` | `clientInput` schema | Cross-field validation on raw client input |
+| `"clientCheck"` | `clientCheck` schema | Cross-field validation on client output |
+| `"client"` | `client` schema | Cross-field validation on raw client input |
 | `"sql"` | `parseFromDb()`, `sql` schema | Cross-field validation on DB reads |
 | `"all"` | all of the above | Universal cross-field validation |
 | `string[]` | specified layers | Apply to multiple layers at once |
@@ -312,10 +314,10 @@ The returned schema object has a clear separation of concerns:
 ```typescript
 const schema = createSchema(mySchema);
 
-schema.schemas; // { sql, clientInput, client, server } — Zod schemas
+schema.schemas; // { sql, client, clientChecked, server } — Zod schemas
 schema.transforms; // { toClient, toDb, parseForDb, parseFromDb } — transformations
 schema.defaults; // Default values for forms
-schema.generateDefaults; // Function to generate fresh defaults (executes randomizers)
+schema.generateDefaults; // Function to generate fresh client defaults (executes randomizers)
 schema.pk; // Primary key field names
 schema.clientPk; // Client-side primary key field names
 schema.isClientRecord; // Function to check if a record is client-created
@@ -334,7 +336,7 @@ import { s, schema, createSchema } from "cogsbox-shape";
 
 const contactSchema = schema({
   _tableName: "contacts",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({
+  id: s.sqlite({ type: "int", pk: true }).client({
     value: () => `new_${crypto.randomUUID().slice(0, 8)}`,
     schema: z.string(),
   }),
@@ -342,7 +344,7 @@ const contactSchema = schema({
   email: s.sqlite({ type: "varchar" }).server(({ sql }) => sql.email()),
   isActive: s
     .sqlite({ type: "boolean", default: true })
-    .clientInput(() => z.boolean())
+    .client(() => z.boolean())
     .transform({
       toClient: (val) => Boolean(val),
       toDb: (val) => (val ? 1 : 0),
@@ -352,7 +354,7 @@ const contactSchema = schema({
 const schema = createSchema(contactSchema);
 
 // Access schemas directly
-const { sql, clientInput, client, server } = schema.schemas;
+const { sql, client, clientChecked, server } = schema.schemas;
 const { defaults, generateDefaults } = schema;
 
 // Transforms for converting between layers

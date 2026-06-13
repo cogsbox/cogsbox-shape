@@ -9,10 +9,10 @@ import { s, schema, createSchemaBox } from "cogsbox-shape";
 
 const userSchema = schema({
   _tableName: "users",
-  id: s.sqlite({ type: "int", pk: true }).clientInput({ value: () => crypto.randomUUID(), clientPk: true }),
-  name: s.sqlite({ type: "varchar", length: 100 }).clientInput({ value: "" }),
+  id: s.sqlite({ type: "int", pk: true }).client({ value: () => crypto.randomUUID(), clientPk: true }),
+  name: s.sqlite({ type: "varchar", length: 100 }).client({ value: "" }),
   email: s.sqlite({ type: "varchar", length: 255 }),
-  isActive: s.sqlite({ type: "int" }).clientInput({ value: false }).transform({
+  isActive: s.sqlite({ type: "int" }).client({ value: false }).transform({
     toClient: (v: number) => v === 1,
     toDb: (v: boolean) => (v ? 1 : 0),
   }),

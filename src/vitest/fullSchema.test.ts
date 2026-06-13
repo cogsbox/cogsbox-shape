@@ -743,7 +743,7 @@ describe("Relation Defaults in Views", () => {
   });
 });
 
-describe("Transform affects defaults", () => {
+describe("Client defaults and transforms", () => {
   const userSchema = schema({
     _tableName: "users",
 
@@ -774,10 +774,11 @@ describe("Transform affects defaults", () => {
   const { transforms } = box.users;
   const defaults = box.users.generateDefaults();
 
-  it("should have defaults with correct runtime values", () => {
+  it("should infer schema-only client defaults without running toClient", () => {
     expect(defaults.isActive).toBe(false);
     expect(typeof defaults.isActive).toBe("boolean");
   });
+
   it("should correctly transform defaults to db format", () => {
     const dbVersion = transforms.toDb(defaults);
     expect(dbVersion.isActive).toBe(0);
@@ -786,6 +787,50 @@ describe("Transform affects defaults", () => {
     const clientVersion = transforms.toClient(dbVersion);
     expect(clientVersion.isActive).toBe(false);
     expect(typeof clientVersion.isActive).toBe("boolean");
+  });
+
+  it("should prefer explicit client defaults over inferred defaults", () => {
+    const explicitDefaults = createSchemaBox(
+      {
+        users: schema({
+          _tableName: "users",
+          score: s.sqlite({ type: "int" }).client({
+            value: 7,
+            schema: z.number().min(0),
+          }),
+          isActive: s.sqlite({ type: "int" }).client({
+            value: true,
+            schema: z.boolean(),
+          }),
+        }),
+      },
+      { users: {} },
+    ).users.generateDefaults();
+
+    expect(explicitDefaults.score).toBe(7);
+    expect(explicitDefaults.isActive).toBe(true);
+  });
+
+  it("should not use toClient while generating defaults", () => {
+    const defaults = createSchemaBox(
+      {
+        users: schema({
+          _tableName: "users",
+          isActive: s
+            .sqlite({ type: "int" })
+            .client(() => z.boolean())
+            .transform({
+              toClient: () => {
+                throw new Error("toClient should not run for defaults");
+              },
+              toDb: (value) => (value ? 1 : 0),
+            }),
+        }),
+      },
+      { users: {} },
+    ).users.generateDefaults();
+
+    expect(defaults.isActive).toBe(false);
   });
 });
 
