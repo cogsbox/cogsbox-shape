@@ -1,4 +1,5 @@
 import { createPluginContext, getGlobalStore } from "cogsbox-state";
+import type { ChainMethodContext } from "cogsbox-state";
 import { z } from "zod";
 
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
@@ -67,6 +68,13 @@ type ValidationParams = Pick<
   FormUpdateParams,
   "stateKey" | "getState" | "addZodErrors" | "clearZodErrors"
 >;
+
+type ShapeKeyValidationParams = {
+  stateKey: string;
+  path: string[];
+  keys?: readonly string[];
+  getState?: () => unknown;
+};
 
 function pathKey(path: string[]) {
   return path.join("\0");
@@ -212,6 +220,53 @@ function addValidationIssues(
   );
 }
 
+function setValidationIssues(
+  stateKey: string,
+  issues: Array<{ path: string[]; message: string; code?: string }>,
+) {
+  if (issues.length === 0) return;
+
+  const store = getGlobalStore.getState();
+  for (const issue of issues) {
+    const currentMeta = store.getShadowMetadata(stateKey, issue.path) || {};
+    store.setShadowMetadata(stateKey, issue.path, {
+      ...currentMeta,
+      validation: {
+        status: "INVALID",
+        errors: [
+          {
+            source: "client",
+            message: issue.message,
+            severity: "error",
+            code: issue.code,
+          },
+        ],
+        lastValidated: Date.now(),
+        validatedValue: store.getShadowValue(stateKey, issue.path),
+      },
+    });
+  }
+  notifyValidationPaths(
+    stateKey,
+    issues.map((issue) => issue.path),
+  );
+}
+
+function issueMatchesSelectedKeys(
+  issue: { path: ReadonlyArray<PropertyKey> },
+  parentPath: string[],
+  selectedKeys: Set<string>,
+) {
+  const issuePath = issue.path.map(String);
+  if (issuePath.length <= parentPath.length) return false;
+
+  for (let index = 0; index < parentPath.length; index++) {
+    if (issuePath[index] !== parentPath[index]) return false;
+  }
+
+  return selectedKeys.has(issuePath[parentPath.length]!);
+}
+
 function getRelatedFields(
   entry: ShapeSchemaBoxEntry,
   field: string,
@@ -252,7 +307,10 @@ function getChangedObjectFields(oldValue: unknown, newValue: unknown) {
   const fields = new Set<string>();
   const oldRecord = oldValue as Record<string, unknown>;
   const newRecord = newValue as Record<string, unknown>;
-  for (const key of new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)])) {
+  for (const key of new Set([
+    ...Object.keys(oldRecord),
+    ...Object.keys(newRecord),
+  ])) {
     if (!Object.is(oldRecord[key], newRecord[key])) fields.add(key);
   }
   return fields;
@@ -390,6 +448,91 @@ export function validateShapeRefinesOnUpdate(
   applyRefineValidation(box, params, target, params.getState());
 }
 
+export function validateShapeKeys(
+  box: ShapeSchemaBox,
+  params: ShapeKeyValidationParams,
+) {
+  const entry = box[params.stateKey];
+  const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
+  if (!entry || !clientSchema) return { success: true, results: [] };
+
+  const store = getGlobalStore.getState();
+  const rootState =
+    params.getState?.() ?? store.getShadowValue(params.stateKey, []);
+  const result = clientSchema.safeParse(rootState);
+  const selectedKeys = params.keys ? new Set(params.keys) : null;
+  const targetPaths =
+    params.keys?.map((key) => [...params.path, key]) ??
+    (result.success
+      ? []
+      : mapZodIssues(result.error.issues).map((issue) => issue.path));
+
+  if (result.success) {
+    clearValidationPaths(
+      {
+        stateKey: params.stateKey,
+        getState: () => rootState,
+        addZodErrors: () => {},
+      },
+      targetPaths,
+    );
+
+    return {
+      success: true,
+      results:
+        params.keys?.map((key) => ({
+          key,
+          path: [...params.path, key],
+          success: true,
+          data: store.getShadowValue(params.stateKey, [...params.path, key]),
+        })) ?? [],
+    };
+  }
+
+  const issues = selectedKeys
+    ? result.error.issues.filter((issue) =>
+        issueMatchesSelectedKeys(issue, params.path, selectedKeys),
+      )
+    : result.error.issues;
+  const mapped = mapZodIssues(issues);
+  const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
+  const stalePaths = targetPaths.filter(
+    (targetPath) => !activeKeys.has(pathKey(targetPath)),
+  );
+
+  clearValidationPaths(
+    {
+      stateKey: params.stateKey,
+      getState: () => rootState,
+      addZodErrors: () => {},
+    },
+    stalePaths,
+  );
+  setValidationIssues(params.stateKey, mapped);
+
+  return {
+    success: mapped.length === 0,
+    results:
+      params.keys?.map((key) => {
+        const keyPath = [...params.path, key];
+        const keyIssues = mapped.filter(
+          (issue) => issue.path[params.path.length] === key,
+        );
+
+        return {
+          key,
+          path: keyPath,
+          success: keyIssues.length === 0,
+          data:
+            keyIssues.length === 0
+              ? store.getShadowValue(params.stateKey, keyPath)
+              : undefined,
+          error: keyIssues.length === 0 ? undefined : { issues: keyIssues },
+        };
+      }) ?? [],
+  };
+}
+
 function buildInitialState<TBox extends ShapeSchemaBox>(
   box: TBox,
 ): InferShapeBoxState<TBox> {
@@ -430,5 +573,16 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
     })
     .onUpdate((params) => {
       validateShapeRefinesOnUpdate(box, params);
-    });
+    })
+    .methods((m) => ({
+      validateShape: m.object(
+        (ctx: ChainMethodContext, keys?: readonly string[]) =>
+          validateShapeKeys(box, {
+            stateKey: ctx.stateKey,
+            path: ctx.path,
+            keys,
+            getState: ctx.$get,
+          }),
+      ),
+    }));
 }

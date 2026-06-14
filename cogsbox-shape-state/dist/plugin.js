@@ -108,6 +108,41 @@ function addValidationIssues(params, issues) {
     params.addZodErrors(issues);
     notifyValidationPaths(params.stateKey, issues.map((issue) => issue.path));
 }
+function setValidationIssues(stateKey, issues) {
+    if (issues.length === 0)
+        return;
+    const store = getGlobalStore.getState();
+    for (const issue of issues) {
+        const currentMeta = store.getShadowMetadata(stateKey, issue.path) || {};
+        store.setShadowMetadata(stateKey, issue.path, {
+            ...currentMeta,
+            validation: {
+                status: "INVALID",
+                errors: [
+                    {
+                        source: "client",
+                        message: issue.message,
+                        severity: "error",
+                        code: issue.code,
+                    },
+                ],
+                lastValidated: Date.now(),
+                validatedValue: store.getShadowValue(stateKey, issue.path),
+            },
+        });
+    }
+    notifyValidationPaths(stateKey, issues.map((issue) => issue.path));
+}
+function issueMatchesSelectedKeys(issue, parentPath, selectedKeys) {
+    const issuePath = issue.path.map(String);
+    if (issuePath.length <= parentPath.length)
+        return false;
+    for (let index = 0; index < parentPath.length; index++) {
+        if (issuePath[index] !== parentPath[index])
+            return false;
+    }
+    return selectedKeys.has(issuePath[parentPath.length]);
+}
 function getRelatedFields(entry, field) {
     const groupIndexes = entry.refineInfo?.fieldToGroup[field];
     if (!groupIndexes?.length)
@@ -138,7 +173,10 @@ function getChangedObjectFields(oldValue, newValue) {
     const fields = new Set();
     const oldRecord = oldValue;
     const newRecord = newValue;
-    for (const key of new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)])) {
+    for (const key of new Set([
+        ...Object.keys(oldRecord),
+        ...Object.keys(newRecord),
+    ])) {
         if (!Object.is(oldRecord[key], newRecord[key]))
             fields.add(key);
     }
@@ -233,6 +271,64 @@ export function validateShapeRefinesOnUpdate(box, params) {
         return;
     applyRefineValidation(box, params, target, params.getState());
 }
+export function validateShapeKeys(box, params) {
+    const entry = box[params.stateKey];
+    const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
+    if (!entry || !clientSchema)
+        return { success: true, results: [] };
+    const store = getGlobalStore.getState();
+    const rootState = params.getState?.() ?? store.getShadowValue(params.stateKey, []);
+    const result = clientSchema.safeParse(rootState);
+    const selectedKeys = params.keys ? new Set(params.keys) : null;
+    const targetPaths = params.keys?.map((key) => [...params.path, key]) ??
+        (result.success
+            ? []
+            : mapZodIssues(result.error.issues).map((issue) => issue.path));
+    if (result.success) {
+        clearValidationPaths({
+            stateKey: params.stateKey,
+            getState: () => rootState,
+            addZodErrors: () => { },
+        }, targetPaths);
+        return {
+            success: true,
+            results: params.keys?.map((key) => ({
+                key,
+                path: [...params.path, key],
+                success: true,
+                data: store.getShadowValue(params.stateKey, [...params.path, key]),
+            })) ?? [],
+        };
+    }
+    const issues = selectedKeys
+        ? result.error.issues.filter((issue) => issueMatchesSelectedKeys(issue, params.path, selectedKeys))
+        : result.error.issues;
+    const mapped = mapZodIssues(issues);
+    const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
+    const stalePaths = targetPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
+    clearValidationPaths({
+        stateKey: params.stateKey,
+        getState: () => rootState,
+        addZodErrors: () => { },
+    }, stalePaths);
+    setValidationIssues(params.stateKey, mapped);
+    return {
+        success: mapped.length === 0,
+        results: params.keys?.map((key) => {
+            const keyPath = [...params.path, key];
+            const keyIssues = mapped.filter((issue) => issue.path[params.path.length] === key);
+            return {
+                key,
+                path: keyPath,
+                success: keyIssues.length === 0,
+                data: keyIssues.length === 0
+                    ? store.getShadowValue(params.stateKey, keyPath)
+                    : undefined,
+                error: keyIssues.length === 0 ? undefined : { issues: keyIssues },
+            };
+        }) ?? [],
+    };
+}
 function buildInitialState(box) {
     const state = {};
     for (const key of Object.keys(box)) {
@@ -263,5 +359,13 @@ export function createShapePlugin(box) {
     })
         .onUpdate((params) => {
         validateShapeRefinesOnUpdate(box, params);
-    });
+    })
+        .methods((m) => ({
+        validateShape: m.object((ctx, keys) => validateShapeKeys(box, {
+            stateKey: ctx.stateKey,
+            path: ctx.path,
+            keys,
+            getState: ctx.$get,
+        })),
+    }));
 }

@@ -22,7 +22,7 @@
   "repository": "github:cogsbox/cogsbox-shape",
   "license": "MIT",
   "dependencies": {
-    "cogsbox-state": "^0.5.485"
+    "cogsbox-state": "^0.5.488"
   },
   "peerDependencies": {
     "cogsbox-shape": "*",

@@ -1,3 +1,4 @@
+import type { ChainMethodContext } from "cogsbox-state";
 import { z } from "zod";
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
 export type ShapeRefineInfo = {
@@ -63,11 +64,36 @@ type UpdateParams = {
     }>) => void;
     clearZodErrors?: (paths: string[][]) => void;
 };
+type ShapeKeyValidationParams = {
+    stateKey: string;
+    path: string[];
+    keys?: readonly string[];
+    getState?: () => unknown;
+};
 export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export declare function validateShapeRefines(box: ShapeSchemaBox, params: FormUpdateParams): void;
 export declare function validateShapeRefinesOnUpdate(box: ShapeSchemaBox, params: UpdateParams): void;
+export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyValidationParams): {
+    success: boolean;
+    results: {
+        key: string;
+        path: string[];
+        success: boolean;
+        data: any;
+    }[];
+};
 export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
-}, unknown, unknown, never, {}, true, true, true, false, false, true, InferShapeBoxState<TBox>>;
+}, unknown, unknown, never, {
+    validateShape: import("cogsbox-state").ChainMethodDefinition<(ctx: ChainMethodContext, keys?: readonly string[]) => {
+        success: boolean;
+        results: {
+            key: string;
+            path: string[];
+            success: boolean;
+            data: any;
+        }[];
+    }>;
+}, true, true, true, true, false, true, InferShapeBoxState<TBox>>;
 export {};

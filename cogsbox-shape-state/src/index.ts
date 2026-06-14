@@ -1,5 +1,6 @@
 export {
   createShapePlugin,
+  validateShapeKeys,
   validateShapeRefines,
   wireShapeValidationOptions,
   type InferShapeBoxState,
