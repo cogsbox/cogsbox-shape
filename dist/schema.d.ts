@@ -15,6 +15,10 @@ type SQLTypeConfig = ({
     nullable?: boolean;
     default?: number;
 } | {
+    type: "real";
+    nullable?: boolean;
+    default?: number;
+} | {
     type: "boolean";
     nullable?: boolean;
     default?: boolean;
@@ -54,11 +58,11 @@ type BaseConfig = {
 };
 type SQLToZodType<T extends SQLTypeInput, TDefault extends boolean> = T["pk"] extends true ? TDefault extends true ? z.ZodString : z.ZodNumber : T["nullable"] extends true ? T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodNullable<z.ZodString> : T["type"] extends "enum" ? T extends {
     values: infer TValues extends readonly [string, ...string[]];
-} ? z.ZodNullable<z.ZodType<TValues[number]>> : never : T["type"] extends "int" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+} ? z.ZodNullable<z.ZodType<TValues[number]>> : never : T["type"] extends "int" | "real" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "boolean" ? z.ZodNullable<z.ZodNumber> : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
 } ? TDefault extends true ? never : z.ZodNullable<z.ZodDate> : z.ZodNullable<z.ZodDate> : never : T["type"] extends "varchar" | "char" | "text" | "longtext" ? z.ZodString : T["type"] extends "enum" ? T extends {
     values: infer TValues extends readonly [string, ...string[]];
-} ? z.ZodType<TValues[number]> : never : T["type"] extends "int" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodNumber : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
+} ? z.ZodType<TValues[number]> : never : T["type"] extends "int" | "real" ? z.ZodNumber : T["type"] extends "boolean" ? z.ZodNumber : T["type"] extends "date" | "datetime" | "timestamp" ? T extends {
     default: "CURRENT_TIMESTAMP";
 } ? TDefault extends true ? never : z.ZodDate : z.ZodDate : never;
 type ZodTypeFromPrimitive<T> = T extends string ? z.ZodString : T extends number ? z.ZodNumber : T extends boolean ? z.ZodBoolean : T extends Date ? z.ZodDate : z.ZodAny;

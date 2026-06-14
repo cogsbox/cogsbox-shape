@@ -28,6 +28,7 @@ export type SQLDialect = "sqlite" | "postgres" | "mysql";
 
 type SQLTypeConfig = (
   | { type: "int"; nullable?: boolean; default?: number }
+  | { type: "real"; nullable?: boolean; default?: number }
   | { type: "boolean"; nullable?: boolean; default?: boolean }
   | {
       type: "date" | "datetime" | "timestamp";
@@ -83,7 +84,7 @@ type SQLToZodType<
         ? T extends { values: infer TValues extends readonly [string, ...string[]] }
           ? z.ZodNullable<z.ZodType<TValues[number]>>
           : never
-      : T["type"] extends "int"
+      : T["type"] extends "int" | "real"
         ? z.ZodNullable<z.ZodNumber>
         : T["type"] extends "boolean"
           ? z.ZodNullable<z.ZodNumber>
@@ -100,7 +101,7 @@ type SQLToZodType<
         ? T extends { values: infer TValues extends readonly [string, ...string[]] }
           ? z.ZodType<TValues[number]>
           : never
-      : T["type"] extends "int"
+      : T["type"] extends "int" | "real"
         ? z.ZodNumber
         : T["type"] extends "boolean"
           ? z.ZodNumber
@@ -472,6 +473,9 @@ function createSqlBuilder<
     } else {
       switch (sqlConfig.type) {
         case "int":
+          baseType = z.number();
+          break;
+        case "real":
           baseType = z.number();
           break;
         case "boolean":
@@ -1201,7 +1205,9 @@ function inferDefaultFromZod(
           return "";
         case "enum":
           return sqlTypeConfig.default ?? sqlTypeConfig.values[0];
-        case "int":
+case "int":
+          return 0;
+        case "real":
           return 0;
         case "boolean":
           return false;

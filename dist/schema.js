@@ -18,6 +18,9 @@ function createSqlBuilder(dialect, sqlConfig) {
                 case "int":
                     baseType = z.number();
                     break;
+                case "real":
+                    baseType = z.number();
+                    break;
                 case "boolean":
                     baseType = z.number();
                     break;
@@ -466,6 +469,8 @@ function inferDefaultFromZod(zodType, sqlConfig) {
                 case "enum":
                     return sqlTypeConfig.default ?? sqlTypeConfig.values[0];
                 case "int":
+                    return 0;
+                case "real":
                     return 0;
                 case "boolean":
                     return false;

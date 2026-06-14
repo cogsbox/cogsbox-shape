@@ -31,6 +31,17 @@ describe("Schema Builder Type Tests (with expect-type)", () => {
             expect(statusField.config.zodSqlSchema.parse("draft")).toBe("draft");
             expect(() => statusField.config.zodSqlSchema.parse("deleted")).toThrow();
         });
+        it("should correctly type a real (float) field", () => {
+            const tempField = s.sqlite({ type: "real" });
+            expectTypeOf(tempField.config.zodSqlSchema).toEqualTypeOf();
+            expect(tempField.config.zodSqlSchema.parse(3.14)).toBe(3.14);
+        });
+        it("should correctly type a nullable real field", () => {
+            const nullableReal = s.sqlite({ type: "real", nullable: true });
+            expectTypeOf(nullableReal.config.zodClientCheckedSchema).toEqualTypeOf();
+            expect(nullableReal.config.zodSqlSchema.parse(null)).toBeNull();
+            expect(nullableReal.config.zodSqlSchema.parse(2.5)).toBe(2.5);
+        });
     });
     describe("Chainable Methods", () => {
         it("should create a union type when .client provides a different type", () => {

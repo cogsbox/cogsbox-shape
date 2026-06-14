@@ -52,6 +52,8 @@ function sqlType(
       switch (config.type) {
         case "int":
           return "INTEGER";
+        case "real":
+          return "REAL";
         case "boolean":
           return "INTEGER";
         case "varchar":
@@ -71,6 +73,8 @@ function sqlType(
       switch (config.type) {
         case "int":
           return "INTEGER";
+        case "real":
+          return "REAL";
         case "boolean":
           return "BOOLEAN";
         case "varchar":
@@ -99,6 +103,8 @@ function sqlType(
       switch (config.type) {
         case "int":
           return "INTEGER";
+        case "real":
+          return "DOUBLE";
         case "boolean":
           return "TINYINT(1)";
         case "varchar":

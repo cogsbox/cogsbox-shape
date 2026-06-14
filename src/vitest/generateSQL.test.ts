@@ -88,4 +88,43 @@ describe("generateSQL dialect columns", () => {
       withOutputFile((path) => generateSQL({ posts }, path)),
     ).rejects.toThrow(/Mixed SQL dialects/);
   });
+
+  it("generates REAL column for SQLite real type", async () => {
+    const measurements = schema({
+      _tableName: "measurements",
+      id: s.sqlite({ type: "int", pk: true }),
+      temperature: s.sqlite({ type: "real" }),
+      humidity: s.sqlite({ type: "real", nullable: true }),
+    });
+
+    const sql = await withOutputFile((path) =>
+      generateSQL({ measurements }, path),
+    );
+
+    expect(sql).toContain("id INTEGER PRIMARY KEY");
+    expect(sql).toContain("temperature REAL NOT NULL");
+    expect(sql).toContain("humidity REAL");
+  });
+
+  it("generates REAL for Postgres and DOUBLE for MySQL real type", async () => {
+    const pgData = schema({
+      _tableName: "readings",
+      id: s.postgres({ type: "int", pk: true }),
+      value: s.postgres({ type: "real" }),
+    });
+    const pgSql = await withOutputFile((path) =>
+      generateSQL({ pgData }, path),
+    );
+    expect(pgSql).toContain("value REAL NOT NULL");
+
+    const myData = schema({
+      _tableName: "readings",
+      id: s.mysql({ type: "int", pk: true }),
+      value: s.mysql({ type: "real" }),
+    });
+    const mySql = await withOutputFile((path) =>
+      generateSQL({ myData }, path),
+    );
+    expect(mySql).toContain("value DOUBLE NOT NULL");
+  });
 });
