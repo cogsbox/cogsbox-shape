@@ -144,7 +144,7 @@ describe("validateShapeRefines", () => {
     expect(errors).toEqual([]);
   });
 
-  it("reports cross-field refine errors on input", () => {
+  it("does not add refine errors on input — only clears stale ones", () => {
     const errors: Array<{ path: string[]; message: string }> = [];
 
     validateShapeRefines(box, {
@@ -152,6 +152,21 @@ describe("validateShapeRefines", () => {
       path: ["min"],
       event: { activityType: "input", details: { value: 10 } },
       getState: () => ({ min: 1, max: 1 }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
+    });
+
+    expect(errors).toEqual([]);
+  });
+
+  it("reports cross-field refine errors on blur", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+
+    validateShapeRefines(box, {
+      stateKey: "form",
+      path: ["min"],
+      event: { activityType: "blur" },
+      getState: () => ({ min: 10, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
       clearZodErrors: () => {},
     });

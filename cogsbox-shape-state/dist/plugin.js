@@ -351,10 +351,16 @@ export function validateShapeRefines(box, params) {
     const relatedFields = getRelatedFields(entry, field);
     if (!relatedFields)
         return;
-    applyRefineValidation(box, params, {
+    const target = {
         relatedFields,
         relatedPaths: resolveRelatedPaths(params.path, relatedFields),
-    }, getStateForValidation(params));
+    };
+    const state = getStateForValidation(params);
+    if (params.event.activityType === "input") {
+        clearStaleRefineValidation(box, params, target, state);
+        return;
+    }
+    applyRefineValidation(box, params, target, state);
 }
 export function validateShapeRefinesOnUpdate(box, params) {
     if (params.update.updateType !== "update")
