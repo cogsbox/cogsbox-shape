@@ -1,4 +1,4 @@
-import { createPluginContext } from "cogsbox-state";
+import { createPluginContext, getGlobalStore } from "cogsbox-state";
 import { z } from "zod";
 
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
@@ -40,12 +40,12 @@ type TransformStateParams = {
 type FormUpdateParams = {
   stateKey: string;
   path: string[];
-  event: { activityType: string };
+  event: { activityType: string; details?: Record<string, unknown> };
   getState: () => unknown;
   addZodErrors: (
     errors: Array<{ path: string[]; message: string; code?: string }>,
   ) => void;
-  clearZodErrors: (paths: string[][]) => void;
+  clearZodErrors?: (paths: string[][]) => void;
 };
 
 function pathKey(path: string[]) {
@@ -72,6 +72,124 @@ function mapZodIssues(
     message: issue.message,
     code: issue.code,
   }));
+}
+
+function cloneStateForInputEvent(
+  state: unknown,
+  path: string[],
+  value: unknown,
+) {
+  if (path.length === 0) return value;
+  if (state === null || typeof state !== "object") return state;
+
+  const root = Array.isArray(state)
+    ? [...state]
+    : { ...(state as Record<string, unknown>) };
+  let cursor: Record<string, unknown> | unknown[] = root;
+
+  for (let index = 0; index < path.length - 1; index++) {
+    const segment = path[index]!;
+    if (Array.isArray(cursor)) {
+      const arrayIndex = Number(segment);
+      if (!Number.isInteger(arrayIndex)) return root;
+
+      const next = cursor[arrayIndex];
+      const cloned =
+        next && typeof next === "object"
+          ? Array.isArray(next)
+            ? [...next]
+            : { ...(next as Record<string, unknown>) }
+          : {};
+      cursor[arrayIndex] = cloned;
+      cursor = cloned as Record<string, unknown> | unknown[];
+    } else {
+      const next = cursor[segment];
+      const cloned =
+        next && typeof next === "object"
+          ? Array.isArray(next)
+            ? [...next]
+            : { ...(next as Record<string, unknown>) }
+          : {};
+      cursor[segment] = cloned;
+      cursor = cloned as Record<string, unknown> | unknown[];
+    }
+  }
+
+  const leaf = path[path.length - 1]!;
+  if (Array.isArray(cursor)) {
+    const arrayIndex = Number(leaf);
+    if (Number.isInteger(arrayIndex)) cursor[arrayIndex] = value;
+  } else {
+    cursor[leaf] = value;
+  }
+
+  return root;
+}
+
+function getStateForValidation(params: FormUpdateParams) {
+  const state = params.getState();
+  if (
+    params.event.activityType !== "input" ||
+    !("details" in params.event) ||
+    !params.event.details ||
+    typeof params.event.details !== "object" ||
+    !("value" in params.event.details)
+  ) {
+    return state;
+  }
+
+  return cloneStateForInputEvent(
+    state,
+    params.path,
+    (params.event.details as { value: unknown }).value,
+  );
+}
+
+function notifyValidationPaths(stateKey: string, paths: string[][]) {
+  const store = getGlobalStore.getState();
+  for (const path of paths) {
+    store.notifyPathSubscribers([stateKey, ...path].join("."), {
+      type: "VALIDATION_UPDATE",
+    });
+  }
+}
+
+function clearValidationPaths(params: FormUpdateParams, paths: string[][]) {
+  if (paths.length === 0) return;
+
+  if (params.clearZodErrors) {
+    params.clearZodErrors(paths);
+    notifyValidationPaths(params.stateKey, paths);
+    return;
+  }
+
+  const store = getGlobalStore.getState();
+  for (const path of paths) {
+    const currentMeta = store.getShadowMetadata(params.stateKey, path) || {};
+    store.setShadowMetadata(params.stateKey, path, {
+      ...currentMeta,
+      validation: {
+        status: "NOT_VALIDATED",
+        errors: [],
+        lastValidated: Date.now(),
+        validatedValue: undefined,
+      },
+    });
+  }
+  notifyValidationPaths(params.stateKey, paths);
+}
+
+function addValidationIssues(
+  params: FormUpdateParams,
+  issues: Array<{ path: string[]; message: string; code?: string }>,
+) {
+  if (issues.length === 0) return;
+
+  params.addZodErrors(issues);
+  notifyValidationPaths(
+    params.stateKey,
+    issues.map((issue) => issue.path),
+  );
 }
 
 function getRelatedFields(
@@ -102,14 +220,29 @@ function issueMatchesRelatedFields(
 export function wireShapeValidationOptions(
   box: ShapeSchemaBox,
   params: TransformStateParams,
-): void {}
+): void {
+  const entry = box[params.stateKey];
+  if (!entry) return;
+
+  params.setOptions({
+    validation: {
+      zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
+      onBlur: "error",
+    },
+  });
+}
 
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export function validateShapeRefines(
   box: ShapeSchemaBox,
   params: FormUpdateParams,
 ): void {
-  if (params.event.activityType !== "blur") return;
+  if (
+    params.event.activityType !== "blur" &&
+    params.event.activityType !== "input"
+  ) {
+    return;
+  }
 
   const entry = box[params.stateKey];
   const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
@@ -122,10 +255,10 @@ export function validateShapeRefines(
   if (!relatedFields) return;
 
   const relatedPaths = resolveRelatedPaths(params.path, relatedFields);
-  const result = clientSchema.safeParse(params.getState());
+  const result = clientSchema.safeParse(getStateForValidation(params));
 
   if (result.success) {
-    params.clearZodErrors(relatedPaths);
+    clearValidationPaths(params, relatedPaths);
     return;
   }
 
@@ -138,12 +271,8 @@ export function validateShapeRefines(
   const stalePaths = relatedPaths.filter(
     (targetPath) => !activeKeys.has(pathKey(targetPath)),
   );
-  if (stalePaths.length > 0) {
-    params.clearZodErrors(stalePaths);
-  }
-  if (mapped.length > 0) {
-    params.addZodErrors(mapped);
-  }
+  clearValidationPaths(params, stalePaths);
+  addValidationIssues(params, mapped);
 }
 
 function buildInitialState<TBox extends ShapeSchemaBox>(
@@ -171,15 +300,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
   return createPlugin("shape")
     .initialState((): InferShapeBoxState<TBox> => buildInitialState(box))
     .transformState((params) => {
-      const entry = box[params.stateKey];
-      if (!entry) return;
-
-      params.setOptions({
-        validation: {
-          zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
-          onBlur: "error",
-        },
-      });
+      wireShapeValidationOptions(box, params);
     })
     .onFormUpdate((params) => {
       if (params.options?.logs) {

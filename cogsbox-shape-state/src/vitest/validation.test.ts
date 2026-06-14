@@ -137,19 +137,38 @@ describe("validateShapeRefines", () => {
     expect(errors).toEqual([]);
   });
 
-  it("ignores input events", () => {
+  it("reports cross-field refine errors on input", () => {
     const errors: Array<{ path: string[]; message: string }> = [];
 
     validateShapeRefines(box, {
       stateKey: "form",
       path: ["min"],
-      event: { activityType: "input" },
-      getState: () => ({ min: 10, max: 1 }),
+      event: { activityType: "input", details: { value: 10 } },
+      getState: () => ({ min: 1, max: 1 }),
       addZodErrors: (next) => errors.push(...next),
       clearZodErrors: () => {},
     });
 
+    expect(errors).toEqual([
+      { path: ["max"], message: "Max must be > min", code: "custom" },
+    ]);
+  });
+
+  it("clears refine errors on input when the typed value fixes the group", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+    const cleared: string[][] = [];
+
+    validateShapeRefines(box, {
+      stateKey: "form",
+      path: ["min"],
+      event: { activityType: "input", details: { value: 1 } },
+      getState: () => ({ min: 10, max: 5 }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: (paths) => cleared.push(...paths),
+    });
+
     expect(errors).toEqual([]);
+    expect(cleared).toEqual([["min"], ["max"]]);
   });
 
   it("does not report simple field errors without refine groups", () => {

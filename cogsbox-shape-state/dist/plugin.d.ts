@@ -37,6 +37,7 @@ type FormUpdateParams = {
     path: string[];
     event: {
         activityType: string;
+        details?: Record<string, unknown>;
     };
     getState: () => unknown;
     addZodErrors: (errors: Array<{
@@ -44,7 +45,7 @@ type FormUpdateParams = {
         message: string;
         code?: string;
     }>) => void;
-    clearZodErrors: (paths: string[][]) => void;
+    clearZodErrors?: (paths: string[][]) => void;
 };
 export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
