@@ -126,6 +126,71 @@ function issueMatchesRelatedFields(issue, relatedFields) {
     const leaf = String(issue.path.at(-1) ?? "");
     return relatedFields.has(leaf);
 }
+function getChangedObjectFields(oldValue, newValue) {
+    if (oldValue === null ||
+        newValue === null ||
+        typeof oldValue !== "object" ||
+        typeof newValue !== "object" ||
+        Array.isArray(oldValue) ||
+        Array.isArray(newValue)) {
+        return null;
+    }
+    const fields = new Set();
+    const oldRecord = oldValue;
+    const newRecord = newValue;
+    for (const key of new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)])) {
+        if (!Object.is(oldRecord[key], newRecord[key]))
+            fields.add(key);
+    }
+    return fields;
+}
+function resolveUpdateRefineTarget(entry, updatePath, oldValue, newValue) {
+    const changedObjectFields = getChangedObjectFields(oldValue, newValue);
+    if (changedObjectFields) {
+        const parentPath = updatePath;
+        const relatedFields = new Set();
+        for (const field of changedObjectFields) {
+            const groupFields = getRelatedFields(entry, field);
+            if (!groupFields)
+                continue;
+            for (const related of groupFields)
+                relatedFields.add(related);
+        }
+        if (relatedFields.size === 0)
+            return null;
+        return {
+            relatedFields,
+            relatedPaths: [...relatedFields].map((field) => [...parentPath, field]),
+        };
+    }
+    const field = updatePath.at(-1);
+    if (!field)
+        return null;
+    const relatedFields = getRelatedFields(entry, field);
+    if (!relatedFields)
+        return null;
+    return {
+        relatedFields,
+        relatedPaths: resolveRelatedPaths(updatePath, relatedFields),
+    };
+}
+function applyRefineValidation(box, params, target, state) {
+    const entry = box[params.stateKey];
+    const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
+    if (!entry || !clientSchema)
+        return;
+    const result = clientSchema.safeParse(state);
+    if (result.success) {
+        clearValidationPaths(params, target.relatedPaths);
+        return;
+    }
+    const issues = result.error.issues.filter((issue) => issueMatchesRelatedFields(issue, target.relatedFields));
+    const mapped = mapZodIssues(issues);
+    const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
+    const stalePaths = target.relatedPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
+    clearValidationPaths(params, stalePaths);
+    addValidationIssues(params, mapped);
+}
 export function wireShapeValidationOptions(box, params) {
     const entry = box[params.stateKey];
     if (!entry)
@@ -144,8 +209,7 @@ export function validateShapeRefines(box, params) {
         return;
     }
     const entry = box[params.stateKey];
-    const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
-    if (!entry || !clientSchema)
+    if (!entry)
         return;
     const field = params.path.at(-1);
     if (!field)
@@ -153,18 +217,21 @@ export function validateShapeRefines(box, params) {
     const relatedFields = getRelatedFields(entry, field);
     if (!relatedFields)
         return;
-    const relatedPaths = resolveRelatedPaths(params.path, relatedFields);
-    const result = clientSchema.safeParse(getStateForValidation(params));
-    if (result.success) {
-        clearValidationPaths(params, relatedPaths);
+    applyRefineValidation(box, params, {
+        relatedFields,
+        relatedPaths: resolveRelatedPaths(params.path, relatedFields),
+    }, getStateForValidation(params));
+}
+export function validateShapeRefinesOnUpdate(box, params) {
+    if (params.update.updateType !== "update")
         return;
-    }
-    const issues = result.error.issues.filter((issue) => issueMatchesRelatedFields(issue, relatedFields));
-    const mapped = mapZodIssues(issues);
-    const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
-    const stalePaths = relatedPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
-    clearValidationPaths(params, stalePaths);
-    addValidationIssues(params, mapped);
+    const entry = box[params.stateKey];
+    if (!entry)
+        return;
+    const target = resolveUpdateRefineTarget(entry, params.update.path, params.update.oldValue, params.update.newValue);
+    if (!target)
+        return;
+    applyRefineValidation(box, params, target, params.getState());
 }
 function buildInitialState(box) {
     const state = {};
@@ -193,5 +260,8 @@ export function createShapePlugin(box) {
             console.log("[shape]", params.stateKey, params.path, params.event.activityType);
         }
         validateShapeRefines(box, params);
+    })
+        .onUpdate((params) => {
+        validateShapeRefinesOnUpdate(box, params);
     });
 }

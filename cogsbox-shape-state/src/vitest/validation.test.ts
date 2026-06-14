@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import {
   validateShapeRefines,
+  validateShapeRefinesOnUpdate,
   wireShapeValidationOptions,
 } from "../plugin.js";
 
@@ -169,6 +170,105 @@ describe("validateShapeRefines", () => {
 
     expect(errors).toEqual([]);
     expect(cleared).toEqual([["min"], ["max"]]);
+  });
+
+  it("clears related refine errors after a whole-object state update", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+    const cleared: string[][] = [];
+
+    validateShapeRefinesOnUpdate(box, {
+      stateKey: "form",
+      update: {
+        path: [],
+        updateType: "update",
+        oldValue: { min: 10, max: 5 },
+        newValue: { min: 1, max: 5 },
+      },
+      getState: () => ({ min: 1, max: 5 }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: (paths) => cleared.push(...paths),
+    });
+
+    expect(errors).toEqual([]);
+    expect(cleared).toEqual([["min"], ["max"]]);
+  });
+
+  it("clears range sizing refine errors when mode changes through state update", () => {
+    const sizingSchema = schema({
+      _tableName: "sizing",
+      startingSizeMode: s.client({ value: "" }),
+      startingSizeMin: s.client({
+        value: null as number | null,
+        schema: z.number().nullable(),
+      }),
+      startingSizeMax: s.client({
+        value: null as number | null,
+        schema: z.number().nullable(),
+      }),
+    }).refine((r) => [
+      r("client", (row) => {
+        const errors: { path: string[]; message: string }[] = [];
+        if (row.startingSizeMode === "range") {
+          if (row.startingSizeMin === null) {
+            errors.push({
+              path: ["startingSizeMin"],
+              message: "Minimum starting size is required for range sizing",
+            });
+          }
+          if (row.startingSizeMax === null) {
+            errors.push({
+              path: ["startingSizeMax"],
+              message: "Maximum starting size is required for range sizing",
+            });
+          }
+        }
+        if (
+          row.startingSizeMode === "fixed" &&
+          row.startingSizeMin === null
+        ) {
+          errors.push({
+            path: ["startingSizeMin"],
+            message: "Number of contracts is required for fixed sizing",
+          });
+        }
+        return errors.length > 0 ? errors : undefined;
+      }, ["startingSizeMode", "startingSizeMin", "startingSizeMax"]),
+    ]);
+    const sizingBox = createSchemaBox({ sizing: sizingSchema }, {});
+    const errors: Array<{ path: string[]; message: string }> = [];
+    const cleared: string[][] = [];
+
+    validateShapeRefinesOnUpdate(sizingBox, {
+      stateKey: "sizing",
+      update: {
+        path: [],
+        updateType: "update",
+        oldValue: {
+          startingSizeMode: "range",
+          startingSizeMin: 1,
+          startingSizeMax: null,
+        },
+        newValue: {
+          startingSizeMode: "fixed",
+          startingSizeMin: 1,
+          startingSizeMax: null,
+        },
+      },
+      getState: () => ({
+        startingSizeMode: "fixed",
+        startingSizeMin: 1,
+        startingSizeMax: null,
+      }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: (paths) => cleared.push(...paths),
+    });
+
+    expect(errors).toEqual([]);
+    expect(cleared).toEqual([
+      ["startingSizeMode"],
+      ["startingSizeMin"],
+      ["startingSizeMax"],
+    ]);
   });
 
   it("does not report simple field errors without refine groups", () => {
