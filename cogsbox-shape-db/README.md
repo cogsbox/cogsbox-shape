@@ -87,7 +87,7 @@ bx.users.findMany({ orderBy: { name: "asc" }, limit: 10, offset: 20 })
 |-------|------|---------|-------------|
 | `where` | `WhereInput<Partial<T>>` | — | Filter conditions (see below) |
 | `orderBy` | `{ [K in keyof T]?: "asc"\|"desc" }` | — | Sort columns |
-| `limit` | `number` | `100` | Max rows to return |
+| `limit` | `number` | — | Max rows to return (no default cap) |
 | `offset` | `number` | — | Number of rows to skip |
 
 Returns `Promise<TClient[]>`
