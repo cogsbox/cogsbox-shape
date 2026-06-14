@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      cogsbox-state:
-        specifier: ^0.5.488
-        version: 0.5.488(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
       commander:
         specifier: ^13.1.0
         version: 13.1.0
@@ -143,8 +140,8 @@ importers:
   cogsbox-shape-state:
     dependencies:
       cogsbox-state:
-        specifier: ^0.5.488
-        version: 0.5.488(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
+        specifier: ^0.5.489
+        version: 0.5.489(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6)
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.9.1
@@ -1221,8 +1218,8 @@ packages:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
 
-  cogsbox-state@0.5.488:
-    resolution: {integrity: sha512-EiKAA8zwSfQTuEzpoeZ6UjlDGK3FjeWdvftePZ7dqk2ye67z0EyJ9gqswp+zhR7ZulFqmW5z/ubkq6OA53N19Q==}
+  cogsbox-state@0.5.489:
+    resolution: {integrity: sha512-hXc2enviZFr8dkLkzxwkyDhNAuACIyKaFOy/4oux3a/Kqhhy/gqneIog7ZasaKdWwfpc5tNkflbUCJyk6MzV+g==}
     peerDependencies:
       '@trpc/next': ^10.0.0 || ^11.0.0
       '@types/react': ^18.0.0 || ^19.0.0
@@ -3200,7 +3197,7 @@ snapshots:
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
 
-  cogsbox-state@0.5.488(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
+  cogsbox-state@0.5.489(@trpc/next@11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3))(@types/react@19.2.14)(rollup@4.60.1)(zod@4.3.6):
     dependencies:
       '@testing-library/jest-dom': 6.9.1
       '@trpc/next': 11.17.0(@tanstack/react-query@5.100.10(react@19.2.7))(@trpc/client@11.17.0(@trpc/server@11.17.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.17.0(typescript@5.9.3))(next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(typescript@5.9.3)

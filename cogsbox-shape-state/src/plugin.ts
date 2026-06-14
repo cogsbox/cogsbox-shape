@@ -575,7 +575,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
       validateShapeRefinesOnUpdate(box, params);
     })
     .methods((m) => ({
-      validateShape: m.object(
+      validateGroup: m.object(
         (ctx: ChainMethodContext, keys?: readonly string[]) =>
           validateShapeKeys(box, {
             stateKey: ctx.stateKey,

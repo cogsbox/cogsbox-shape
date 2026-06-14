@@ -361,7 +361,7 @@ export function createShapePlugin(box) {
         validateShapeRefinesOnUpdate(box, params);
     })
         .methods((m) => ({
-        validateShape: m.object((ctx, keys) => validateShapeKeys(box, {
+        validateGroup: m.object((ctx, keys) => validateShapeKeys(box, {
             stateKey: ctx.stateKey,
             path: ctx.path,
             keys,

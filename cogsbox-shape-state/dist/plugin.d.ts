@@ -86,7 +86,7 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
 export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
 }, unknown, unknown, never, {
-    validateShape: import("cogsbox-state").ChainMethodDefinition<(ctx: ChainMethodContext, keys?: readonly string[]) => {
+    validateGroup: import("cogsbox-state").ChainMethodDefinition<(ctx: ChainMethodContext<any, any>, keys?: readonly string[] | undefined) => {
         success: boolean;
         results: {
             key: string;
