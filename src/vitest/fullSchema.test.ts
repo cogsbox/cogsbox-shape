@@ -467,7 +467,7 @@ describe("client vs clientChecked schema divergence after .clientCheck()", () =>
     });
     expect(clientResult.success).toBe(true);
 
-    const clientCheckedResult = box.forms.schemas.clientChecked.safeParse({
+    const clientCheckedResult = box.forms.validators.clientChecked.safeParse({
       id: 1, password: "abc", confirmPassword: "def",
     });
     expect(clientCheckedResult.success).toBe(false);
@@ -1522,7 +1522,7 @@ describe("refine", () => {
 
     const box = createSchemaBox({ forms }, { forms: {} });
 
-    const result = box.forms.schemas.client.safeParse({
+    const result = box.forms.validators.client.safeParse({
       id: 1,
       password: "secret",
       confirmPassword: "different",
@@ -1532,7 +1532,7 @@ describe("refine", () => {
       expect(result.error.issues[0]!.message).toBe("Passwords must match");
     }
 
-    const validResult = box.forms.schemas.client.safeParse({
+    const validResult = box.forms.validators.client.safeParse({
       id: 1,
       password: "secret",
       confirmPassword: "secret",

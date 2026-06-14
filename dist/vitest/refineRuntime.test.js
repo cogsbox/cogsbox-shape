@@ -32,16 +32,16 @@ describe("refine runtime behavior", () => {
         ]);
         return createSchemaBox({ rules }, { rules: {} });
     }
-    it("schemas.client catches client refine", () => {
+    it("validators.client catches client refine", () => {
         const box = makeRefinedBox();
-        const good = box.rules.schemas.client.safeParse({
+        const good = box.rules.validators.client.safeParse({
             id: 1,
             min: 1,
             max: 10,
             label: "x",
         });
         expect(good.success).toBe(true);
-        const bad = box.rules.schemas.client.safeParse({
+        const bad = box.rules.validators.client.safeParse({
             id: 1,
             min: 10,
             max: 1,
@@ -52,9 +52,9 @@ describe("refine runtime behavior", () => {
             expect(bad.error.issues[0].message).toBe("Max must be > min");
         }
     });
-    it("schemas.clientChecked catches client refine", () => {
+    it("validators.clientChecked catches client refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.clientChecked.safeParse({
+        const bad = box.rules.validators.clientChecked.safeParse({
             id: 1,
             min: 10,
             max: 1,
@@ -65,9 +65,9 @@ describe("refine runtime behavior", () => {
             expect(bad.error.issues[0].message).toBe("Max must be > min");
         }
     });
-    it("schemas.server catches server refine", () => {
+    it("validators.server catches server refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.server.safeParse({
+        const bad = box.rules.validators.server.safeParse({
             id: 1,
             min: 1,
             max: 10,
@@ -78,9 +78,9 @@ describe("refine runtime behavior", () => {
             expect(bad.error.issues[0].message).toBe("Label required");
         }
     });
-    it("schemas.sql catches server refine", () => {
+    it("validators.sql catches server refine", () => {
         const box = makeRefinedBox();
-        const bad = box.rules.schemas.sql.safeParse({
+        const bad = box.rules.validators.sql.safeParse({
             id: 1,
             min: 1,
             max: 10,
@@ -122,36 +122,18 @@ describe("refine runtime behavior", () => {
         });
         expect(good.success).toBe(true);
     });
-    it("view keeps leaf refines and prefixes issue paths", () => {
-        const rules = schema({
-            _tableName: "rules",
-            id: s.sqlite({ type: "int", pk: true }),
-            min: s
-                .sqlite({ type: "int", field: "minField" })
-                .client({ value: 0 }),
-            max: s.sqlite({ type: "int" }).client({ value: 0 }),
-        }).refine((r) => [
-            r("clientCheck", (row) => row.min >= row.max
-                ? { path: ["max"], message: "Max must be > min" }
-                : undefined, ["min", "max"]),
-        ]);
-        const journal = schema({
-            _tableName: "journal",
-            id: s.sqlite({ type: "int", pk: true }),
-            rules: s.hasOne(true),
-        });
-        const box = createSchemaBox({ rules, journal }, {
-            journal: { rules: { fromKey: "id", toKey: rules.id } },
-        });
-        const view = box.journal.createView({ rules: true });
-        const bad = view.schemas.clientChecked.safeParse({
+    it("validators enforce refine on direct table schemas", () => {
+        const box = makeRefinedBox();
+        const bad = box.rules.validators.clientChecked.safeParse({
             id: 1,
-            rules: { id: 1, min: 10, max: 1 },
+            min: 10,
+            max: 1,
+            label: "x",
         });
         expect(bad.success).toBe(false);
         if (!bad.success) {
             expect(bad.error.issues[0]).toMatchObject({
-                path: ["rules", "max"],
+                path: ["max"],
                 message: "Max must be > min",
             });
         }

@@ -307,6 +307,28 @@ schema({ ... })
 
 **Note**: `parsePatchForDb` uses the base schema (without refinement) since partial data may not satisfy cross-field rules.
 
+### Schemas vs Validators
+
+Each box entry exposes two sets of Zod schemas:
+
+- **`schemas`** — plain `ZodObject` shapes. Always composable with `.pick()`, `.omit()`, `.partial()`, etc. Use these for form field extraction, type inference, and partial validation.
+- **`validators`** — schema + refinements. These are `ZodEffects` when `.refine()` is used, otherwise the same `ZodObject`. Use these for full validation that enforces cross-field rules.
+
+```typescript
+const box = createSchemaBox({ events }, { events: {} });
+
+// Base schema — always a ZodObject, always composable
+box.events.schemas.client.pick({ startDate: true, endDate: true }); // works!
+
+// Validator — enforces refine rules
+box.events.validators.client.safeParse(data); // runs cross-field checks
+
+// Internal transforms use validators automatically
+box.events.transforms.parseForDb(data); // uses validator.server
+```
+
+Why the split? After `.refine()`, Zod wraps the schema in `ZodEffects`, which loses `.shape`, `.pick()`, `.omit()`, and `.partial()`. By keeping the base schema separate from refinements, you can always compose the shape while still enforcing cross-field rules when needed.
+
 ### Schema Object Structure
 
 The returned schema object has a clear separation of concerns:
@@ -314,7 +336,8 @@ The returned schema object has a clear separation of concerns:
 ```typescript
 const schema = createSchema(mySchema);
 
-schema.schemas; // { sql, client, clientChecked, server } — Zod schemas
+schema.schemas; // { sql, client, clientChecked, server } — ZodObject shapes (composable)
+schema.validators; // { sql, client, clientChecked, server } — with refinements enforced
 schema.transforms; // { toClient, toDb, parseForDb, parseFromDb } — transformations
 schema.defaults; // Default values for forms
 schema.generateDefaults; // Function to generate fresh client defaults (executes randomizers)
@@ -364,8 +387,11 @@ const { toClient, toDb, parseForDb, parseFromDb } = schema.transforms;
 const [data, setData] = useState(generateDefaults());
 // { id: "new_a1b2c3d4", name: "", email: "", isActive: true }
 
-// Validate explicitly
-const result = server.safeParse(data);
+// Validate explicitly (use validators for refinement enforcement)
+const result = schema.validators.server.safeParse(data);
+
+// Or use the base schema for shape operations
+const pickedSchema = schema.schemas.server.pick({ email: true, age: true });
 
 // Or handle validation & transformation in a single step!
 const safeDbRow = parseForDb(data);

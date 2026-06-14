@@ -35,8 +35,9 @@ export class TableDB {
                 }
             }
         }
-        const limit = opts?.limit ?? 100;
-        query = query.limit(limit);
+        if (opts?.limit !== undefined) {
+            query = query.limit(opts.limit);
+        }
         if (opts?.offset !== undefined) {
             query = query.offset(opts.offset);
         }

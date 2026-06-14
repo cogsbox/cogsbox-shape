@@ -1251,6 +1251,12 @@ export function createSchema<
   serverSchema: z.ZodObject<
     Prettify<DeriveSchemaByKey<TActualSchema, "zodValidationSchema">>
   >;
+  validators: {
+    sql: z.ZodTypeAny;
+    client: z.ZodTypeAny;
+    clientChecked: z.ZodTypeAny;
+    server: z.ZodTypeAny;
+  };
   defaultValues: Prettify<DeriveDefaults<TActualSchema>>;
   stateType: Prettify<DeriveStateType<TActualSchema>>;
   generateDefaults: () => Prettify<DeriveDefaults<TActualSchema>>;
@@ -1663,10 +1669,16 @@ export function createSchema<
     deriveDependencies,
     refineInfo: { groups: refineGroups ?? [], fieldToGroup },
     isClientRecord,
-    sqlSchema: refinedSqlSchema,
-    clientSchema: refinedClientSchema,
-    clientCheckedSchema: refinedClientCheckedSchema,
-    serverSchema: refinedValidationSchema,
+    sqlSchema: finalSqlSchema,
+    clientSchema: finalClientSchema,
+    clientCheckedSchema: finalClientCheckedSchema,
+    serverSchema: finalValidationSchema,
+    validators: {
+      sql: refinedSqlSchema,
+      client: refinedClientSchema,
+      clientChecked: refinedClientCheckedSchema,
+      server: refinedValidationSchema,
+    },
     defaultValues: defaultValues as any,
     stateType: {} as any,
     generateDefaults,
@@ -1826,6 +1838,12 @@ type ResolvedRegistryWithSchemas<
           >
         >
       >;
+      validators: {
+        sql: z.ZodTypeAny;
+        client: z.ZodTypeAny;
+        clientChecked: z.ZodTypeAny;
+        server: z.ZodTypeAny;
+      };
       defaultValues: Prettify<
         DeriveDefaults<
           ResolveSchema<
@@ -2228,6 +2246,12 @@ export type DeriveViewResult<
       _DeriveViewShape<TTableName, TSelection, TRegistry, "serverSchema">
     >;
   };
+  validators: {
+    sql: TRegistry[TTableName]["zodSchemas"]["validators"]["sql"];
+    client: TRegistry[TTableName]["zodSchemas"]["validators"]["client"];
+    clientChecked: TRegistry[TTableName]["zodSchemas"]["validators"]["clientChecked"];
+    server: TRegistry[TTableName]["zodSchemas"]["validators"]["server"];
+  };
   transforms: {
     toClient: TRegistry[TTableName]["transforms"]["toClient"];
     toDb: TRegistry[TTableName]["transforms"]["toDb"];
@@ -2402,6 +2426,12 @@ type RegistryShape = Record<
       clientSchema: z.ZodObject<any>;
       clientCheckedSchema: z.ZodObject<any>;
       serverSchema: z.ZodObject<any>;
+      validators: {
+        sql: z.ZodTypeAny;
+        client: z.ZodTypeAny;
+        clientChecked: z.ZodTypeAny;
+        server: z.ZodTypeAny;
+      };
       defaultValues: any;
       stateType: any;
       deriveDependencies: Record<string, string[]>;
@@ -2436,6 +2466,13 @@ type CreateSchemaBoxReturn<
       client: Resolved[K]["zodSchemas"]["clientSchema"];
       clientChecked: Resolved[K]["zodSchemas"]["clientCheckedSchema"];
       server: Resolved[K]["zodSchemas"]["serverSchema"];
+    };
+
+    validators: {
+      sql: Resolved[K]["zodSchemas"]["validators"]["sql"];
+      client: Resolved[K]["zodSchemas"]["validators"]["client"];
+      clientChecked: Resolved[K]["zodSchemas"]["validators"]["clientChecked"];
+      server: Resolved[K]["zodSchemas"]["validators"]["server"];
     };
 
     transforms: {
@@ -2676,6 +2713,13 @@ export function createSchemaBox<
         server: entry.zodSchemas.serverSchema,
       },
 
+      validators: {
+        sql: entry.zodSchemas.validators.sql,
+        client: entry.zodSchemas.validators.client,
+        clientChecked: entry.zodSchemas.validators.clientChecked,
+        server: entry.zodSchemas.validators.server,
+      },
+
       transforms: {
         toClient: entry.transforms.toClient,
         toDb: entry.transforms.toDb,
@@ -2900,6 +2944,12 @@ export function createSchemaBox<
           definition: entry.rawSchema,
           schemaKey: tableName,
           schemas: {
+            sql: view.sql,
+            client: view.client,
+            clientChecked: view.clientChecked,
+            server: view.server,
+          },
+          validators: {
             sql: view.sql,
             client: view.client,
             clientChecked: view.clientChecked,
