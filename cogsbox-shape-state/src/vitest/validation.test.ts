@@ -61,14 +61,18 @@ describe("validateShapeRefines", () => {
     min: s.client({ value: 0 }),
     max: s.client({ value: 0 }),
   }).refine((r) => [
-    r("client", (row) => {
-      if (row.min >= row.max) {
-        return {
-          path: ["max"],
-          message: "Max must be > min",
-        };
-      }
-    }, ["min", "max"]),
+    r(
+      "client",
+      (row) => {
+        if (row.min >= row.max) {
+          return {
+            path: ["max"],
+            message: "Max must be > min",
+          };
+        }
+      },
+      ["min", "max"],
+    ),
   ]);
 
   const box = createSchemaBox({ form: formSchema }, {});
@@ -207,33 +211,37 @@ describe("validateShapeRefines", () => {
         schema: z.number().nullable(),
       }),
     }).refine((r) => [
-      r("client", (row) => {
-        const errors: { path: string[]; message: string }[] = [];
-        if (row.startingSizeMode === "range") {
-          if (row.startingSizeMin === null) {
+      r(
+        "client",
+        (row) => {
+          const errors: { path: string[]; message: string }[] = [];
+          if (row.startingSizeMode === "range") {
+            if (row.startingSizeMin === null) {
+              errors.push({
+                path: ["startingSizeMin"],
+                message: "Minimum starting size is required for range sizing",
+              });
+            }
+            if (row.startingSizeMax === null) {
+              errors.push({
+                path: ["startingSizeMax"],
+                message: "Maximum starting size is required for range sizing",
+              });
+            }
+          }
+          if (
+            row.startingSizeMode === "fixed" &&
+            row.startingSizeMin === null
+          ) {
             errors.push({
               path: ["startingSizeMin"],
-              message: "Minimum starting size is required for range sizing",
+              message: "Number of contracts is required for fixed sizing",
             });
           }
-          if (row.startingSizeMax === null) {
-            errors.push({
-              path: ["startingSizeMax"],
-              message: "Maximum starting size is required for range sizing",
-            });
-          }
-        }
-        if (
-          row.startingSizeMode === "fixed" &&
-          row.startingSizeMin === null
-        ) {
-          errors.push({
-            path: ["startingSizeMin"],
-            message: "Number of contracts is required for fixed sizing",
-          });
-        }
-        return errors.length > 0 ? errors : undefined;
-      }, ["startingSizeMode", "startingSizeMin", "startingSizeMax"]),
+          return errors.length > 0 ? errors : undefined;
+        },
+        ["startingSizeMode", "startingSizeMin", "startingSizeMax"],
+      ),
     ]);
     const sizingBox = createSchemaBox({ sizing: sizingSchema }, {});
     const errors: Array<{ path: string[]; message: string }> = [];
@@ -308,36 +316,40 @@ describe("validateShapeKeys", () => {
       schema: z.number().nullable(),
     }),
   }).refine((r) => [
-    r("client", (row) => {
-      const errors: { path: string[]; message: string }[] = [];
-      if (row.startingSizeMode === "") {
-        errors.push({
-          path: ["startingSizeMode"],
-          message: "Choose how starting size is set",
-        });
-      }
-      if (row.startingSizeMode === "range") {
-        if (row.startingSizeMin === null) {
+    r(
+      "client",
+      (row) => {
+        const errors: { path: string[]; message: string }[] = [];
+        if (row.startingSizeMode === "") {
+          errors.push({
+            path: ["startingSizeMode"],
+            message: "Choose how starting size is set",
+          });
+        }
+        if (row.startingSizeMode === "range") {
+          if (row.startingSizeMin === null) {
+            errors.push({
+              path: ["startingSizeMin"],
+              message: "Minimum starting size is required for range sizing",
+            });
+          }
+          if (row.startingSizeMax === null) {
+            errors.push({
+              path: ["startingSizeMax"],
+              message: "Maximum starting size is required for range sizing",
+            });
+          }
+        }
+        if (row.startingSizeMode === "fixed" && row.startingSizeMin === null) {
           errors.push({
             path: ["startingSizeMin"],
-            message: "Minimum starting size is required for range sizing",
+            message: "Number of contracts is required for fixed sizing",
           });
         }
-        if (row.startingSizeMax === null) {
-          errors.push({
-            path: ["startingSizeMax"],
-            message: "Maximum starting size is required for range sizing",
-          });
-        }
-      }
-      if (row.startingSizeMode === "fixed" && row.startingSizeMin === null) {
-        errors.push({
-          path: ["startingSizeMin"],
-          message: "Number of contracts is required for fixed sizing",
-        });
-      }
-      return errors.length > 0 ? errors : undefined;
-    }, ["startingSizeMode", "startingSizeMin", "startingSizeMax"]),
+        return errors.length > 0 ? errors : undefined;
+      },
+      ["startingSizeMode", "startingSizeMin", "startingSizeMax"],
+    ),
   ]);
   const sizingBox = createSchemaBox({ sizing: sizingSchema }, {});
 
@@ -400,21 +412,22 @@ describe("validateShapeKeys", () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.results.find((entry) => entry.key === "startingSizeMin"))
-      .toEqual({
-        key: "startingSizeMin",
-        path: ["startingSizeMin"],
-        success: false,
-        data: undefined,
-        error: {
-          issues: [
-            {
-              path: ["startingSizeMin"],
-              message: "Number of contracts is required for fixed sizing",
-              code: "custom",
-            },
-          ],
-        },
-      });
+    expect(
+      result.results.find((entry) => entry.key === "startingSizeMin"),
+    ).toEqual({
+      key: "startingSizeMin",
+      path: ["startingSizeMin"],
+      success: false,
+      data: undefined,
+      error: {
+        issues: [
+          {
+            path: ["startingSizeMin"],
+            message: "Number of contracts is required for fixed sizing",
+            code: "custom",
+          },
+        ],
+      },
+    });
   });
 });

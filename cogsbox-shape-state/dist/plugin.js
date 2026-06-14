@@ -3,6 +3,15 @@ import { z } from "zod";
 function pathKey(path) {
     return path.join("\0");
 }
+function getValueAtPath(value, path) {
+    let cursor = value;
+    for (const segment of path) {
+        if (cursor === null || typeof cursor !== "object")
+            return undefined;
+        cursor = cursor[segment];
+    }
+    return cursor;
+}
 function resolveRelatedPaths(blurPath, relatedFields) {
     const parent = blurPath.slice(0, -1);
     return [...relatedFields].map((field) => [...parent, field]);
@@ -296,7 +305,7 @@ export function validateShapeKeys(box, params) {
                 key,
                 path: [...params.path, key],
                 success: true,
-                data: store.getShadowValue(params.stateKey, [...params.path, key]),
+                data: getValueAtPath(rootState, [...params.path, key]),
             })) ?? [],
         };
     }
@@ -322,7 +331,7 @@ export function validateShapeKeys(box, params) {
                 path: keyPath,
                 success: keyIssues.length === 0,
                 data: keyIssues.length === 0
-                    ? store.getShadowValue(params.stateKey, keyPath)
+                    ? getValueAtPath(rootState, keyPath)
                     : undefined,
                 error: keyIssues.length === 0 ? undefined : { issues: keyIssues },
             };

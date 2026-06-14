@@ -9,67 +9,108 @@ import { z } from "zod";
 
 import { createShapePlugin } from "../index.js";
 
-describe("shape plugin form validation", () => {
-  it("shows validation errors on blur when field is invalid", async () => {
+describe("shape plugin $validateGroup", () => {
+  it("returns per-key success when all fields pass", async () => {
     const formSchema = schema({
       _tableName: "form",
-      name: s.client({
-        value: "",
-        schema: z.string().min(1, "Name is required"),
-      }),
-    });
+      min: s.client({ value: 0, schema: z.number() }),
+      max: s.client({ value: 0, schema: z.number() }),
+    }).refine((r) => [
+      r("client", (row) => {
+        if (row.min >= row.max) {
+          return { path: ["max"], message: "Max must be > min" };
+        }
+      }, ["min", "max"]),
+    ]);
 
     const box = createSchemaBox({ form: formSchema }, {});
-    const shapePlugin = createShapePlugin(box);
-    const { useCogsState } = createCogsState(
-      {},
-      {
-        plugins: [shapePlugin],
-        formElements: {
-          validation: ({ children, hasErrors, hasWarnings, message }) => (
-            <div className="grid gap-1">
-              {children}
-              <p
-                className={`min-h-[1rem] text-xs transition-opacity ${
-                  hasErrors || hasWarnings
-                    ? "text-red-400 opacity-100"
-                    : "pointer-events-none opacity-0"
-                }`}
-              >
-                {message ?? " "}
-              </p>
-            </div>
-          ),
-        },
-      },
-    );
+    const plugin = createShapePlugin(box);
+    const { useCogsState } = createCogsState({}, { plugins: [plugin] });
 
-    function Form() {
+    let lastResult: unknown = null;
+
+    function TestComp() {
       const form = useCogsState("form");
-
       return (
         <div>
-          <PluginRunner>
-            {form.name.$formElement(({ $inputProps }) => (
-              <div>
-                <label htmlFor="name">Name</label>
-                <input id="name" {...$inputProps} />
-              </div>
-            ))}{" "}
-          </PluginRunner>
+          <button
+            onClick={() => {
+              form.min(1);
+              form.max(5);
+              lastResult = form.$validateGroup(["min", "max"]);
+            }}
+            data-testid="btn"
+          >
+            Validate
+          </button>
         </div>
       );
     }
 
     const user = userEvent.setup();
-    render(<Form />);
+    render(<TestComp />);
+    await user.click(screen.getByTestId("btn"));
 
-    const input = screen.getByLabelText("Name");
-    await user.click(input);
-    await user.tab();
+    expect(lastResult).toBeDefined();
+    const result = lastResult as {
+      success: boolean;
+      results: Array<{ key: string; success: boolean }>;
+    };
+    expect(result.success).toBe(true);
+    expect(result.results).toHaveLength(2);
+    expect(result.results.every((r) => r.success)).toBe(true);
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText("Name is required")).toBeInTheDocument();
-    });
+  it("reports refine errors on failing keys", async () => {
+    const formSchema = schema({
+      _tableName: "form",
+      min: s.client({ value: 0, schema: z.number() }),
+      max: s.client({ value: 0, schema: z.number() }),
+    }).refine((r) => [
+      r("client", (row) => {
+        if (row.min >= row.max) {
+          return { path: ["max"], message: "Max must be > min" };
+        }
+      }, ["min", "max"]),
+    ]);
+
+    const box = createSchemaBox({ form: formSchema }, {});
+    const plugin = createShapePlugin(box);
+    const { useCogsState } = createCogsState({}, { plugins: [plugin] });
+
+    let lastResult: unknown = null;
+
+    function TestComp() {
+      const form = useCogsState("form");
+      return (
+        <div>
+          <button
+            onClick={() => {
+              lastResult = form.$validateGroup(["min", "max"]);
+            }}
+            data-testid="btn"
+          >
+            Validate
+          </button>
+        </div>
+      );
+    }
+
+    const user = userEvent.setup();
+    render(<TestComp />);
+    await user.click(screen.getByTestId("btn"));
+
+    const result = lastResult as {
+      success: boolean;
+      results: Array<{
+        key: string;
+        success: boolean;
+        error?: { issues: Array<{ message: string }> };
+      }>;
+    };
+    expect(result.success).toBe(false);
+    const maxResult = result.results.find((r) => r.key === "max")!;
+    expect(maxResult.success).toBe(false);
+    expect(maxResult.error!.issues[0]!.message).toBe("Max must be > min");
   });
 });

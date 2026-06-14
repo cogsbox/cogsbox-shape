@@ -1,4 +1,3 @@
-import type { ChainMethodContext } from "cogsbox-state";
 import { z } from "zod";
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
 export type ShapeRefineInfo = {
@@ -80,19 +79,19 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
         key: string;
         path: string[];
         success: boolean;
-        data: any;
+        data: unknown;
     }[];
 };
 export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
 }, unknown, unknown, never, {
-    validateGroup: import("cogsbox-state").ChainMethodDefinition<(ctx: ChainMethodContext<any, any>, keys?: readonly string[] | undefined) => {
+    validateGroup: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>, keys?: readonly string[] | undefined) => {
         success: boolean;
         results: {
             key: string;
             path: string[];
             success: boolean;
-            data: any;
+            data: unknown;
         }[];
     }>;
 }, true, true, true, true, false, true, InferShapeBoxState<TBox>>;

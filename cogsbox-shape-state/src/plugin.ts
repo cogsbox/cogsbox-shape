@@ -1,5 +1,4 @@
 import { createPluginContext, getGlobalStore } from "cogsbox-state";
-import type { ChainMethodContext } from "cogsbox-state";
 import { z } from "zod";
 
 /** Minimal shape of a createSchemaBox entry — matches journalSchemaBox.journalTechnical etc. */
@@ -78,6 +77,15 @@ type ShapeKeyValidationParams = {
 
 function pathKey(path: string[]) {
   return path.join("\0");
+}
+
+function getValueAtPath(value: unknown, path: string[]) {
+  let cursor = value;
+  for (const segment of path) {
+    if (cursor === null || typeof cursor !== "object") return undefined;
+    cursor = (cursor as Record<string, unknown>)[segment];
+  }
+  return cursor;
 }
 
 function resolveRelatedPaths(
@@ -484,7 +492,7 @@ export function validateShapeKeys(
           key,
           path: [...params.path, key],
           success: true,
-          data: store.getShadowValue(params.stateKey, [...params.path, key]),
+          data: getValueAtPath(rootState, [...params.path, key]),
         })) ?? [],
     };
   }
@@ -525,7 +533,7 @@ export function validateShapeKeys(
           success: keyIssues.length === 0,
           data:
             keyIssues.length === 0
-              ? store.getShadowValue(params.stateKey, keyPath)
+              ? getValueAtPath(rootState, keyPath)
               : undefined,
           error: keyIssues.length === 0 ? undefined : { issues: keyIssues },
         };
@@ -576,7 +584,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
     })
     .methods((m) => ({
       validateGroup: m.object(
-        (ctx: ChainMethodContext, keys?: readonly string[]) =>
+        (ctx, keys?: readonly string[]) =>
           validateShapeKeys(box, {
             stateKey: ctx.stateKey,
             path: ctx.path,
