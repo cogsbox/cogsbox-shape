@@ -32,17 +32,7 @@ function issueMatchesRelatedFields(issue, relatedFields) {
     const leaf = String(issue.path.at(-1) ?? "");
     return relatedFields.has(leaf);
 }
-export function wireShapeValidationOptions(box, params) {
-    const entry = box[params.stateKey];
-    if (!entry)
-        return;
-    params.setOptions({
-        validation: {
-            zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
-            onBlur: "error",
-        },
-    });
-}
+export function wireShapeValidationOptions(box, params) { }
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export function validateShapeRefines(box, params) {
     if (params.event.activityType !== "blur")
@@ -93,7 +83,17 @@ const { createPlugin } = createPluginContext({
 export function createShapePlugin(box) {
     return createPlugin("shape")
         .initialState(() => buildInitialState(box))
-        .transformState((params) => wireShapeValidationOptions(box, params))
+        .transformState((params) => {
+        const entry = box[params.stateKey];
+        if (!entry)
+            return;
+        params.setOptions({
+            validation: {
+                zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
+                onBlur: "error",
+            },
+        });
+    })
         .onFormUpdate((params) => {
         if (params.options?.logs) {
             console.log("[shape]", params.stateKey, params.path, params.event.activityType);
