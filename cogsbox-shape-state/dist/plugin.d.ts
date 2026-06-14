@@ -70,7 +70,10 @@ type ShapeKeyValidationParams = {
     getState?: () => unknown;
     /** When true (default), writes filtered issues to shadow validation metadata. */
     persist?: boolean;
+    /** When true, clears existing errors on sibling fields outside `keys`. */
+    clearOutsideKeys?: boolean;
 };
+export type ValidateGroupOptions = Pick<ShapeKeyValidationParams, "persist" | "clearOutsideKeys">;
 export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export declare function validateShapeRefines(box: ShapeSchemaBox, params: FormUpdateParams): void;

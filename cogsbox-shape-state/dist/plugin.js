@@ -182,6 +182,9 @@ function notifyStateComponents(stateKey) {
 }
 function persistValidateGroupResults(params, keys, mapped) {
     const validationParams = createShadowValidationBridge(params.stateKey);
+    if (params.clearOutsideKeys === true) {
+        clearOutsideGroupValidation(params, keys, validationParams);
+    }
     const keyPaths = keys.map((key) => [...params.path, key]);
     const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
     const stalePaths = keyPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
@@ -190,6 +193,25 @@ function persistValidateGroupResults(params, keys, mapped) {
         addValidationIssues(validationParams, mapped);
     }
     notifyStateComponents(params.stateKey);
+}
+function clearOutsideGroupValidation(params, keys, validationParams) {
+    const store = getGlobalStore.getState();
+    const parentNode = store.getShadowNode(params.stateKey, params.path);
+    if (!parentNode)
+        return;
+    const keySet = new Set(keys);
+    const outsidePaths = [];
+    for (const childKey of Object.keys(parentNode)) {
+        if (childKey === "_meta" || keySet.has(childKey))
+            continue;
+        const fieldPath = [...params.path, childKey];
+        const status = store.getShadowMetadata(params.stateKey, fieldPath)
+            ?.validation?.status;
+        if (status === "INVALID") {
+            outsidePaths.push(fieldPath);
+        }
+    }
+    clearValidationPaths(validationParams, outsidePaths);
 }
 function issueMatchesSelectedKeys(issue, parentPath, selectedKeys) {
     const issuePath = issue.path.map(String);
@@ -270,6 +292,22 @@ function resolveUpdateRefineTarget(entry, updatePath, oldValue, newValue) {
         relatedPaths: resolveRelatedPaths(updatePath, relatedFields),
     };
 }
+function clearStaleRefineValidation(box, params, target, state) {
+    const entry = box[params.stateKey];
+    const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
+    if (!entry || !clientSchema)
+        return;
+    const result = clientSchema.safeParse(state);
+    if (result.success) {
+        clearValidationPaths(params, target.relatedPaths);
+        return;
+    }
+    const issues = result.error.issues.filter((issue) => issueMatchesRelatedFields(issue, target.relatedFields));
+    const mapped = mapZodIssues(issues);
+    const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
+    const stalePaths = target.relatedPaths.filter((targetPath) => !activeKeys.has(pathKey(targetPath)));
+    clearValidationPaths(params, stalePaths);
+}
 function applyRefineValidation(box, params, target, state) {
     const entry = box[params.stateKey];
     const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
@@ -327,7 +365,7 @@ export function validateShapeRefinesOnUpdate(box, params) {
     const target = resolveUpdateRefineTarget(entry, params.update.path, params.update.oldValue, params.update.newValue);
     if (!target)
         return;
-    applyRefineValidation(box, params, target, params.getState());
+    clearStaleRefineValidation(box, params, target, params.getState());
 }
 export function validateShapeKeys(box, params) {
     const entry = box[params.stateKey];

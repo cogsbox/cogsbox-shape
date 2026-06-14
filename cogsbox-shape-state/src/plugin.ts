@@ -75,7 +75,14 @@ type ShapeKeyValidationParams = {
   getState?: () => unknown;
   /** When true (default), writes filtered issues to shadow validation metadata. */
   persist?: boolean;
+  /** When true, clears existing errors on sibling fields outside `keys`. */
+  clearOutsideKeys?: boolean;
 };
+
+export type ValidateGroupOptions = Pick<
+  ShapeKeyValidationParams,
+  "persist" | "clearOutsideKeys"
+>;
 
 function pathKey(path: string[]) {
   return path.join("\0");
@@ -297,11 +304,19 @@ function notifyStateComponents(stateKey: string) {
 }
 
 function persistValidateGroupResults(
-  params: Pick<ShapeKeyValidationParams, "stateKey" | "path">,
+  params: Pick<
+    ShapeKeyValidationParams,
+    "stateKey" | "path" | "clearOutsideKeys"
+  >,
   keys: readonly string[],
   mapped: Array<{ path: string[]; message: string; code?: string }>,
 ) {
   const validationParams = createShadowValidationBridge(params.stateKey);
+
+  if (params.clearOutsideKeys === true) {
+    clearOutsideGroupValidation(params, keys, validationParams);
+  }
+
   const keyPaths = keys.map((key) => [...params.path, key]);
   const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
 
@@ -315,6 +330,32 @@ function persistValidateGroupResults(
   }
 
   notifyStateComponents(params.stateKey);
+}
+
+function clearOutsideGroupValidation(
+  params: Pick<ShapeKeyValidationParams, "stateKey" | "path">,
+  keys: readonly string[],
+  validationParams: ValidationParams,
+) {
+  const store = getGlobalStore.getState();
+  const parentNode = store.getShadowNode(params.stateKey, params.path);
+  if (!parentNode) return;
+
+  const keySet = new Set(keys);
+  const outsidePaths: string[][] = [];
+
+  for (const childKey of Object.keys(parentNode)) {
+    if (childKey === "_meta" || keySet.has(childKey)) continue;
+
+    const fieldPath = [...params.path, childKey];
+    const status = store.getShadowMetadata(params.stateKey, fieldPath)
+      ?.validation?.status;
+    if (status === "INVALID") {
+      outsidePaths.push(fieldPath);
+    }
+  }
+
+  clearValidationPaths(validationParams, outsidePaths);
 }
 
 function issueMatchesSelectedKeys(
@@ -416,6 +457,35 @@ function resolveUpdateRefineTarget(
   };
 }
 
+function clearStaleRefineValidation(
+  box: ShapeSchemaBox,
+  params: ValidationParams,
+  target: { relatedFields: Set<string>; relatedPaths: string[][] },
+  state: unknown,
+) {
+  const entry = box[params.stateKey];
+  const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
+  if (!entry || !clientSchema) return;
+
+  const result = clientSchema.safeParse(state);
+
+  if (result.success) {
+    clearValidationPaths(params, target.relatedPaths);
+    return;
+  }
+
+  const issues = result.error.issues.filter((issue) =>
+    issueMatchesRelatedFields(issue, target.relatedFields),
+  );
+  const mapped = mapZodIssues(issues);
+  const activeKeys = new Set(mapped.map((entry) => pathKey(entry.path)));
+
+  const stalePaths = target.relatedPaths.filter(
+    (targetPath) => !activeKeys.has(pathKey(targetPath)),
+  );
+  clearValidationPaths(params, stalePaths);
+}
+
 function applyRefineValidation(
   box: ShapeSchemaBox,
   params: ValidationParams,
@@ -510,7 +580,7 @@ export function validateShapeRefinesOnUpdate(
   );
   if (!target) return;
 
-  applyRefineValidation(box, params, target, params.getState());
+  clearStaleRefineValidation(box, params, target, params.getState());
 }
 
 export function validateShapeKeys(

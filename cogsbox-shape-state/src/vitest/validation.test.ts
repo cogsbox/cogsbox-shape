@@ -497,4 +497,100 @@ describe("validateShapeKeys", () => {
         ?.status,
     ).toBe("NOT_VALIDATED");
   });
+
+  it("clears validation errors on fields outside the validated key group", () => {
+    const store = getGlobalStore.getState();
+    store.setShadowMetadata("sizing", ["startingSizeMax"], {
+      validation: {
+        status: "INVALID",
+        errors: [
+          {
+            source: "client",
+            message: "Unrelated step error",
+            severity: "error",
+          },
+        ],
+        lastValidated: 0,
+      },
+    });
+
+    validateShapeKeys(sizingBox, {
+      stateKey: "sizing",
+      path: [],
+      keys: ["startingSizeMode", "startingSizeMin"],
+      clearOutsideKeys: true,
+      getState: () => ({
+        startingSizeMode: "",
+        startingSizeMin: null,
+        startingSizeMax: null,
+      }),
+    });
+
+    expect(
+      store.getShadowMetadata("sizing", ["startingSizeMax"])?.validation?.status,
+    ).toBe("NOT_VALIDATED");
+    expect(
+      store.getShadowMetadata("sizing", ["startingSizeMode"])?.validation
+        ?.status,
+    ).toBe("INVALID");
+  });
+});
+
+describe("validateShapeRefinesOnUpdate", () => {
+  const wizardSchema = schema({
+    _tableName: "wizard",
+    startingSizeMode: s.client({ value: "" }),
+    entryBuildMode: s.client({ value: "" }),
+  }).refine((r) => [
+    r(
+      "client",
+      (row) => {
+        if (row.startingSizeMode === "") {
+          return {
+            path: ["startingSizeMode"],
+            message: "Choose how starting size is set",
+          };
+        }
+      },
+      ["startingSizeMode"],
+    ),
+    r(
+      "client",
+      (row) => {
+        if (row.entryBuildMode === "") {
+          return {
+            path: ["entryBuildMode"],
+            message: "Choose how entries are built",
+          };
+        }
+      },
+      ["entryBuildMode"],
+    ),
+  ]);
+  const wizardBox = createSchemaBox({ wizard: wizardSchema }, {});
+
+  it("never adds refine errors on state update — only clears stale ones", () => {
+    const errors: Array<{ path: string[]; message: string }> = [];
+
+    validateShapeRefinesOnUpdate(wizardBox, {
+      stateKey: "wizard",
+      update: {
+        path: [],
+        updateType: "update",
+        oldValue: {},
+        newValue: {
+          startingSizeMode: "",
+          entryBuildMode: "",
+        },
+      },
+      getState: () => ({
+        startingSizeMode: "",
+        entryBuildMode: "",
+      }),
+      addZodErrors: (next) => errors.push(...next),
+      clearZodErrors: () => {},
+    });
+
+    expect(errors).toEqual([]);
+  });
 });
