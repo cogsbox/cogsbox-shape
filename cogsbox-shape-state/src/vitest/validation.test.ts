@@ -79,6 +79,7 @@ describe("validateShapeRefines", () => {
     form: {
       stateType: {},
       schemas: { client },
+      validators: { client },
       generateDefaults: () => ({ min: 0, max: 0 }),
       refineInfo: {
         fieldToGroup: {

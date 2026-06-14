@@ -13,6 +13,9 @@ export type ShapeSchemaBoxEntry = {
     schemas: {
         client: z.ZodTypeAny;
     };
+    validators?: {
+        client: z.ZodTypeAny;
+    };
     refineInfo?: ShapeRefineInfo;
 };
 export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;

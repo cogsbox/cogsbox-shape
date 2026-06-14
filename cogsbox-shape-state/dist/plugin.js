@@ -38,7 +38,7 @@ export function wireShapeValidationOptions(box, params) {
         return;
     params.setOptions({
         validation: {
-            zodSchemaV4: entry.schemas.client,
+            zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
             onBlur: "error",
         },
     });
@@ -48,7 +48,7 @@ export function validateShapeRefines(box, params) {
     if (params.event.activityType !== "blur")
         return;
     const entry = box[params.stateKey];
-    const clientSchema = entry?.schemas.client;
+    const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
     if (!entry || !clientSchema)
         return;
     const field = params.path.at(-1);
