@@ -1,3 +1,4 @@
+import { createSchemaBox, s, schema } from "cogsbox-shape";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -8,18 +9,13 @@ import {
 
 describe("wireShapeValidationOptions", () => {
   it("sets client schema on state options per box key", () => {
-    const client = z.object({
-      name: z.string(),
-      count: z.coerce.number(),
+    const formSchema = schema({
+      _tableName: "form",
+      name: s.client({ value: "" }),
+      count: s.client({ value: 0 }),
     });
 
-    const box = {
-      form: {
-        stateType: {},
-        schemas: { client },
-        generateDefaults: () => ({ name: "", count: 0 }),
-      },
-    };
+    const box = createSchemaBox({ form: formSchema }, {});
 
     let captured: unknown;
     wireShapeValidationOptions(box, {
@@ -31,65 +27,49 @@ describe("wireShapeValidationOptions", () => {
 
     expect(captured).toEqual({
       validation: {
-        zodSchemaV4: client,
+        zodSchemaV4: box.form.validators.client,
         onBlur: "error",
       },
     });
   });
 
   it("no-ops when state key is missing from the box", () => {
+    const formSchema = schema({
+      _tableName: "form",
+      name: s.client({ value: "" }),
+    });
+
+    const box = createSchemaBox({ form: formSchema }, {});
+
     let called = false;
-    wireShapeValidationOptions(
-      {
-        form: {
-          stateType: {},
-          schemas: { client: z.object({}) },
-          generateDefaults: () => ({}),
-        },
+    wireShapeValidationOptions(box, {
+      stateKey: "missing",
+      setOptions: () => {
+        called = true;
       },
-      {
-        stateKey: "missing",
-        setOptions: () => {
-          called = true;
-        },
-      },
-    );
+    });
 
     expect(called).toBe(false);
   });
 });
 
 describe("validateShapeRefines", () => {
-  const client = z
-    .object({
-      min: z.number(),
-      max: z.number(),
-    })
-    .superRefine((row, ctx) => {
+  const formSchema = schema({
+    _tableName: "form",
+    min: s.client({ value: 0 }),
+    max: s.client({ value: 0 }),
+  }).refine((r) => [
+    r("client", (row) => {
       if (row.min >= row.max) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Max must be > min",
+        return {
           path: ["max"],
-        });
+          message: "Max must be > min",
+        };
       }
-    });
+    }, ["min", "max"]),
+  ]);
 
-  const box = {
-    form: {
-      stateType: {},
-      schemas: { client },
-      validators: { client },
-      generateDefaults: () => ({ min: 0, max: 0 }),
-      refineInfo: {
-        fieldToGroup: {
-          min: [0],
-          max: [0],
-        },
-        groups: [{ deps: ["min", "max"] }],
-      },
-    },
-  };
+  const box = createSchemaBox({ form: formSchema }, {});
 
   it("clears related paths when refine passes", () => {
     const cleared: string[][] = [];
@@ -105,10 +85,7 @@ describe("validateShapeRefines", () => {
       clearZodErrors: (paths) => cleared.push(...paths),
     });
 
-    expect(cleared).toEqual([
-      ["min"],
-      ["max"],
-    ]);
+    expect(cleared).toEqual([["min"], ["max"]]);
   });
 
   it("clears stale refine errors on related fields when issue is gone", () => {
@@ -176,22 +153,17 @@ describe("validateShapeRefines", () => {
   });
 
   it("does not report simple field errors without refine groups", () => {
-    const fieldOnlyClient = z.object({
-      name: z.string().min(3, "Too short"),
+    const fieldOnlySchema = schema({
+      _tableName: "fieldOnly",
+      name: s.client({ value: "" }),
     });
 
-    const fieldOnlyBox = {
-      form: {
-        stateType: {},
-        schemas: { client: fieldOnlyClient },
-        generateDefaults: () => ({ name: "" }),
-      },
-    };
+    const fieldOnlyBox = createSchemaBox({ fieldOnly: fieldOnlySchema }, {});
 
     const errors: Array<{ path: string[]; message: string }> = [];
 
     validateShapeRefines(fieldOnlyBox, {
-      stateKey: "form",
+      stateKey: "fieldOnly",
       path: ["name"],
       event: { activityType: "blur" },
       getState: () => ({ name: "ab" }),
