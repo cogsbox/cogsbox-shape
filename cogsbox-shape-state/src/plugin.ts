@@ -102,17 +102,7 @@ function issueMatchesRelatedFields(
 export function wireShapeValidationOptions(
   box: ShapeSchemaBox,
   params: TransformStateParams,
-): void {
-  const entry = box[params.stateKey];
-  if (!entry) return;
-
-  params.setOptions({
-    validation: {
-      zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
-      onBlur: "error",
-    },
-  });
-}
+): void {}
 
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export function validateShapeRefines(
@@ -180,7 +170,17 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
 ) {
   return createPlugin("shape")
     .initialState((): InferShapeBoxState<TBox> => buildInitialState(box))
-    .transformState((params) => wireShapeValidationOptions(box, params))
+    .transformState((params) => {
+      const entry = box[params.stateKey];
+      if (!entry) return;
+
+      params.setOptions({
+        validation: {
+          zodSchemaV4: entry.validators?.client ?? entry.schemas.client,
+          onBlur: "error",
+        },
+      });
+    })
     .onFormUpdate((params) => {
       if (params.options?.logs) {
         console.log(
