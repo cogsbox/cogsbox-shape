@@ -228,38 +228,6 @@ function addValidationIssues(
   );
 }
 
-function setValidationIssues(
-  stateKey: string,
-  issues: Array<{ path: string[]; message: string; code?: string }>,
-) {
-  if (issues.length === 0) return;
-
-  const store = getGlobalStore.getState();
-  for (const issue of issues) {
-    const currentMeta = store.getShadowMetadata(stateKey, issue.path) || {};
-    store.setShadowMetadata(stateKey, issue.path, {
-      ...currentMeta,
-      validation: {
-        status: "INVALID",
-        errors: [
-          {
-            source: "client",
-            message: issue.message,
-            severity: "error",
-            code: issue.code,
-          },
-        ],
-        lastValidated: Date.now(),
-        validatedValue: store.getShadowValue(stateKey, issue.path),
-      },
-    });
-  }
-  notifyValidationPaths(
-    stateKey,
-    issues.map((issue) => issue.path),
-  );
-}
-
 function issueMatchesSelectedKeys(
   issue: { path: ReadonlyArray<PropertyKey> },
   parentPath: string[],
@@ -464,27 +432,12 @@ export function validateShapeKeys(
   const clientSchema = entry?.validators?.client ?? entry?.schemas.client;
   if (!entry || !clientSchema) return { success: true, results: [] };
 
-  const store = getGlobalStore.getState();
   const rootState =
-    params.getState?.() ?? store.getShadowValue(params.stateKey, []);
+    params.getState?.() ?? getGlobalStore.getState().getShadowValue(params.stateKey, []);
   const result = clientSchema.safeParse(rootState);
   const selectedKeys = params.keys ? new Set(params.keys) : null;
-  const targetPaths =
-    params.keys?.map((key) => [...params.path, key]) ??
-    (result.success
-      ? []
-      : mapZodIssues(result.error.issues).map((issue) => issue.path));
 
   if (result.success) {
-    clearValidationPaths(
-      {
-        stateKey: params.stateKey,
-        getState: () => rootState,
-        addZodErrors: () => {},
-      },
-      targetPaths,
-    );
-
     return {
       success: true,
       results:
@@ -503,20 +456,6 @@ export function validateShapeKeys(
       )
     : result.error.issues;
   const mapped = mapZodIssues(issues);
-  const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
-  const stalePaths = targetPaths.filter(
-    (targetPath) => !activeKeys.has(pathKey(targetPath)),
-  );
-
-  clearValidationPaths(
-    {
-      stateKey: params.stateKey,
-      getState: () => rootState,
-      addZodErrors: () => {},
-    },
-    stalePaths,
-  );
-  setValidationIssues(params.stateKey, mapped);
 
   return {
     success: mapped.length === 0,
