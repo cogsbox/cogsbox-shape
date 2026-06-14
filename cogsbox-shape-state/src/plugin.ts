@@ -73,6 +73,8 @@ type ShapeKeyValidationParams = {
   path: string[];
   keys?: readonly string[];
   getState?: () => unknown;
+  /** When true (default), writes filtered issues to shadow validation metadata. */
+  persist?: boolean;
 };
 
 function pathKey(path: string[]) {
@@ -226,6 +228,93 @@ function addValidationIssues(
     params.stateKey,
     issues.map((issue) => issue.path),
   );
+}
+
+function createShadowValidationBridge(stateKey: string): ValidationParams {
+  const store = getGlobalStore.getState();
+  return {
+    stateKey,
+    getState: () => store.getShadowValue(stateKey, []),
+    addZodErrors: (issues) => {
+      for (const error of issues) {
+        const errorPath = error.path;
+        const currentMeta = store.getShadowMetadata(stateKey, errorPath) || {};
+        store.setShadowMetadata(stateKey, errorPath, {
+          ...currentMeta,
+          validation: {
+            status: "INVALID",
+            errors: [
+              {
+                source: "client",
+                message: error.message,
+                severity: "error",
+                code: error.code,
+              },
+            ],
+            lastValidated: Date.now(),
+            validatedValue: undefined,
+          },
+        });
+      }
+    },
+    clearZodErrors: (paths) => {
+      for (const path of paths) {
+        const currentMeta = store.getShadowMetadata(stateKey, path) || {};
+        store.setShadowMetadata(stateKey, path, {
+          ...currentMeta,
+          validation: {
+            status: "NOT_VALIDATED",
+            errors: [],
+            lastValidated: Date.now(),
+            validatedValue: undefined,
+          },
+        });
+      }
+    },
+  };
+}
+
+function notifyStateComponents(stateKey: string) {
+  const store = getGlobalStore.getState();
+  const stateEntry = store.getShadowMetadata(stateKey, []);
+  if (!stateEntry?.components) return;
+
+  const updates = new Set<() => void>();
+  stateEntry.components.forEach((component) => {
+    const reactiveTypes = component
+      ? Array.isArray(component.reactiveType)
+        ? component.reactiveType
+        : [component.reactiveType || "component"]
+      : null;
+    if (!reactiveTypes?.includes("none")) {
+      updates.add(() => component.forceUpdate());
+    }
+  });
+
+  queueMicrotask(() => {
+    updates.forEach((update) => update());
+  });
+}
+
+function persistValidateGroupResults(
+  params: Pick<ShapeKeyValidationParams, "stateKey" | "path">,
+  keys: readonly string[],
+  mapped: Array<{ path: string[]; message: string; code?: string }>,
+) {
+  const validationParams = createShadowValidationBridge(params.stateKey);
+  const keyPaths = keys.map((key) => [...params.path, key]);
+  const activeKeys = new Set(mapped.map((issue) => pathKey(issue.path)));
+
+  const stalePaths = keyPaths.filter(
+    (targetPath) => !activeKeys.has(pathKey(targetPath)),
+  );
+  clearValidationPaths(validationParams, stalePaths);
+
+  if (mapped.length > 0) {
+    addValidationIssues(validationParams, mapped);
+  }
+
+  notifyStateComponents(params.stateKey);
 }
 
 function issueMatchesSelectedKeys(
@@ -436,8 +525,13 @@ export function validateShapeKeys(
     params.getState?.() ?? getGlobalStore.getState().getShadowValue(params.stateKey, []);
   const result = clientSchema.safeParse(rootState);
   const selectedKeys = params.keys ? new Set(params.keys) : null;
+  const shouldPersist = params.persist !== false && !!params.keys?.length;
 
   if (result.success) {
+    if (shouldPersist) {
+      persistValidateGroupResults(params, params.keys!, []);
+    }
+
     return {
       success: true,
       results:
@@ -456,6 +550,10 @@ export function validateShapeKeys(
       )
     : result.error.issues;
   const mapped = mapZodIssues(issues);
+
+  if (shouldPersist) {
+    persistValidateGroupResults(params, params.keys!, mapped);
+  }
 
   return {
     success: mapped.length === 0,

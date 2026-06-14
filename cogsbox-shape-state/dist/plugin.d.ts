@@ -68,6 +68,8 @@ type ShapeKeyValidationParams = {
     path: string[];
     keys?: readonly string[];
     getState?: () => unknown;
+    /** When true (default), writes filtered issues to shadow validation metadata. */
+    persist?: boolean;
 };
 export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */

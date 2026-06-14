@@ -1,4 +1,5 @@
 import { createSchemaBox, s, schema } from "cogsbox-shape";
+import { getGlobalStore } from "cogsbox-state";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -429,5 +430,71 @@ describe("validateShapeKeys", () => {
         ],
       },
     });
+  });
+
+  it("persists filtered issues to shadow validation metadata", () => {
+    const store = getGlobalStore.getState();
+
+    validateShapeKeys(sizingBox, {
+      stateKey: "sizing",
+      path: [],
+      keys: ["startingSizeMode", "startingSizeMin"],
+      getState: () => ({
+        startingSizeMode: "",
+        startingSizeMin: null,
+        startingSizeMax: null,
+      }),
+    });
+
+    expect(
+      store.getShadowMetadata("sizing", ["startingSizeMode"])?.validation,
+    ).toEqual(
+      expect.objectContaining({
+        status: "INVALID",
+        errors: [
+          expect.objectContaining({
+            message: "Choose how starting size is set",
+            severity: "error",
+          }),
+        ],
+      }),
+    );
+    expect(
+      store.getShadowMetadata("sizing", ["startingSizeMin"])?.validation
+        ?.status,
+    ).toBe("NOT_VALIDATED");
+  });
+
+  it("clears stale shadow errors when the validated group passes", () => {
+    const store = getGlobalStore.getState();
+    store.setShadowMetadata("sizing", ["startingSizeMin"], {
+      validation: {
+        status: "INVALID",
+        errors: [
+          {
+            source: "client",
+            message: "Old error",
+            severity: "error",
+          },
+        ],
+        lastValidated: 0,
+      },
+    });
+
+    validateShapeKeys(sizingBox, {
+      stateKey: "sizing",
+      path: [],
+      keys: ["startingSizeMode", "startingSizeMin", "startingSizeMax"],
+      getState: () => ({
+        startingSizeMode: "fixed",
+        startingSizeMin: 2,
+        startingSizeMax: null,
+      }),
+    });
+
+    expect(
+      store.getShadowMetadata("sizing", ["startingSizeMin"])?.validation
+        ?.status,
+    ).toBe("NOT_VALIDATED");
   });
 });
