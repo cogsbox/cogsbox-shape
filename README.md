@@ -17,6 +17,20 @@ yarn add cogsbox-shape
 pnpm add cogsbox-shape
 ```
 
+## State Plugin
+
+Shape can be used with `cogsbox-state` through the `cogsbox-shape/state` export:
+
+```typescript
+import { createShapePlugin } from "cogsbox-shape/state";
+
+const shapePlugin = createShapePlugin(schemaBox);
+```
+
+The state plugin wires Shape defaults and validation into state, and adds persistence methods such as `$save()`, `$load()`, `$revert()`, and `$status()` for server-backed state.
+
+See [cogsbox-shape-state/README.md](./cogsbox-shape-state/README.md) for the plugin API, server adapters, cache keys, dirty tracking, and status behaviour.
+
 ## The Problem
 
 In full-stack applications, data flows through multiple layers:
