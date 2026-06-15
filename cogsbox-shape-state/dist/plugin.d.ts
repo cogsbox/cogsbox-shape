@@ -98,7 +98,6 @@ export type ShapeStatus = {
 };
 type ShapePluginOptions = {
     logs?: boolean;
-    key?: string;
 };
 type ShapePersistenceContext<TEntry extends ShapeSchemaBoxEntry> = {
     stateKey: string;
@@ -113,6 +112,10 @@ type ShapePersistenceContext<TEntry extends ShapeSchemaBoxEntry> = {
     status: ShapeStatus;
 };
 export type ShapePersistenceAdapter<TEntry extends ShapeSchemaBoxEntry = ShapeSchemaBoxEntry> = {
+    key?: (ctx: {
+        shape: TEntry["stateType"];
+        stateKey: string;
+    }) => string | number | boolean | null | undefined;
     load?: (ctx: ShapePersistenceContext<TEntry>) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
     save?: (ctx: ShapePersistenceContext<TEntry> & {
         data: unknown;
@@ -147,7 +150,6 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
 };
 export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox, config?: ShapePluginConfig<TBox>): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
-    key: string | undefined;
 }, {
     cacheKey: string | undefined;
     baseline: any;

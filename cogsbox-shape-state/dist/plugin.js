@@ -45,8 +45,11 @@ function valuesEqual(left, right) {
         return false;
     }
 }
-function cacheKeyFor(stateKey, options) {
-    return options?.key ?? stateKey;
+function cacheKeyFor(stateKey, adapter, shape) {
+    const key = adapter?.key?.({ shape: shape, stateKey });
+    if (key === undefined || key === null || key === "")
+        return stateKey;
+    return `${stateKey}:${String(key)}`;
 }
 function dirtyPathKey(path) {
     return path.length === 0 ? "$" : path.join(".");
@@ -74,12 +77,12 @@ function sameStatus(left, right) {
         left.lastSavedAt === right.lastSavedAt &&
         valuesEqual(left.dirtyPaths, right.dirtyPaths));
 }
-function statusFromMeta(stateKey, options, meta) {
+function statusFromMeta(stateKey, cacheKey, meta) {
     const dirtyPaths = meta?.dirtyPaths ?? [];
     const loadStatus = meta?.loadStatus ?? "idle";
     const saveStatus = meta?.saveStatus ?? "idle";
     return {
-        cacheKey: meta?.cacheKey ?? cacheKeyFor(stateKey, options),
+        cacheKey: meta?.cacheKey ?? cacheKey,
         dirtyPaths,
         isDirty: dirtyPaths.length > 0,
         isLoading: loadStatus === "loading",
@@ -548,7 +551,6 @@ function buildInitialState(box) {
 const { createPlugin } = createPluginContext({
     options: z.object({
         logs: z.boolean().optional(),
-        key: z.string().optional(),
     }),
     pluginMetaData: z.object({
         cacheKey: z.string().optional(),
@@ -570,12 +572,14 @@ const { createPlugin } = createPluginContext({
     }),
 });
 export function createShapePlugin(box, config = {}) {
+    const getAdapter = (stateKey) => config.server?.[stateKey];
+    const getCacheKey = (stateKey, shape) => cacheKeyFor(stateKey, getAdapter(stateKey), shape);
     return createPlugin("shape")
         .initialState(() => buildInitialState(box))
         .transformState((params) => {
         wireShapeValidationOptions(box, params);
         const meta = (params.getPluginMetaData?.() ?? {});
-        const cacheKey = cacheKeyFor(params.stateKey, params.options);
+        const cacheKey = getCacheKey(params.stateKey, params.getState());
         if (!meta.baseline || meta.cacheKey !== cacheKey) {
             params.setPluginMetaData({
                 cacheKey,
@@ -602,7 +606,20 @@ export function createShapePlugin(box, config = {}) {
             params.setPluginMetaData({ suppressDirtyOnce: false });
             return;
         }
-        const beforeStatus = statusFromMeta(params.stateKey, params.options, meta);
+        const cacheKey = getCacheKey(params.stateKey, params.getState());
+        if (meta.cacheKey && meta.cacheKey !== cacheKey) {
+            const nextMeta = {
+                ...meta,
+                cacheKey,
+                baseline: params.getState(),
+                dirtyPaths: [],
+                isDirty: false,
+            };
+            params.setPluginMetaData(nextMeta);
+            notifyShapeStatus(params.stateKey, []);
+            return;
+        }
+        const beforeStatus = statusFromMeta(params.stateKey, cacheKey, meta);
         const baseline = meta.baseline ?? box[params.stateKey]?.generateDefaults?.();
         const dirty = new Set(meta.dirtyPaths ?? []);
         const key = dirtyPathKey(params.update.path);
@@ -615,11 +632,12 @@ export function createShapePlugin(box, config = {}) {
         }
         const nextMeta = {
             ...meta,
+            cacheKey,
             dirtyPaths: [...dirty],
             isDirty: dirty.size > 0,
         };
         params.setPluginMetaData(nextMeta);
-        if (!sameStatus(beforeStatus, statusFromMeta(params.stateKey, params.options, nextMeta))) {
+        if (!sameStatus(beforeStatus, statusFromMeta(params.stateKey, cacheKey, nextMeta))) {
             notifyShapeStatus(params.stateKey, []);
         }
     })
@@ -632,17 +650,19 @@ export function createShapePlugin(box, config = {}) {
         })),
         status: m.object((ctx) => {
             ctx.watchPluginMeta?.("status");
-            return statusFromMeta(ctx.stateKey, ctx.options, ctx.getFieldMetaData());
+            const cacheKey = getCacheKey(ctx.stateKey, ctx.$get());
+            return statusFromMeta(ctx.stateKey, cacheKey, ctx.getFieldMetaData());
         }),
         load: m.object(async (ctx) => {
             const entry = box[ctx.stateKey];
-            const adapter = config.server?.[ctx.stateKey];
+            const adapter = getAdapter(ctx.stateKey);
             if (!entry || !adapter?.load) {
                 throw new Error(`No shape load adapter registered for ${ctx.stateKey}`);
             }
+            const value = ctx.$get();
             const meta = (ctx.getFieldMetaData() ?? {});
-            const cacheKey = cacheKeyFor(ctx.stateKey, ctx.options);
-            const status = statusFromMeta(ctx.stateKey, ctx.options, meta);
+            const cacheKey = getCacheKey(ctx.stateKey, value);
+            const status = statusFromMeta(ctx.stateKey, cacheKey, meta);
             ctx.setFieldMetaData({
                 cacheKey,
                 loadStatus: "loading",
@@ -654,9 +674,9 @@ export function createShapePlugin(box, config = {}) {
                     stateKey: ctx.stateKey,
                     cacheKey,
                     path: ctx.path,
-                    value: ctx.$get(),
+                    value,
                     entry,
-                    id: identityFor(entry, ctx.$get()),
+                    id: identityFor(entry, value),
                     options: ctx.options,
                     status,
                 });
@@ -682,20 +702,20 @@ export function createShapePlugin(box, config = {}) {
         }),
         save: m.object(async (ctx) => {
             const entry = box[ctx.stateKey];
-            const adapter = config.server?.[ctx.stateKey];
+            const adapter = getAdapter(ctx.stateKey);
             if (!entry || !adapter) {
                 throw new Error(`No shape save adapter registered for ${ctx.stateKey}`);
             }
             const value = ctx.$get();
             const meta = (ctx.getFieldMetaData() ?? {});
-            const cacheKey = cacheKeyFor(ctx.stateKey, ctx.options);
+            const cacheKey = getCacheKey(ctx.stateKey, value);
             const operation = entry.isClientRecord?.(value) ? "insert" : "update";
             const data = operation === "insert"
                 ? entry.transforms?.parseForDb?.(value) ?? value
                 : entry.transforms?.parsePatchForDb?.(value) ??
                     entry.transforms?.parseForDb?.(value) ??
                     value;
-            const status = statusFromMeta(ctx.stateKey, ctx.options, meta);
+            const status = statusFromMeta(ctx.stateKey, cacheKey, meta);
             ctx.setFieldMetaData({
                 cacheKey,
                 saveStatus: "saving",
