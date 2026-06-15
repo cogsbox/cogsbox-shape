@@ -149,7 +149,8 @@ const factorySchema = schema({
       toDb: (val: boolean) => (val ? 1 : 0),
     }),
   boxes: s.hasMany([]),
-  // Virtual client-only field
+  tradeCount: s.client(0),
+  totalPnl: s.client(0),
   statusLabel: s.client(""),
 }).derive({
   forClient: {
@@ -865,6 +866,8 @@ describe("cogsbox-shape-db", () => {
       name: "Hydrated FindMany Factory",
       isActive: false,
       statusLabel: "Hydrated FindMany Factory - Inactive",
+      tradeCount: 0,
+      totalPnl: 0,
       boxes: [
         {
           id: box.id,
@@ -877,6 +880,26 @@ describe("cogsbox-shape-db", () => {
         },
       ],
     });
+  });
+
+  it("view findMany returns client-only fields with defaults", async () => {
+    const b = connect(factoryViewBox, db);
+    await b.factories
+      .insert({
+        ...factoryViewBox.factories.generateDefaults(),
+        name: "Client Default Test",
+        isActive: true,
+      })
+      .ids();
+
+    const factoryView = b.factories.createView({
+      boxes: true,
+    });
+    const rows = await factoryView.findMany();
+    for (const row of rows) {
+      expect(row).toHaveProperty("tradeCount", 0);
+      expect(row).toHaveProperty("totalPnl", 0);
+    }
   });
 
   it("findMany returns all records", async () => {
@@ -906,6 +929,14 @@ describe("cogsbox-shape-db", () => {
       where: { name: { contains: "Ali" } },
     });
     expect(results.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("findMany returns client-only fields with defaults", async () => {
+    const b = connect(box, db);
+    const all = await b.users.findMany();
+    for (const row of all) {
+      expect(row).toHaveProperty("statusLabel", "");
+    }
   });
 
   it("update modifies fields and returns PK from the db", async () => {

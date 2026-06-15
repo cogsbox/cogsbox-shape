@@ -782,8 +782,8 @@ function createBuilder<
         }
       }
 
-      const newConfig = { ...config.sqlConfig };
-      if (clientPk !== undefined) {
+      const newConfig = config.sqlConfig ? { ...config.sqlConfig } : null;
+      if (newConfig && clientPk !== undefined) {
         (newConfig as any).isClientPk = clientPk;
       }
 
@@ -1405,7 +1405,7 @@ export function createSchema<
         )
       ) {
         continue;
-      } else if (sqlConfig) {
+      } else if (sqlConfig?.type) {
         const dbFieldName = sqlConfig.field || key;
         sqlFields[dbFieldName] = config.zodSqlSchema;
 

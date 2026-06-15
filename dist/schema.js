@@ -261,8 +261,8 @@ function createBuilder(config) {
                     actualValue = inferredClientDefault;
                 }
             }
-            const newConfig = { ...config.sqlConfig };
-            if (clientPk !== undefined) {
+            const newConfig = config.sqlConfig ? { ...config.sqlConfig } : null;
+            if (newConfig && clientPk !== undefined) {
                 newConfig.isClientPk = clientPk;
             }
             let clientAndServerSchema;
@@ -554,7 +554,7 @@ export function createSchema(schema, relations) {
                 ["hasMany", "hasOne", "belongsTo", "manyToMany"].includes(sqlConfig.type)) {
                 continue;
             }
-            else if (sqlConfig) {
+            else if (sqlConfig?.type) {
                 const dbFieldName = sqlConfig.field || key;
                 sqlFields[dbFieldName] = config.zodSqlSchema;
                 if (sqlConfig.sqlOnly) {
