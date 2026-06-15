@@ -817,7 +817,13 @@ export function createSchema(schema, relations) {
         },
         parseFromDb: (dbData) => {
             const parsed = refinedSqlSchema.parse(dbData);
-            return toClient(parsed);
+            const clientObj = toClient(parsed);
+            for (const key in defaultValues) {
+                if (!(key in clientObj)) {
+                    clientObj[key] = defaultValues[key];
+                }
+            }
+            return clientObj;
         },
     };
 }

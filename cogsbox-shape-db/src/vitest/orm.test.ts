@@ -508,7 +508,7 @@ describe("cogsbox-shape-db", () => {
       email: "client-only-insert@test.com",
       isActive: true,
     });
-    expect(stored).not.toHaveProperty("statusLabel");
+    expect(stored).toHaveProperty("statusLabel", "");
   });
 
   it("insert rejects non-sqlOnly fields in the second parameter", async () => {
@@ -997,7 +997,7 @@ describe("cogsbox-shape-db", () => {
       email: "client-only-update@test.com",
       isActive: false,
     });
-    expect(updated).not.toHaveProperty("statusLabel");
+    expect(updated).toHaveProperty("statusLabel", "");
   });
 
   it("update accepts sqlOnly fields as the third parameter", async () => {
