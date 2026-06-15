@@ -81,3 +81,37 @@ type _tradingRulesNotAny = 0 extends 1 &
   : true;
 type _assertTradingRulesHasJournalId = Assert<_tradingRulesHasJournalId>;
 type _assertTradingRulesNotAny = Assert<_tradingRulesNotAny>;
+
+const tradingRulesViewPlugin = createShapePlugin(journalSchemaBox, {
+  state: {
+    tradingRulesView: {
+      from: "tradingRulesForm",
+      with: {},
+      key: ({ shape }) => shape.journalId,
+      save: ({ value }) => {
+        const journalId: number = value.journalId;
+        return { ...value, journalId };
+      },
+    },
+  },
+});
+
+type TradingRulesViewPluginInitialState = ReturnType<
+  NonNullable<(typeof tradingRulesViewPlugin)["initialState"]>
+>;
+type _tradingRulesViewHasJournalId =
+  TradingRulesViewPluginInitialState["tradingRulesView"]["journalId"] extends number
+    ? true
+    : false;
+type _assertTradingRulesViewHasJournalId =
+  Assert<_tradingRulesViewHasJournalId>;
+
+createShapePlugin(journalSchemaBox, {
+  state: {
+    // @ts-expect-error from must be a key of journalSchemaBox
+    badView: {
+      from: "missingForm",
+      with: {},
+    },
+  },
+});

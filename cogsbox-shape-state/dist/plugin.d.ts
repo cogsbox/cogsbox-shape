@@ -167,6 +167,12 @@ type ShapeStateConfigEntry<TBox extends ShapeSchemaBox, TKey extends PropertyKey
 type ShapeStateConfig<TBox extends ShapeSchemaBox> = Partial<{
     [K in ShapeBoxKey<TBox>]: ShapeStateConfigEntry<TBox, K>;
 }>;
+type ShapeStateConfigFor<TBox extends ShapeSchemaBox, TState extends Record<string, unknown>> = {
+    [K in keyof TState]: K extends ShapeBoxKey<TBox> ? ShapePersistenceAdapter<TBox[K]> : TState[K] extends {
+        from: infer TFrom;
+        with: infer TWith;
+    } ? TFrom extends ShapeBoxKey<TBox> ? ShapeViewStateConfig<TBox, TFrom, TWith> : never : ShapeViewStateConfigUnion<TBox>;
+};
 type StateEntryShape<TBox extends ShapeSchemaBox, TEntry, TFallbackKey extends PropertyKey> = TEntry extends {
     from: infer TFrom;
     with: infer TWith;
@@ -175,7 +181,7 @@ type InferConfiguredShapeState<TBox extends ShapeSchemaBox, TState extends Recor
     [K in keyof TState]: StateEntryShape<TBox, NonNullable<TState[K]>, K>;
 };
 export type ShapePluginConfig<TBox extends ShapeSchemaBox, TState extends Record<string, unknown> = {}> = {
-    state?: TState & ShapeStateConfig<TBox>;
+    state?: ShapeStateConfig<TBox> & TState & ShapeStateConfigFor<TBox, TState>;
     /** @deprecated use state */
     server?: {
         [K in keyof TBox & string]?: ShapePersistenceAdapter<TBox[K]>;

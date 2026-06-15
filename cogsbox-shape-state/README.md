@@ -2,7 +2,7 @@
 
 `cogsbox-shape/state` is the `cogsbox-state` plugin for Shape schema boxes.
 
-It wires Shape defaults and client validation into state, and adds a small persistence surface for server-backed state:
+It wires Shape defaults and client validation into state, and adds a small persistence surface for state that needs to load or save data:
 
 ```ts
 rules.$save();
@@ -11,7 +11,7 @@ rules.$revert();
 rules.$status();
 ```
 
-The plugin does not know your routes, users, database keys, or server functions. The app supplies those through a server adapter.
+The plugin does not know your routes, users, database keys, or server functions. The app supplies those through state adapters.
 
 ## Setup
 
@@ -34,14 +34,15 @@ rules.startingSizeMode.$get();
 rules.$validateGroup(["startingSizeMode"]);
 ```
 
-## Server Adapters
+## State Adapters
 
-Add persistence by passing `server` handlers keyed by schema-box key.
+Add persistence by passing `state` handlers keyed by schema-box key. Known schema keys are typed from the Shape entry, so `shape` and `value` are the client state for that schema.
 
 ```ts
 const shapePlugin = createShapePlugin(schemaBox, {
-  server: {
+  state: {
     tradingRulesForm: {
+      key: ({ shape }) => shape.journalId,
       save: async ({ value, data, operation, id, cacheKey }) => {
         await saveTradingRules({
           data,
@@ -57,6 +58,8 @@ const shapePlugin = createShapePlugin(schemaBox, {
 });
 ```
 
+`key({ shape })` chooses the cache/persistence lane for that state entry. It is useful when one state key can represent different records, pages, or route contexts. If omitted, the state key itself is used.
+
 `$save()` transforms the current state before calling the adapter:
 
 - new client records use `entry.transforms.parseForDb(value)` when available
@@ -67,7 +70,7 @@ You can provide one `save` handler, or split it into `insert` and `update`.
 
 ```ts
 const shapePlugin = createShapePlugin(schemaBox, {
-  server: {
+  state: {
     contacts: {
       insert: async ({ data }) => api.createContact(data),
       update: async ({ data, id }) => api.updateContact(id, data),
@@ -78,31 +81,27 @@ const shapePlugin = createShapePlugin(schemaBox, {
 
 Handlers must return the saved or loaded state. The plugin normalises the returned value back into client shape where possible, updates the state, and uses that value as the new clean baseline.
 
-## App-Specific Server Shapes
+## View State
 
-If your server function needs app-only fields, adapt at the boundary. Keep those details in the app, not in the plugin.
+Custom state keys can be backed by a Shape view. Use `from` to point at a schema-box key and `with` to choose the relation selection. `from` is type-safe; it must be one of the schema box keys.
 
 ```ts
 const shapePlugin = createShapePlugin(schemaBox, {
-  server: {
-    tradingRulesForm: {
-      save: async ({ value }) => {
-        const rules = value as TradingRulesForm;
-        const { isDefault, ...data } = rules;
-        const setAsDefault = Boolean(isDefault);
-
-        await saveTradingRules({
-          data: { ...data, setAsDefault },
-        });
-
-        return { ...rules, isDefault: setAsDefault };
+  state: {
+    journalWithRules: {
+      from: "journals",
+      with: { tradingRules: true },
+      key: ({ shape }) => shape.id,
+      save: async ({ value, data }) => {
+        await saveJournalView(data);
+        return value;
       },
     },
   },
 });
 ```
 
-This keeps user/session/page keys and server-function details out of the generic plugin.
+For view-backed entries, `value` is the view state. The `key` callback receives the base shape from `from`, so route/cache identity can be derived from the parent record.
 
 ## Cache Keys
 
@@ -113,11 +112,16 @@ const rules = useCogsState("tradingRulesForm");
 rules.$status().cacheKey; // "tradingRulesForm"
 ```
 
-For per-record or per-page persistence, pass an arbitrary key through the `shape` plugin options:
+For per-record or per-page persistence, configure `key` on the state adapter:
 
 ```ts
-const rules = useCogsState("tradingRulesForm", {
-  shape: { key: `trading-rules:${journalId}` },
+const shapePlugin = createShapePlugin(schemaBox, {
+  state: {
+    tradingRulesForm: {
+      key: ({ shape }) => shape.journalId,
+      save: ({ data }) => saveTradingRules({ data }),
+    },
+  },
 });
 ```
 
