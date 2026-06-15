@@ -583,7 +583,17 @@ const { createPlugin } = createPluginContext({
     }),
 });
 export function createShapePlugin(box, config = {}) {
-    const entries = { ...box };
+    const entries = {};
+    for (const [key, value] of Object.entries(box)) {
+        if (!value)
+            continue;
+        if (typeof value === "object" && "isView" in value && value.isView) {
+            entries[key] = normalizeViewEntry(value);
+        }
+        else {
+            entries[key] = value;
+        }
+    }
     const stateConfig = config.state ?? {};
     for (const [stateKey, rawStateEntry] of Object.entries(stateConfig)) {
         const stateEntry = rawStateEntry;
