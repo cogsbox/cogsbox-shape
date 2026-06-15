@@ -456,6 +456,46 @@ export function connect<T extends Record<string, unknown>>(
             },
           });
         };
+      } else if ((entry as any).isView) {
+        const viewTransforms = (entry as any).transforms ?? {};
+        const reconcile = (entry as any).reconcile as
+          | ((clientData: unknown) => { withServer: (serverData: unknown) => unknown })
+          | undefined;
+        const registry = (entry as any).__registry as
+          | Record<string, any>
+          | undefined;
+        const baseTable = (entry as any).baseTable as string | undefined;
+        const viewSelection = (entry as any).viewSelection as
+          | Record<string, any>
+          | boolean
+          | undefined;
+        const hydrateRows =
+          registry && baseTable && viewSelection
+            ? createViewHydrator(db, registry, baseTable, viewSelection)
+            : undefined;
+        const viewDb = new TableDB(
+          db,
+          meta,
+          {
+            toClient: viewTransforms.toClient ?? ((r: any) => r),
+            toDb: viewTransforms.toDb ?? ((r: any) => r),
+            parseForDb: viewTransforms.parseForDb ?? ((r: any) => r),
+            parsePatchForDb: viewTransforms.parsePatchForDb ?? viewTransforms.toDb ?? ((r: any) => r),
+            parseFromDb: viewTransforms.parseFromDb ?? ((r: any) => r),
+          },
+          reconcile,
+          hydrateRows,
+        );
+
+        result[key] = new Proxy(entry, {
+          get(target, prop, receiver) {
+            if (prop in viewDb) {
+              const value = Reflect.get(viewDb, prop, viewDb);
+              return typeof value === "function" ? value.bind(viewDb) : value;
+            }
+            return Reflect.get(target, prop, receiver);
+          },
+        });
       }
     } else {
       result[key] = entry;

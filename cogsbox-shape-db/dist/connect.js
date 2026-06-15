@@ -232,6 +232,32 @@ export function connect(box, db) {
                     });
                 };
             }
+            else if (entry.isView) {
+                const viewTransforms = entry.transforms ?? {};
+                const reconcile = entry.reconcile;
+                const registry = entry.__registry;
+                const baseTable = entry.baseTable;
+                const viewSelection = entry.viewSelection;
+                const hydrateRows = registry && baseTable && viewSelection
+                    ? createViewHydrator(db, registry, baseTable, viewSelection)
+                    : undefined;
+                const viewDb = new TableDB(db, meta, {
+                    toClient: viewTransforms.toClient ?? ((r) => r),
+                    toDb: viewTransforms.toDb ?? ((r) => r),
+                    parseForDb: viewTransforms.parseForDb ?? ((r) => r),
+                    parsePatchForDb: viewTransforms.parsePatchForDb ?? viewTransforms.toDb ?? ((r) => r),
+                    parseFromDb: viewTransforms.parseFromDb ?? ((r) => r),
+                }, reconcile, hydrateRows);
+                result[key] = new Proxy(entry, {
+                    get(target, prop, receiver) {
+                        if (prop in viewDb) {
+                            const value = Reflect.get(viewDb, prop, viewDb);
+                            return typeof value === "function" ? value.bind(viewDb) : value;
+                        }
+                        return Reflect.get(target, prop, receiver);
+                    },
+                });
+            }
         }
         else {
             result[key] = entry;
