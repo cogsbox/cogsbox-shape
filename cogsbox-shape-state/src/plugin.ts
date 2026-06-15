@@ -118,11 +118,14 @@ type ShapePluginOptions = {
   key?: string;
 };
 
+type RuntimeShapePersistenceAdapter =
+  ShapePersistenceAdapter<ShapeSchemaBoxEntry>;
+
 type ShapePersistenceContext<TEntry extends ShapeSchemaBoxEntry> = {
   stateKey: string;
   cacheKey: string;
   path: string[];
-  value: unknown;
+  value: TEntry["stateType"];
   data?: unknown;
   entry: TEntry;
   id?: Record<string, unknown>;
@@ -134,29 +137,33 @@ type ShapePersistenceContext<TEntry extends ShapeSchemaBoxEntry> = {
 export type ShapePersistenceAdapter<
   TEntry extends ShapeSchemaBoxEntry = ShapeSchemaBoxEntry,
 > = {
-  load?: (ctx: ShapePersistenceContext<TEntry>) => Promise<unknown> | unknown;
+  load?: (
+    ctx: ShapePersistenceContext<TEntry>,
+  ) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
   save?: (
     ctx: ShapePersistenceContext<TEntry> & {
       data: unknown;
       operation: "insert" | "update";
     },
-  ) => Promise<unknown> | unknown;
+  ) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
   insert?: (
     ctx: ShapePersistenceContext<TEntry> & {
       data: unknown;
       operation: "insert";
     },
-  ) => Promise<unknown> | unknown;
+  ) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
   update?: (
     ctx: ShapePersistenceContext<TEntry> & {
       data: unknown;
       operation: "update";
     },
-  ) => Promise<unknown> | unknown;
+  ) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
 };
 
 export type ShapePluginConfig<TBox extends ShapeSchemaBox> = {
-  server?: Partial<Record<keyof TBox & string, ShapePersistenceAdapter>>;
+  server?: {
+    [K in keyof TBox & string]?: ShapePersistenceAdapter<TBox[K]>;
+  };
 };
 
 function pathKey(path: string[]) {
@@ -990,7 +997,9 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
       }),
       load: m.object(async (ctx) => {
         const entry = box[ctx.stateKey];
-        const adapter = config.server?.[ctx.stateKey];
+        const adapter = config.server?.[
+          ctx.stateKey as keyof TBox & string
+        ] as RuntimeShapePersistenceAdapter | undefined;
         if (!entry || !adapter?.load) {
           throw new Error(`No shape load adapter registered for ${ctx.stateKey}`);
         }
@@ -1039,7 +1048,9 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
       }),
       save: m.object(async (ctx) => {
         const entry = box[ctx.stateKey];
-        const adapter = config.server?.[ctx.stateKey];
+        const adapter = config.server?.[
+          ctx.stateKey as keyof TBox & string
+        ] as RuntimeShapePersistenceAdapter | undefined;
         if (!entry || !adapter) {
           throw new Error(`No shape save adapter registered for ${ctx.stateKey}`);
         }
