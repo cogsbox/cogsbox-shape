@@ -27,11 +27,33 @@ export type ShapeSchemaBoxEntry = {
     isClientRecord?: (value: any) => boolean;
     refineInfo?: ShapeRefineInfo;
 };
-export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;
+type ShapeViewEntry = Omit<ShapeSchemaBoxEntry, "generateDefaults" | "stateType" | "isClientRecord"> & {
+    defaults: () => any;
+    reconcile?: any;
+    isView: true;
+    viewSelection: unknown;
+    baseTable: string;
+};
+type ShapeSchemaBoxEntryWithViews = ShapeSchemaBoxEntry & {
+    RelationSelection?: unknown;
+    createView?: (selection: any) => ShapeViewEntry;
+};
+export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntryWithViews>;
+type NormalizedShapeEntry<TState extends Record<string, unknown> = Record<string, unknown>> = ShapeSchemaBoxEntry & {
+    stateType: TState;
+};
 /** Per-box-key state: each entry's field keys stay typed via stateType. */
 export type InferShapeBoxState<TBox extends ShapeSchemaBox> = {
     [K in keyof TBox]: TBox[K]["stateType"];
 };
+type ShapeBoxKey<TBox extends ShapeSchemaBox> = keyof TBox & string;
+type ViewStateShape<TBox extends ShapeSchemaBox, TFrom extends ShapeBoxKey<TBox>, TWith> = TBox[TFrom] extends {
+    createView: (selection: TWith) => infer TView;
+} ? TView extends {
+    schemas: {
+        client: z.ZodTypeAny;
+    };
+} ? z.infer<TView["schemas"]["client"]> : Record<string, unknown> : Record<string, unknown>;
 type TransformStateParams = {
     stateKey: string;
     setOptions: (options: {
@@ -130,7 +152,34 @@ export type ShapePersistenceAdapter<TEntry extends ShapeSchemaBoxEntry = ShapeSc
         operation: "update";
     }) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
 };
-export type ShapePluginConfig<TBox extends ShapeSchemaBox> = {
+type ShapeViewStateConfig<TBox extends ShapeSchemaBox, TFrom extends ShapeBoxKey<TBox>, TWith> = Omit<ShapePersistenceAdapter<NormalizedShapeEntry<ViewStateShape<TBox, TFrom, TWith>>>, "key"> & {
+    from: TFrom;
+    with: TWith;
+    key?: (ctx: {
+        shape: TBox[TFrom]["stateType"];
+        stateKey: string;
+    }) => string | number | boolean | null | undefined;
+};
+type ShapeViewStateConfigUnion<TBox extends ShapeSchemaBox> = {
+    [K in ShapeBoxKey<TBox>]: ShapeViewStateConfig<TBox, K, any>;
+}[ShapeBoxKey<TBox>];
+type ShapeBoxAdapterUnion<TBox extends ShapeSchemaBox> = {
+    [K in ShapeBoxKey<TBox>]: ShapePersistenceAdapter<TBox[K]>;
+}[ShapeBoxKey<TBox>];
+type ShapeStateConfigEntry<TBox extends ShapeSchemaBox, TKey extends PropertyKey> = TKey extends ShapeBoxKey<TBox> ? ShapePersistenceAdapter<TBox[TKey]> | ShapeViewStateConfigUnion<TBox> : ShapeViewStateConfigUnion<TBox>;
+type ShapeStateConfig<TBox extends ShapeSchemaBox> = Partial<{
+    [K in ShapeBoxKey<TBox>]: ShapeStateConfigEntry<TBox, K>;
+}> & Record<string, ShapeViewStateConfigUnion<TBox> | ShapeBoxAdapterUnion<TBox> | undefined>;
+type StateEntryShape<TBox extends ShapeSchemaBox, TEntry, TFallbackKey extends PropertyKey> = TEntry extends {
+    from: infer TFrom;
+    with: infer TWith;
+} ? TFrom extends ShapeBoxKey<TBox> ? ViewStateShape<TBox, TFrom, TWith> : never : TFallbackKey extends ShapeBoxKey<TBox> ? TBox[TFallbackKey]["stateType"] : never;
+type InferConfiguredShapeState<TBox extends ShapeSchemaBox, TState extends ShapeStateConfig<TBox>> = InferShapeBoxState<TBox> & {
+    [K in keyof TState]: StateEntryShape<TBox, NonNullable<TState[K]>, K>;
+};
+export type ShapePluginConfig<TBox extends ShapeSchemaBox, TState extends ShapeStateConfig<TBox> = {}> = {
+    state?: TState;
+    /** @deprecated use state */
     server?: {
         [K in keyof TBox & string]?: ShapePersistenceAdapter<TBox[K]>;
     };
@@ -148,7 +197,9 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
         data: unknown;
     }[];
 };
-export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox, config?: ShapePluginConfig<TBox>): import("cogsbox-state").CogsPluginBuilder<"shape", {
+export declare function createShapePlugin<const TBox extends ShapeSchemaBox, const TState extends ShapeStateConfig<TBox> = {}>(box: TBox, config?: ShapePluginConfig<TBox, TState> & {
+    state?: ShapeStateConfig<TBox>;
+}): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
 }, {
     cacheKey: string | undefined;
@@ -207,5 +258,5 @@ export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box
         data: {} | null;
         error?: undefined;
     }>;
-}, true, true, true, true, false, true, InferShapeBoxState<TBox>>;
+}, true, true, true, true, false, true, InferConfiguredShapeState<TBox, TState>>;
 export {};

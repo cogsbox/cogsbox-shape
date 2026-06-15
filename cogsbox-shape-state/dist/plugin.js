@@ -537,16 +537,27 @@ export function validateShapeKeys(box, params) {
         }) ?? [],
     };
 }
-function buildInitialState(box) {
+function buildInitialState(entries) {
     const state = {};
-    for (const key of Object.keys(box)) {
-        const entry = box[key];
+    for (const key of Object.keys(entries)) {
+        const entry = entries[key];
         if (!entry)
             continue;
-        state[key] =
-            entry.generateDefaults();
+        state[key] = entry.generateDefaults();
     }
     return state;
+}
+function normalizeViewEntry(view) {
+    return {
+        stateType: {},
+        generateDefaults: view.defaults,
+        schemas: view.schemas,
+        validators: view.validators,
+        transforms: view.transforms,
+        pk: view.pk,
+        clientPk: view.clientPk,
+        isClientRecord: () => false,
+    };
 }
 const { createPlugin } = createPluginContext({
     options: z.object({
@@ -572,12 +583,27 @@ const { createPlugin } = createPluginContext({
     }),
 });
 export function createShapePlugin(box, config = {}) {
-    const getAdapter = (stateKey) => config.server?.[stateKey];
+    const entries = { ...box };
+    const stateConfig = config.state ?? {};
+    for (const [stateKey, rawStateEntry] of Object.entries(stateConfig)) {
+        const stateEntry = rawStateEntry;
+        if (!stateEntry || typeof stateEntry !== "object" || !("from" in stateEntry)) {
+            continue;
+        }
+        const base = box[stateEntry.from];
+        const view = base?.createView?.(stateEntry.with);
+        if (!view) {
+            throw new Error(`No shape view could be created for state key "${stateKey}"`);
+        }
+        entries[stateKey] = normalizeViewEntry(view);
+    }
+    const getAdapter = (stateKey) => (config.state?.[stateKey] ??
+        config.server?.[stateKey]);
     const getCacheKey = (stateKey, shape) => cacheKeyFor(stateKey, getAdapter(stateKey), shape);
     return createPlugin("shape")
-        .initialState(() => buildInitialState(box))
+        .initialState(() => buildInitialState(entries))
         .transformState((params) => {
-        wireShapeValidationOptions(box, params);
+        wireShapeValidationOptions(entries, params);
         const meta = (params.getPluginMetaData?.() ?? {});
         const cacheKey = getCacheKey(params.stateKey, params.getState());
         if (!meta.baseline || meta.cacheKey !== cacheKey) {
@@ -595,10 +621,10 @@ export function createShapePlugin(box, config = {}) {
         if (params.options?.logs) {
             console.log("[shape]", params.stateKey, params.path, params.event.activityType);
         }
-        validateShapeRefines(box, params);
+        validateShapeRefines(entries, params);
     })
         .onUpdate((params) => {
-        validateShapeRefinesOnUpdate(box, params);
+        validateShapeRefinesOnUpdate(entries, params);
         if (params.update.updateType !== "update")
             return;
         const meta = (params.getPluginMetaData?.() ?? {});
@@ -620,7 +646,7 @@ export function createShapePlugin(box, config = {}) {
             return;
         }
         const beforeStatus = statusFromMeta(params.stateKey, cacheKey, meta);
-        const baseline = meta.baseline ?? box[params.stateKey]?.generateDefaults?.();
+        const baseline = meta.baseline ?? entries[params.stateKey]?.generateDefaults?.();
         const dirty = new Set(meta.dirtyPaths ?? []);
         const key = dirtyPathKey(params.update.path);
         const baselineValue = getValueAtPath(baseline, params.update.path);
@@ -642,7 +668,7 @@ export function createShapePlugin(box, config = {}) {
         }
     })
         .methods((m) => ({
-        validateGroup: m.object((ctx, keys) => validateShapeKeys(box, {
+        validateGroup: m.object((ctx, keys) => validateShapeKeys(entries, {
             stateKey: ctx.stateKey,
             path: ctx.path,
             keys,
@@ -654,7 +680,7 @@ export function createShapePlugin(box, config = {}) {
             return statusFromMeta(ctx.stateKey, cacheKey, ctx.getFieldMetaData());
         }),
         load: m.object(async (ctx) => {
-            const entry = box[ctx.stateKey];
+            const entry = entries[ctx.stateKey];
             const adapter = getAdapter(ctx.stateKey);
             if (!entry || !adapter?.load) {
                 throw new Error(`No shape load adapter registered for ${ctx.stateKey}`);
@@ -701,7 +727,7 @@ export function createShapePlugin(box, config = {}) {
             }
         }),
         save: m.object(async (ctx) => {
-            const entry = box[ctx.stateKey];
+            const entry = entries[ctx.stateKey];
             const adapter = getAdapter(ctx.stateKey);
             if (!entry || !adapter) {
                 throw new Error(`No shape save adapter registered for ${ctx.stateKey}`);

@@ -29,12 +29,45 @@ export type ShapeSchemaBoxEntry = {
   refineInfo?: ShapeRefineInfo;
 };
 
-export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;
+type ShapeViewEntry = Omit<
+  ShapeSchemaBoxEntry,
+  "generateDefaults" | "stateType" | "isClientRecord"
+> & {
+  defaults: () => any;
+  reconcile?: any;
+  isView: true;
+  viewSelection: unknown;
+  baseTable: string;
+};
+
+type ShapeSchemaBoxEntryWithViews = ShapeSchemaBoxEntry & {
+  RelationSelection?: unknown;
+  createView?: (selection: any) => ShapeViewEntry;
+};
+
+export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntryWithViews>;
+
+type NormalizedShapeEntry<TState extends Record<string, unknown> = Record<string, unknown>> =
+  ShapeSchemaBoxEntry & {
+    stateType: TState;
+  };
 
 /** Per-box-key state: each entry's field keys stay typed via stateType. */
 export type InferShapeBoxState<TBox extends ShapeSchemaBox> = {
   [K in keyof TBox]: TBox[K]["stateType"];
 };
+
+type ShapeBoxKey<TBox extends ShapeSchemaBox> = keyof TBox & string;
+
+type ViewStateShape<
+  TBox extends ShapeSchemaBox,
+  TFrom extends ShapeBoxKey<TBox>,
+  TWith,
+> = TBox[TFrom] extends { createView: (selection: TWith) => infer TView }
+  ? TView extends { schemas: { client: z.ZodTypeAny } }
+    ? z.infer<TView["schemas"]["client"]>
+    : Record<string, unknown>
+  : Record<string, unknown>;
 
 type TransformStateParams = {
   stateKey: string;
@@ -163,7 +196,70 @@ export type ShapePersistenceAdapter<
   ) => Promise<TEntry["stateType"] | unknown> | TEntry["stateType"] | unknown;
 };
 
-export type ShapePluginConfig<TBox extends ShapeSchemaBox> = {
+type ShapeViewStateConfig<
+  TBox extends ShapeSchemaBox,
+  TFrom extends ShapeBoxKey<TBox>,
+  TWith,
+> = Omit<
+  ShapePersistenceAdapter<NormalizedShapeEntry<ViewStateShape<TBox, TFrom, TWith>>>,
+  "key"
+> & {
+  from: TFrom;
+  with: TWith;
+  key?: (ctx: {
+    shape: TBox[TFrom]["stateType"];
+    stateKey: string;
+  }) => string | number | boolean | null | undefined;
+};
+
+type ShapeViewStateConfigUnion<TBox extends ShapeSchemaBox> = {
+  [K in ShapeBoxKey<TBox>]: ShapeViewStateConfig<TBox, K, any>;
+}[ShapeBoxKey<TBox>];
+
+type ShapeBoxAdapterUnion<TBox extends ShapeSchemaBox> = {
+  [K in ShapeBoxKey<TBox>]: ShapePersistenceAdapter<TBox[K]>;
+}[ShapeBoxKey<TBox>];
+
+type ShapeStateConfigEntry<
+  TBox extends ShapeSchemaBox,
+  TKey extends PropertyKey,
+> = TKey extends ShapeBoxKey<TBox>
+  ? ShapePersistenceAdapter<TBox[TKey]> | ShapeViewStateConfigUnion<TBox>
+  : ShapeViewStateConfigUnion<TBox>;
+
+type ShapeStateConfig<TBox extends ShapeSchemaBox> = Partial<{
+  [K in ShapeBoxKey<TBox>]: ShapeStateConfigEntry<TBox, K>;
+}> &
+  Record<
+    string,
+    ShapeViewStateConfigUnion<TBox> | ShapeBoxAdapterUnion<TBox> | undefined
+  >;
+
+type StateEntryShape<
+  TBox extends ShapeSchemaBox,
+  TEntry,
+  TFallbackKey extends PropertyKey,
+> = TEntry extends { from: infer TFrom; with: infer TWith }
+  ? TFrom extends ShapeBoxKey<TBox>
+    ? ViewStateShape<TBox, TFrom, TWith>
+    : never
+  : TFallbackKey extends ShapeBoxKey<TBox>
+    ? TBox[TFallbackKey]["stateType"]
+    : never;
+
+type InferConfiguredShapeState<
+  TBox extends ShapeSchemaBox,
+  TState extends ShapeStateConfig<TBox>,
+> = InferShapeBoxState<TBox> & {
+  [K in keyof TState]: StateEntryShape<TBox, NonNullable<TState[K]>, K>;
+};
+
+export type ShapePluginConfig<
+  TBox extends ShapeSchemaBox,
+  TState extends ShapeStateConfig<TBox> = {},
+> = {
+  state?: TState;
+  /** @deprecated use state */
   server?: {
     [K in keyof TBox & string]?: ShapePersistenceAdapter<TBox[K]>;
   };
@@ -877,17 +973,29 @@ export function validateShapeKeys(
   };
 }
 
-function buildInitialState<TBox extends ShapeSchemaBox>(
-  box: TBox,
-): InferShapeBoxState<TBox> {
-  const state = {} as InferShapeBoxState<TBox>;
-  for (const key of Object.keys(box) as Array<keyof TBox & string>) {
-    const entry = box[key];
+function buildInitialState<TState extends Record<string, ShapeSchemaBoxEntry>>(
+  entries: TState,
+): { [K in keyof TState]: TState[K]["stateType"] } {
+  const state = {} as { [K in keyof TState]: TState[K]["stateType"] };
+  for (const key of Object.keys(entries) as Array<keyof TState & string>) {
+    const entry = entries[key];
     if (!entry) continue;
-    state[key] =
-      entry.generateDefaults() as InferShapeBoxState<TBox>[typeof key];
+    state[key] = entry.generateDefaults() as TState[typeof key]["stateType"];
   }
   return state;
+}
+
+function normalizeViewEntry(view: ShapeViewEntry): ShapeSchemaBoxEntry {
+  return {
+    stateType: {} as Record<string, unknown>,
+    generateDefaults: view.defaults,
+    schemas: view.schemas,
+    validators: view.validators,
+    transforms: view.transforms,
+    pk: view.pk,
+    clientPk: view.clientPk,
+    isClientRecord: () => false,
+  };
 }
 
 const { createPlugin } = createPluginContext({
@@ -914,21 +1022,50 @@ const { createPlugin } = createPluginContext({
   }),
 });
 
-export function createShapePlugin<const TBox extends ShapeSchemaBox>(
+export function createShapePlugin<
+  const TBox extends ShapeSchemaBox,
+  const TState extends ShapeStateConfig<TBox> = {},
+>(
   box: TBox,
-  config: ShapePluginConfig<TBox> = {},
+  config: ShapePluginConfig<TBox, TState> & {
+    state?: ShapeStateConfig<TBox>;
+  } = {},
 ) {
+  const entries: Record<string, ShapeSchemaBoxEntry> = { ...box };
+  const stateConfig = config.state ?? {};
+
+  for (const [stateKey, rawStateEntry] of Object.entries(stateConfig)) {
+    const stateEntry = rawStateEntry as
+      | ShapeViewStateConfig<TBox, ShapeBoxKey<TBox>, any>
+      | undefined;
+    if (!stateEntry || typeof stateEntry !== "object" || !("from" in stateEntry)) {
+      continue;
+    }
+    const base = box[stateEntry.from as ShapeBoxKey<TBox>];
+    const view = base?.createView?.(stateEntry.with);
+    if (!view) {
+      throw new Error(
+        `No shape view could be created for state key "${stateKey}"`,
+      );
+    }
+    entries[stateKey] = normalizeViewEntry(view);
+  }
+
   const getAdapter = (stateKey: string) =>
-    config.server?.[
-      stateKey as keyof TBox & string
-    ] as RuntimeShapePersistenceAdapter | undefined;
+    ((config.state as Record<string, unknown> | undefined)?.[stateKey] ??
+      config.server?.[stateKey as keyof TBox & string]) as
+      | RuntimeShapePersistenceAdapter
+      | undefined;
   const getCacheKey = (stateKey: string, shape: unknown) =>
     cacheKeyFor(stateKey, getAdapter(stateKey), shape);
 
   return createPlugin("shape")
-    .initialState((): InferShapeBoxState<TBox> => buildInitialState(box))
+    .initialState(
+      (): InferConfiguredShapeState<TBox, TState> =>
+        buildInitialState(entries) as InferConfiguredShapeState<TBox, TState>,
+    )
     .transformState((params) => {
-      wireShapeValidationOptions(box, params);
+      wireShapeValidationOptions(entries, params);
       const meta = (params.getPluginMetaData?.() ?? {}) as ShapeMeta;
       const cacheKey = getCacheKey(params.stateKey, params.getState());
       if (!meta.baseline || meta.cacheKey !== cacheKey) {
@@ -951,10 +1088,10 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
           params.event.activityType,
         );
       }
-      validateShapeRefines(box, params);
+      validateShapeRefines(entries, params);
     })
     .onUpdate((params) => {
-      validateShapeRefinesOnUpdate(box, params);
+      validateShapeRefinesOnUpdate(entries, params);
       if (params.update.updateType !== "update") return;
 
       const meta = (params.getPluginMetaData?.() ?? {}) as ShapeMeta;
@@ -979,7 +1116,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
 
       const beforeStatus = statusFromMeta(params.stateKey, cacheKey, meta);
       const baseline =
-        meta.baseline ?? box[params.stateKey]?.generateDefaults?.();
+        meta.baseline ?? entries[params.stateKey]?.generateDefaults?.();
       const dirty = new Set(meta.dirtyPaths ?? []);
       const key = dirtyPathKey(params.update.path);
       const baselineValue = getValueAtPath(baseline, params.update.path);
@@ -1010,7 +1147,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
     .methods((m) => ({
       validateGroup: m.object(
         (ctx, keys?: readonly string[]) =>
-          validateShapeKeys(box, {
+          validateShapeKeys(entries, {
             stateKey: ctx.stateKey,
             path: ctx.path,
             keys,
@@ -1027,7 +1164,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
         );
       }),
       load: m.object(async (ctx) => {
-        const entry = box[ctx.stateKey];
+        const entry = entries[ctx.stateKey];
         const adapter = getAdapter(ctx.stateKey);
         if (!entry || !adapter?.load) {
           throw new Error(`No shape load adapter registered for ${ctx.stateKey}`);
@@ -1077,7 +1214,7 @@ export function createShapePlugin<const TBox extends ShapeSchemaBox>(
         }
       }),
       save: m.object(async (ctx) => {
-        const entry = box[ctx.stateKey];
+        const entry = entries[ctx.stateKey];
         const adapter = getAdapter(ctx.stateKey);
         if (!entry || !adapter) {
           throw new Error(`No shape save adapter registered for ${ctx.stateKey}`);

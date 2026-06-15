@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { createCogsState, PluginRunner, getGlobalStore } from "cogsbox-state";
 import { createSchemaBox, s, schema } from "cogsbox-shape";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -155,9 +155,15 @@ describe("shape plugin $validateGroup", () => {
           >
             Validate
           </button>
-          {form.max.$formElement(({ message, hasErrors }) => (
-            <p data-testid="max-error">{hasErrors ? message : ""}</p>
-          ))}
+          {form.max.$formElement(
+            ({
+              message,
+              hasErrors,
+            }: {
+              message?: string;
+              hasErrors: boolean;
+            }) => <p data-testid="max-error">{hasErrors ? message : ""}</p>,
+          )}
         </div>
       );
     }
