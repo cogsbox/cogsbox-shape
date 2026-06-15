@@ -1186,6 +1186,7 @@ export function createSchemaBox(schemas, resolutions) {
                         },
                     };
                 };
+                const viewDefaults = entry.generateDefaults();
                 return {
                     definition: entry.rawSchema,
                     schemaKey: tableName,
@@ -1214,7 +1215,13 @@ export function createSchemaBox(schemas, resolutions) {
                         },
                         parseFromDb: (dbData) => {
                             const mappedData = view.sql.parse(dbData);
-                            return viewToClient(mappedData);
+                            const clientObj = viewToClient(mappedData);
+                            for (const key in viewDefaults) {
+                                if (!(key in clientObj)) {
+                                    clientObj[key] = viewDefaults[key];
+                                }
+                            }
+                            return clientObj;
                         },
                     },
                     reconcile,
