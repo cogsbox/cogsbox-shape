@@ -168,7 +168,9 @@ describe("shape plugin $validateGroup", () => {
             }: {
               message?: string;
               hasErrors: boolean;
-            }) => <p data-testid="max-error">{hasErrors ? message : ""}</p>,
+            }) => (
+              <p data-testid="max-error">{hasErrors ? message : ""}</p>
+            ),
           )}
         </div>
       );

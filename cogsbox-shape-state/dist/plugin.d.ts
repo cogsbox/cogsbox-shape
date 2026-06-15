@@ -163,22 +163,19 @@ type ShapeViewStateConfig<TBox extends ShapeSchemaBox, TFrom extends ShapeBoxKey
 type ShapeViewStateConfigUnion<TBox extends ShapeSchemaBox> = {
     [K in ShapeBoxKey<TBox>]: ShapeViewStateConfig<TBox, K, any>;
 }[ShapeBoxKey<TBox>];
-type ShapeBoxAdapterUnion<TBox extends ShapeSchemaBox> = {
-    [K in ShapeBoxKey<TBox>]: ShapePersistenceAdapter<TBox[K]>;
-}[ShapeBoxKey<TBox>];
-type ShapeStateConfigEntry<TBox extends ShapeSchemaBox, TKey extends PropertyKey> = TKey extends ShapeBoxKey<TBox> ? ShapePersistenceAdapter<TBox[TKey]> | ShapeViewStateConfigUnion<TBox> : ShapeViewStateConfigUnion<TBox>;
+type ShapeStateConfigEntry<TBox extends ShapeSchemaBox, TKey extends PropertyKey> = TKey extends ShapeBoxKey<TBox> ? ShapePersistenceAdapter<TBox[TKey]> : ShapeViewStateConfigUnion<TBox>;
 type ShapeStateConfig<TBox extends ShapeSchemaBox> = Partial<{
     [K in ShapeBoxKey<TBox>]: ShapeStateConfigEntry<TBox, K>;
-}> & Record<string, ShapeViewStateConfigUnion<TBox> | ShapeBoxAdapterUnion<TBox> | undefined>;
+}>;
 type StateEntryShape<TBox extends ShapeSchemaBox, TEntry, TFallbackKey extends PropertyKey> = TEntry extends {
     from: infer TFrom;
     with: infer TWith;
 } ? TFrom extends ShapeBoxKey<TBox> ? ViewStateShape<TBox, TFrom, TWith> : never : TFallbackKey extends ShapeBoxKey<TBox> ? TBox[TFallbackKey]["stateType"] : never;
-type InferConfiguredShapeState<TBox extends ShapeSchemaBox, TState extends ShapeStateConfig<TBox>> = InferShapeBoxState<TBox> & {
+type InferConfiguredShapeState<TBox extends ShapeSchemaBox, TState extends Record<string, unknown>> = InferShapeBoxState<TBox> & {
     [K in keyof TState]: StateEntryShape<TBox, NonNullable<TState[K]>, K>;
 };
-export type ShapePluginConfig<TBox extends ShapeSchemaBox, TState extends ShapeStateConfig<TBox> = {}> = {
-    state?: TState;
+export type ShapePluginConfig<TBox extends ShapeSchemaBox, TState extends Record<string, unknown> = {}> = {
+    state?: TState & ShapeStateConfig<TBox>;
     /** @deprecated use state */
     server?: {
         [K in keyof TBox & string]?: ShapePersistenceAdapter<TBox[K]>;
@@ -197,9 +194,7 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
         data: unknown;
     }[];
 };
-export declare function createShapePlugin<const TBox extends ShapeSchemaBox, const TState extends ShapeStateConfig<TBox> = {}>(box: TBox, config?: ShapePluginConfig<TBox, TState> & {
-    state?: ShapeStateConfig<TBox>;
-}): import("cogsbox-state").CogsPluginBuilder<"shape", {
+export declare function createShapePlugin<const TBox extends ShapeSchemaBox, const TState extends Record<string, unknown> = {}>(box: TBox, config?: ShapePluginConfig<TBox, TState>): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
 }, {
     cacheKey: string | undefined;

@@ -37,32 +37,47 @@ type _pluginHasFilters =
   PluginInitialState["demo"]["activeFilters"] extends string[] ? true : false;
 type _assertPlugin = Assert<_pluginHasFilters>;
 
-const parentSchema = schema({
-  _tableName: "parents",
+const tradingRulesFormSchema = schema({
+  _tableName: "trading_rules",
   id: s.sqlite({ type: "int", pk: true }).client({
     value: 0,
     schema: z.number(),
     clientPk: true,
   }),
+  journalId: s.sqlite({ type: "int", field: "journal_id" }).client({
+    value: 0,
+    schema: z.number(),
+  }),
   name: s.sqlite({ type: "text" }).client({ value: "" }),
 });
 
-const relationBox = createSchemaBox({ parents: parentSchema }, {});
+const journalSchemaBox = createSchemaBox(
+  { tradingRulesForm: tradingRulesFormSchema },
+  {},
+);
 
-const viewPlugin = createShapePlugin(relationBox, {
+const tradingRulesPlugin = createShapePlugin(journalSchemaBox, {
   state: {
-    parentView: {
-      from: "parents",
-      with: {},
-      key: ({ shape }) => shape.id,
+    tradingRulesForm: {
+      key: ({ shape }) => shape.journalId,
+      save: ({ value }) => {
+        const journalId: number = value.journalId;
+        return { ...value, journalId };
+      },
     },
   },
 });
 
-type ViewPluginInitialState = ReturnType<
-  NonNullable<(typeof viewPlugin)["initialState"]>
+type TradingRulesPluginInitialState = ReturnType<
+  NonNullable<(typeof tradingRulesPlugin)["initialState"]>
 >;
-type _viewHasName = ViewPluginInitialState["parentView"]["name"] extends string
-  ? true
-  : false;
-type _assertViewHasName = Assert<_viewHasName>;
+type _tradingRulesHasJournalId =
+  TradingRulesPluginInitialState["tradingRulesForm"]["journalId"] extends number
+    ? true
+    : false;
+type _tradingRulesNotAny = 0 extends 1 &
+  TradingRulesPluginInitialState["tradingRulesForm"]
+  ? false
+  : true;
+type _assertTradingRulesHasJournalId = Assert<_tradingRulesHasJournalId>;
+type _assertTradingRulesNotAny = Assert<_tradingRulesNotAny>;

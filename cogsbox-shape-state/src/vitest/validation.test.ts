@@ -542,7 +542,8 @@ describe("validateShapeKeys", () => {
     });
 
     expect(
-      store.getShadowMetadata("sizing", ["startingSizeMax"])?.validation?.status,
+      store.getShadowMetadata("sizing", ["startingSizeMax"])?.validation
+        ?.status,
     ).toBe("NOT_VALIDATED");
     expect(
       store.getShadowMetadata("sizing", ["startingSizeMode"])?.validation

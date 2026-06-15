@@ -22,10 +22,7 @@ import { schemaBox } from "./schema";
 
 const shapePlugin = createShapePlugin(schemaBox);
 
-export const { useCogsState } = createCogsState(
-  {},
-  { plugins: [shapePlugin] },
-);
+export const { useCogsState } = createCogsState({}, { plugins: [shapePlugin] });
 ```
 
 Every key in the schema box becomes a typed state key with defaults from the Shape entry.
@@ -188,10 +185,7 @@ status.lastSavedAt;
 The plugin also connects Shape client validation to `cogsbox-state`.
 
 ```ts
-const result = rules.$validateGroup([
-  "startingSizeMode",
-  "startingSizeMin",
-]);
+const result = rules.$validateGroup(["startingSizeMode", "startingSizeMin"]);
 ```
 
 `$validateGroup(keys)` validates the full client state, filters issues down to the selected keys, and writes those validation errors to state metadata by default.
