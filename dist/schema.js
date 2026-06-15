@@ -1242,6 +1242,13 @@ export function createSchemaBox(schemas, resolutions) {
     }
     return cleanerRegistry;
 }
+export function addViews(box, views) {
+    const extended = { ...box };
+    for (const key in views) {
+        extended[key] = views[key];
+    }
+    return extended;
+}
 function computeViewDefaults(currentRegistryKey, selection, registry, tableNameToRegistryKeyMap, visited = new Set()) {
     if (visited.has(currentRegistryKey)) {
         return undefined;

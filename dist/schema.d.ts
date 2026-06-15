@@ -655,6 +655,9 @@ type CreateSchemaBoxReturn<S extends Record<string, SchemaWithPlaceholders>, R e
     };
 };
 export declare function createSchemaBox<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>>(schemas: S, resolutions: R): CreateSchemaBoxReturn<S, R>;
+export declare function addViews<S extends Record<string, SchemaWithPlaceholders>, R extends ResolutionMap<S>, V extends Record<string, DeriveViewResult<any, any, any>>>(box: CreateSchemaBoxReturn<S, R>, views: V): Prettify<CreateSchemaBoxReturn<S, R> & {
+    [K in keyof V]: V[K];
+}>;
 type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};

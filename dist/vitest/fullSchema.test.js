@@ -1,7 +1,7 @@
 import { expect, describe, it } from "vitest";
 import { expectTypeOf } from "expect-type";
 // Import the new primary method for schema creation
-import { s, schema, createSchemaBox } from "../schema.js";
+import { s, schema, createSchemaBox, addViews } from "../schema.js";
 import z from "zod";
 /*
 ================================================================
@@ -1496,5 +1496,89 @@ describe("dynamic value functions re-run on each view.defaults() call", () => {
         const second = view.defaultsDefinition();
         expect(first.id).not.toBe(second.id);
         expect(first.boxes[0].variant.id).not.toBe(second.boxes[0].variant.id);
+    });
+});
+describe("addViews", () => {
+    const users = schema({
+        _tableName: "users",
+        id: s
+            .sqlite({ type: "int", pk: true })
+            .client({ value: "user-123", schema: z.string() }),
+        name: s.sqlite({ type: "varchar" }).client({ value: "John" }),
+        posts: s.hasMany({ count: 2 }),
+    });
+    const posts = schema({
+        _tableName: "posts",
+        id: s.sqlite({ type: "int", pk: true }),
+        title: s.sqlite({ type: "varchar" }).client({ value: "Default Post" }),
+        authorId: s.reference(() => users.id),
+    });
+    const box = createSchemaBox({ users, posts }, {
+        users: { posts: { fromKey: "id", toKey: posts.authorId } },
+    });
+    it("should add views as top-level entries on the extended box", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        expect(extended.userWithPosts).toBeDefined();
+        expect(extended.userWithPosts.isView).toBe(true);
+        expect(extended.userWithPosts.baseTable).toBe("users");
+    });
+    it("should preserve original box entries after addViews", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        expect(extended.users).toBeDefined();
+        expect(extended.users.schemaKey).toBe("users");
+        expect(extended.posts).toBeDefined();
+        expect(extended.posts.schemaKey).toBe("posts");
+    });
+    it("should not mutate the original box", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        expect(box.userWithPosts).toBeUndefined();
+        expect(extended.userWithPosts).toBeDefined();
+    });
+    it("should allow view transforms on extended entries", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        const dbData = {
+            id: 1,
+            name: "Alice",
+            posts: [{ id: 10, title: "Hello", authorId: 1 }],
+        };
+        const result = extended.userWithPosts.transforms.toClient(dbData);
+        expect(result.name).toBe("Alice");
+        expect(result.posts).toHaveLength(1);
+    });
+    it("should allow view defaults on extended entries", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        const defaults = extended.userWithPosts.defaults();
+        expect(defaults.id).toBe("user-123");
+        expect(defaults.name).toBe("John");
+        expect(defaults.posts).toBeInstanceOf(Array);
+    });
+    it("should support multiple views in a single addViews call", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+            postsOnly: box.posts.createView({}),
+        });
+        expect(extended.userWithPosts).toBeDefined();
+        expect(extended.postsOnly).toBeDefined();
+        expect(extended.userWithPosts.isView).toBe(true);
+        expect(extended.postsOnly.isView).toBe(true);
+    });
+    it("should provide type-safe access to view schemas on extended box", () => {
+        const extended = addViews(box, {
+            userWithPosts: box.users.createView({ posts: true }),
+        });
+        const clientShape = extended.userWithPosts.schemas.clientChecked.shape;
+        expect(clientShape).toHaveProperty("id");
+        expect(clientShape).toHaveProperty("name");
+        expect(clientShape).toHaveProperty("posts");
     });
 });

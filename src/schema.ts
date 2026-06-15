@@ -3021,8 +3021,24 @@ export function createSchemaBox<
     };
   }
 
-  return cleanerRegistry as CreateSchemaBoxReturn<S, R>;
+return cleanerRegistry as CreateSchemaBoxReturn<S, R>;
 }
+
+export function addViews<
+  S extends Record<string, SchemaWithPlaceholders>,
+  R extends ResolutionMap<S>,
+  V extends Record<string, DeriveViewResult<any, any, any>>,
+>(
+  box: CreateSchemaBoxReturn<S, R>,
+  views: V,
+): Prettify<CreateSchemaBoxReturn<S, R> & { [K in keyof V]: V[K] }> {
+  const extended = { ...box };
+  for (const key in views) {
+    (extended as any)[key] = views[key];
+  }
+  return extended as any;
+}
+
 function computeViewDefaults(
   currentRegistryKey: string,
   selection: Record<string, any> | boolean,
