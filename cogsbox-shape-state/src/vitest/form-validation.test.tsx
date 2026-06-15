@@ -1,13 +1,19 @@
+// @vitest-environment jsdom
+
 import "@testing-library/jest-dom/vitest";
 
 import { createCogsState, PluginRunner, getGlobalStore } from "cogsbox-state";
 import { createSchemaBox, s, schema } from "cogsbox-shape";
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { createShapePlugin } from "../index.js";
+
+afterEach(() => {
+  cleanup();
+});
 
 describe("shape plugin $validateGroup", () => {
   it("returns per-key success when all fields pass", async () => {
