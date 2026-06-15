@@ -42,4 +42,64 @@ describe("shapePlugin", () => {
 
     expect(plugin.name).toBe("shape");
   });
+
+  it("saves through a configured adapter and exposes status", async () => {
+    const userSchema = schema({
+      _tableName: "users",
+      id: s.client({ value: () => "temp-id", clientPk: true }),
+      name: s.client({ value: "Draft" }),
+    });
+
+    const box = createSchemaBox({ users: userSchema }, {});
+    const plugin = createShapePlugin(box, {
+      server: {
+        users: {
+          save: async ({ value }) => ({ ...(value as any), name: "Saved" }),
+        },
+      },
+    });
+
+    let value = { id: "temp-id", name: "Draft" };
+    let meta: Record<string, any> = {};
+    const ctx = {
+      stateKey: "users",
+      path: [],
+      pluginName: "shape",
+      options: {},
+      $get: () => value,
+      $update: (next: typeof value) => {
+        value = next;
+        return { synced: () => undefined };
+      },
+      $applyOperation: () => undefined,
+      getFieldMetaData: () => meta,
+      setFieldMetaData: (next: Record<string, any>) => {
+        meta = { ...meta, ...next };
+      },
+      removeFieldMetaData: () => {
+        meta = {};
+      },
+      watchPluginMeta: () => undefined,
+      notifyPluginMeta: () => undefined,
+      getFieldRefs: () => [],
+      getFieldElements: () => [],
+      setFieldDisabled: () => undefined,
+    };
+
+    const result = await plugin.chainMethods!.save.handler(ctx as any);
+    const status = plugin.chainMethods!.status.handler(ctx as any);
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { id: "temp-id", name: "Saved" },
+      cacheKey: "users",
+    });
+    expect(value).toEqual({ id: "temp-id", name: "Saved" });
+    expect(status).toMatchObject({
+      cacheKey: "users",
+      isDirty: false,
+      isSaving: false,
+      saveStatus: "success",
+    });
+  });
 });

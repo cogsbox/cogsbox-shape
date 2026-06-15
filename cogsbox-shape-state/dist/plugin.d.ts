@@ -16,6 +16,15 @@ export type ShapeSchemaBoxEntry = {
     validators?: {
         client: z.ZodTypeAny;
     };
+    transforms?: {
+        parseForDb?: (value: any) => any;
+        parsePatchForDb?: (value: any) => any;
+        parseFromDb?: (value: any) => any;
+        toClient?: (value: any) => any;
+    };
+    pk?: readonly string[] | null;
+    clientPk?: readonly string[] | null;
+    isClientRecord?: (value: any) => boolean;
     refineInfo?: ShapeRefineInfo;
 };
 export type ShapeSchemaBox = Record<string, ShapeSchemaBoxEntry>;
@@ -74,6 +83,53 @@ type ShapeKeyValidationParams = {
     clearOutsideKeys?: boolean;
 };
 export type ValidateGroupOptions = Pick<ShapeKeyValidationParams, "persist" | "clearOutsideKeys">;
+type ShapeStatusValue = "idle" | "loading" | "success" | "error";
+export type ShapeStatus = {
+    cacheKey: string;
+    isDirty: boolean;
+    dirtyPaths: string[];
+    isLoading: boolean;
+    isSaving: boolean;
+    loadStatus: ShapeStatusValue;
+    saveStatus: Exclude<ShapeStatusValue, "loading"> | "saving";
+    error?: unknown;
+    lastLoadedAt?: number;
+    lastSavedAt?: number;
+};
+type ShapePluginOptions = {
+    logs?: boolean;
+    key?: string;
+};
+type ShapePersistenceContext<TEntry extends ShapeSchemaBoxEntry> = {
+    stateKey: string;
+    cacheKey: string;
+    path: string[];
+    value: unknown;
+    data?: unknown;
+    entry: TEntry;
+    id?: Record<string, unknown>;
+    operation?: "insert" | "update";
+    options?: ShapePluginOptions;
+    status: ShapeStatus;
+};
+export type ShapePersistenceAdapter<TEntry extends ShapeSchemaBoxEntry = ShapeSchemaBoxEntry> = {
+    load?: (ctx: ShapePersistenceContext<TEntry>) => Promise<unknown> | unknown;
+    save?: (ctx: ShapePersistenceContext<TEntry> & {
+        data: unknown;
+        operation: "insert" | "update";
+    }) => Promise<unknown> | unknown;
+    insert?: (ctx: ShapePersistenceContext<TEntry> & {
+        data: unknown;
+        operation: "insert";
+    }) => Promise<unknown> | unknown;
+    update?: (ctx: ShapePersistenceContext<TEntry> & {
+        data: unknown;
+        operation: "update";
+    }) => Promise<unknown> | unknown;
+};
+export type ShapePluginConfig<TBox extends ShapeSchemaBox> = {
+    server?: Partial<Record<keyof TBox & string, ShapePersistenceAdapter>>;
+};
 export declare function wireShapeValidationOptions(box: ShapeSchemaBox, params: TransformStateParams): void;
 /** Cross-field refine errors only — field rules are handled by state via setOptions. */
 export declare function validateShapeRefines(box: ShapeSchemaBox, params: FormUpdateParams): void;
@@ -87,9 +143,23 @@ export declare function validateShapeKeys(box: ShapeSchemaBox, params: ShapeKeyV
         data: unknown;
     }[];
 };
-export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox): import("cogsbox-state").CogsPluginBuilder<"shape", {
+export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box: TBox, config?: ShapePluginConfig<TBox>): import("cogsbox-state").CogsPluginBuilder<"shape", {
     logs: boolean | undefined;
-}, unknown, unknown, never, {
+    key: string | undefined;
+}, {
+    cacheKey: string | undefined;
+    baseline: any;
+    dirtyPaths: string[] | undefined;
+    isDirty: boolean | undefined;
+    isLoading: boolean | undefined;
+    isSaving: boolean | undefined;
+    loadStatus: "error" | "idle" | "loading" | "success" | undefined;
+    saveStatus: "error" | "idle" | "success" | "saving" | undefined;
+    error: any;
+    lastLoadedAt: number | undefined;
+    lastSavedAt: number | undefined;
+    suppressDirtyOnce: boolean | undefined;
+}, unknown, never, {
     validateGroup: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>, keys?: readonly string[] | undefined) => {
         success: boolean;
         results: {
@@ -98,6 +168,40 @@ export declare function createShapePlugin<const TBox extends ShapeSchemaBox>(box
             success: boolean;
             data: unknown;
         }[];
+    }>;
+    status: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>) => ShapeStatus>;
+    load: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>) => Promise<{
+        success: boolean;
+        data: any;
+        cacheKey: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: unknown;
+        cacheKey: string;
+        data?: undefined;
+    }>>;
+    save: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>) => Promise<{
+        success: boolean;
+        data: any;
+        operation: string;
+        cacheKey: string;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: unknown;
+        operation: string;
+        cacheKey: string;
+        data?: undefined;
+    }>>;
+    revert: import("cogsbox-state").ChainMethodDefinition<(ctx: import("cogsbox-state").ChainMethodContext<any, any>) => {
+        success: boolean;
+        error: string;
+        data?: undefined;
+    } | {
+        success: boolean;
+        data: {} | null;
+        error?: undefined;
     }>;
 }, true, true, true, true, false, true, InferShapeBoxState<TBox>>;
 export {};

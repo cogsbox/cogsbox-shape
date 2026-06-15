@@ -12,6 +12,120 @@ function getValueAtPath(value, path) {
     }
     return cursor;
 }
+function setValueAtPath(value, path, nextValue) {
+    if (path.length === 0)
+        return nextValue;
+    if (value === null || typeof value !== "object")
+        return value;
+    const root = Array.isArray(value)
+        ? [...value]
+        : { ...value };
+    let cursor = root;
+    for (let index = 0; index < path.length - 1; index++) {
+        const segment = path[index];
+        const current = cursor[segment];
+        cursor[segment] =
+            current && typeof current === "object"
+                ? Array.isArray(current)
+                    ? [...current]
+                    : { ...current }
+                : {};
+        cursor = cursor[segment];
+    }
+    cursor[path[path.length - 1]] = nextValue;
+    return root;
+}
+function valuesEqual(left, right) {
+    if (Object.is(left, right))
+        return true;
+    try {
+        return JSON.stringify(left) === JSON.stringify(right);
+    }
+    catch {
+        return false;
+    }
+}
+function cacheKeyFor(stateKey, options) {
+    return options?.key ?? stateKey;
+}
+function dirtyPathKey(path) {
+    return path.length === 0 ? "$" : path.join(".");
+}
+function shapeStatusDependencyPath(path) {
+    return [...path, "$pluginMeta", "shape", "status"];
+}
+function notifyShapeStatus(stateKey, path = []) {
+    const store = getGlobalStore.getState();
+    const rootMeta = store.getShadowMetadata(stateKey, []);
+    const statusMeta = store.getShadowMetadata(stateKey, shapeStatusDependencyPath(path));
+    statusMeta?.pathComponents?.forEach((componentId) => {
+        rootMeta?.components?.get(componentId)?.forceUpdate();
+    });
+}
+function sameStatus(left, right) {
+    return (left.cacheKey === right.cacheKey &&
+        left.isDirty === right.isDirty &&
+        left.isLoading === right.isLoading &&
+        left.isSaving === right.isSaving &&
+        left.loadStatus === right.loadStatus &&
+        left.saveStatus === right.saveStatus &&
+        left.error === right.error &&
+        left.lastLoadedAt === right.lastLoadedAt &&
+        left.lastSavedAt === right.lastSavedAt &&
+        valuesEqual(left.dirtyPaths, right.dirtyPaths));
+}
+function statusFromMeta(stateKey, options, meta) {
+    const dirtyPaths = meta?.dirtyPaths ?? [];
+    const loadStatus = meta?.loadStatus ?? "idle";
+    const saveStatus = meta?.saveStatus ?? "idle";
+    return {
+        cacheKey: meta?.cacheKey ?? cacheKeyFor(stateKey, options),
+        dirtyPaths,
+        isDirty: dirtyPaths.length > 0,
+        isLoading: loadStatus === "loading",
+        isSaving: saveStatus === "saving",
+        loadStatus,
+        saveStatus,
+        error: meta?.error,
+        lastLoadedAt: meta?.lastLoadedAt,
+        lastSavedAt: meta?.lastSavedAt,
+    };
+}
+function normaliseFromServer(entry, data) {
+    const clientSchema = entry.validators?.client ?? entry.schemas.client;
+    const parsed = clientSchema.safeParse(data);
+    if (parsed.success)
+        return parsed.data;
+    if (entry.transforms?.parseFromDb) {
+        try {
+            return entry.transforms.parseFromDb(data);
+        }
+        catch {
+            // Fall through to the raw data. The caller's save/load handler may
+            // already return client-shaped data with server-side metadata attached.
+        }
+    }
+    if (entry.transforms?.toClient) {
+        try {
+            return entry.transforms.toClient(data);
+        }
+        catch {
+            // Same fallback as parseFromDb.
+        }
+    }
+    return data;
+}
+function identityFor(entry, value) {
+    if (value === null || typeof value !== "object")
+        return undefined;
+    const source = value;
+    const keys = [...(entry.pk ?? []), ...(entry.clientPk ?? [])];
+    if (keys.length === 0)
+        return undefined;
+    return Object.fromEntries(keys
+        .filter((key) => Object.prototype.hasOwnProperty.call(source, key))
+        .map((key) => [key, source[key]]));
+}
 function resolveRelatedPaths(blurPath, relatedFields) {
     const parent = blurPath.slice(0, -1);
     return [...relatedFields].map((field) => [...parent, field]);
@@ -434,13 +548,44 @@ function buildInitialState(box) {
 const { createPlugin } = createPluginContext({
     options: z.object({
         logs: z.boolean().optional(),
+        key: z.string().optional(),
+    }),
+    pluginMetaData: z.object({
+        cacheKey: z.string().optional(),
+        baseline: z.any().optional(),
+        dirtyPaths: z.array(z.string()).optional(),
+        isDirty: z.boolean().optional(),
+        isLoading: z.boolean().optional(),
+        isSaving: z.boolean().optional(),
+        loadStatus: z
+            .enum(["idle", "loading", "success", "error"])
+            .optional(),
+        saveStatus: z
+            .enum(["idle", "saving", "success", "error"])
+            .optional(),
+        error: z.any().optional(),
+        lastLoadedAt: z.number().optional(),
+        lastSavedAt: z.number().optional(),
+        suppressDirtyOnce: z.boolean().optional(),
     }),
 });
-export function createShapePlugin(box) {
+export function createShapePlugin(box, config = {}) {
     return createPlugin("shape")
         .initialState(() => buildInitialState(box))
         .transformState((params) => {
         wireShapeValidationOptions(box, params);
+        const meta = (params.getPluginMetaData?.() ?? {});
+        const cacheKey = cacheKeyFor(params.stateKey, params.options);
+        if (!meta.baseline || meta.cacheKey !== cacheKey) {
+            params.setPluginMetaData({
+                cacheKey,
+                baseline: params.getState(),
+                dirtyPaths: [],
+                isDirty: false,
+                loadStatus: meta.loadStatus ?? "idle",
+                saveStatus: meta.saveStatus ?? "idle",
+            });
+        }
     })
         .onFormUpdate((params) => {
         if (params.options?.logs) {
@@ -450,6 +595,33 @@ export function createShapePlugin(box) {
     })
         .onUpdate((params) => {
         validateShapeRefinesOnUpdate(box, params);
+        if (params.update.updateType !== "update")
+            return;
+        const meta = (params.getPluginMetaData?.() ?? {});
+        if (meta.suppressDirtyOnce) {
+            params.setPluginMetaData({ suppressDirtyOnce: false });
+            return;
+        }
+        const beforeStatus = statusFromMeta(params.stateKey, params.options, meta);
+        const baseline = meta.baseline ?? box[params.stateKey]?.generateDefaults?.();
+        const dirty = new Set(meta.dirtyPaths ?? []);
+        const key = dirtyPathKey(params.update.path);
+        const baselineValue = getValueAtPath(baseline, params.update.path);
+        if (valuesEqual(baselineValue, params.update.newValue)) {
+            dirty.delete(key);
+        }
+        else {
+            dirty.add(key);
+        }
+        const nextMeta = {
+            ...meta,
+            dirtyPaths: [...dirty],
+            isDirty: dirty.size > 0,
+        };
+        params.setPluginMetaData(nextMeta);
+        if (!sameStatus(beforeStatus, statusFromMeta(params.stateKey, params.options, nextMeta))) {
+            notifyShapeStatus(params.stateKey, []);
+        }
     })
         .methods((m) => ({
         validateGroup: m.object((ctx, keys) => validateShapeKeys(box, {
@@ -458,5 +630,133 @@ export function createShapePlugin(box) {
             keys,
             getState: ctx.$get,
         })),
+        status: m.object((ctx) => {
+            ctx.watchPluginMeta?.("status");
+            return statusFromMeta(ctx.stateKey, ctx.options, ctx.getFieldMetaData());
+        }),
+        load: m.object(async (ctx) => {
+            const entry = box[ctx.stateKey];
+            const adapter = config.server?.[ctx.stateKey];
+            if (!entry || !adapter?.load) {
+                throw new Error(`No shape load adapter registered for ${ctx.stateKey}`);
+            }
+            const meta = (ctx.getFieldMetaData() ?? {});
+            const cacheKey = cacheKeyFor(ctx.stateKey, ctx.options);
+            const status = statusFromMeta(ctx.stateKey, ctx.options, meta);
+            ctx.setFieldMetaData({
+                cacheKey,
+                loadStatus: "loading",
+                error: undefined,
+            });
+            ctx.notifyPluginMeta?.("status");
+            try {
+                const serverData = await adapter.load({
+                    stateKey: ctx.stateKey,
+                    cacheKey,
+                    path: ctx.path,
+                    value: ctx.$get(),
+                    entry,
+                    id: identityFor(entry, ctx.$get()),
+                    options: ctx.options,
+                    status,
+                });
+                const nextState = normaliseFromServer(entry, serverData);
+                ctx.setFieldMetaData({
+                    suppressDirtyOnce: true,
+                    baseline: nextState,
+                    dirtyPaths: [],
+                    isDirty: false,
+                    loadStatus: "success",
+                    lastLoadedAt: Date.now(),
+                    error: undefined,
+                });
+                ctx.$update(nextState);
+                ctx.notifyPluginMeta?.("status");
+                return { success: true, data: nextState, cacheKey };
+            }
+            catch (error) {
+                ctx.setFieldMetaData({ loadStatus: "error", error });
+                ctx.notifyPluginMeta?.("status");
+                return { success: false, error, cacheKey };
+            }
+        }),
+        save: m.object(async (ctx) => {
+            const entry = box[ctx.stateKey];
+            const adapter = config.server?.[ctx.stateKey];
+            if (!entry || !adapter) {
+                throw new Error(`No shape save adapter registered for ${ctx.stateKey}`);
+            }
+            const value = ctx.$get();
+            const meta = (ctx.getFieldMetaData() ?? {});
+            const cacheKey = cacheKeyFor(ctx.stateKey, ctx.options);
+            const operation = entry.isClientRecord?.(value) ? "insert" : "update";
+            const data = operation === "insert"
+                ? entry.transforms?.parseForDb?.(value) ?? value
+                : entry.transforms?.parsePatchForDb?.(value) ??
+                    entry.transforms?.parseForDb?.(value) ??
+                    value;
+            const status = statusFromMeta(ctx.stateKey, ctx.options, meta);
+            ctx.setFieldMetaData({
+                cacheKey,
+                saveStatus: "saving",
+                error: undefined,
+            });
+            ctx.notifyPluginMeta?.("status");
+            try {
+                const baseCtx = {
+                    stateKey: ctx.stateKey,
+                    cacheKey,
+                    path: ctx.path,
+                    value,
+                    data,
+                    entry,
+                    id: identityFor(entry, value),
+                    operation,
+                    options: ctx.options,
+                    status,
+                };
+                const saved = adapter.save !== undefined
+                    ? await adapter.save(baseCtx)
+                    : operation === "insert"
+                        ? await adapter.insert?.(baseCtx)
+                        : await adapter.update?.(baseCtx);
+                if (saved === undefined) {
+                    throw new Error(`No ${operation} handler returned data for ${ctx.stateKey}`);
+                }
+                const nextState = normaliseFromServer(entry, saved);
+                ctx.setFieldMetaData({
+                    suppressDirtyOnce: true,
+                    baseline: nextState,
+                    dirtyPaths: [],
+                    isDirty: false,
+                    saveStatus: "success",
+                    lastSavedAt: Date.now(),
+                    error: undefined,
+                });
+                ctx.$update(nextState);
+                ctx.notifyPluginMeta?.("status");
+                return { success: true, data: nextState, operation, cacheKey };
+            }
+            catch (error) {
+                ctx.setFieldMetaData({ saveStatus: "error", error });
+                ctx.notifyPluginMeta?.("status");
+                return { success: false, error, operation, cacheKey };
+            }
+        }),
+        revert: m.object((ctx) => {
+            const meta = (ctx.getFieldMetaData() ?? {});
+            const baseline = meta.baseline;
+            if (baseline === undefined) {
+                return { success: false, error: "No shape baseline to revert to" };
+            }
+            ctx.setFieldMetaData({
+                suppressDirtyOnce: true,
+                dirtyPaths: [],
+                isDirty: false,
+            });
+            ctx.$update(baseline);
+            ctx.notifyPluginMeta?.("status");
+            return { success: true, data: baseline };
+        }),
     }));
 }
