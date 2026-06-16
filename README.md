@@ -419,7 +419,7 @@ For schemas with relationships, use `createSchemaBox`.
 ### 1. Define Schemas with Placeholders
 
 ```typescript
-import { s, schema, createSchemaBox } from "cogsbox-shape";
+import { s, schema, createSchemaBox, addViews } from "cogsbox-shape";
 
 const users = schema({
   _tableName: "users",
@@ -492,7 +492,59 @@ const { defaults, transforms } = userWithPosts;
 // transforms.toClient() handles nested relation transforms automatically
 ```
 
-When a box is connected to the ORM, view reads hydrate the selected relation tree before parsing:
+### 5. Expose Views on the Box with `addViews`
+
+Relations are **excluded from base schemas** — `box.journals` doesn't have `imports` or `tradeEvents` on it. To access those joined shapes, you create a view. But calling `box.journals.createView(...)` every time is repetitive, and you often want views as stable, named entries you can pass around.
+
+`addViews` takes a box and merges named views as top-level keys on a new extended box:
+
+```typescript
+import { addViews } from "cogsbox-shape";
+
+const box = createSchemaBox(
+  { journals, importBatches, tradeEvents, tradingRulesForm },
+  {
+    journals: {
+      imports: { fromKey: "id", toKey: importBatches.journalId },
+      tradeEvents: { fromKey: "id", toKey: tradeEvents.journalId },
+      tradingRules: { fromKey: "id", toKey: tradingRulesForm.journalId },
+    },
+  },
+);
+
+const extendedBox = addViews(box, {
+  journalSummary: box.journals.createView({
+    imports: true,
+    tradeEvents: true,
+  }),
+  journalFull: box.journals.createView({
+    imports: true,
+    tradeEvents: true,
+  }),
+});
+
+// Views are now first-class entries on the box
+extendedBox.journalSummary;     // full view entry with schemas, transforms, defaults, etc.
+extendedBox.journalFull;        // same shape, different view selection
+
+// Use with the state plugin — views are normalized automatically
+const plugin = createShapePlugin(extendedBox);
+
+// Connect to the ORM — views hydrate their relations automatically
+const db = createSqliteDb("app.sqlite");
+const bx = connect(extendedBox, db);
+const journals = await bx.journalSummary.findMany({ where: { userId } });
+// Each journal already has imports[] and tradeEvents[] hydrated from SQL
+```
+
+**Why is this important?** Without `addViews`, views are local variables — you'd call `box.journals.createView(...)` at each call site. `addViews` gives views named keys on the box so they can be:
+- Used as keys in state management (e.g., `shapePlugin.initialState.journalSummary`)
+- Queried via the ORM with automatic relation hydration (`bx.journalSummary.findMany(...)`)
+- Passed as a single box object to `createShapePlugin()` and `connect()` instead of managing loose views
+
+`addViews` is how you turn relations from invisible schema definitions into usable, named shape entries.
+
+When a box with views is connected to the ORM, view reads hydrate the selected relation tree before parsing:
 
 ```typescript
 import { connect } from "cogsbox-shape/db";
@@ -527,7 +579,7 @@ export default {
 
 Use `insert(data).ids()` when you only need the database identity, or `insert(data).full()` when you want optimistic client IDs reconciled back into the submitted client object. `create()` is kept as an alias for older code; prefer `insert()` in new code.
 
-### 5. Nested Defaults and Form Definitions (`defaultsDefinition`)
+### 6. Nested Defaults and Form Definitions (`defaultsDefinition`)
 
 When working with forms and nested array relations (like `hasMany`), you often need the default state for a _single new item_ to add to a form array.
 
